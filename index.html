@@ -1,0 +1,87 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>冻品整箱到店统一小程序</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>冻品整箱到店统一小程序</h1>
+      <p id="dataNote">10%触发 · 门店可执行 · 运营可调试</p>
+    </div>
+    <div class="top-actions">
+      <select id="storeSelect" aria-label="选择门店"></select>
+      <label class="switch"><input id="opsMode" type="checkbox"><span>运营模式</span></label>
+      <button id="syncStoreViewBtn" class="ops-only sync-btn" type="button">同步并退出到店员端</button>
+      <button id="resetFilterBtn" type="button">重置筛选</button>
+    </div>
+  </header>
+  <nav class="tabs" aria-label="页面切换">
+    <button class="active" data-view="overview">总览看板</button>
+    <button data-view="store">门店执行</button>
+    <button data-view="goods">商品明细</button>
+    <button data-view="risk">周转风险</button>
+    <button data-view="productpool" class="ops-only">产品池管理</button>
+    <button data-view="replenish" class="ops-only">补货测算</button>
+    <button data-view="allocation" class="ops-only">排柜调整</button>
+    <button data-view="cabinets" class="ops-only">柜段余量</button>
+    <button data-view="suggestions" class="ops-only">空位建议</button>
+    <button data-view="newstore" class="ops-only">新增门店测算</button>
+    <button data-view="displaymap">陈列图</button>
+    <button data-view="io" class="ops-only">导入导出</button>
+    <button data-view="logic">测算逻辑</button>
+  </nav>
+  <div id="modeBanner" class="mode-banner"></div>
+  <main>
+    <section id="overview" class="view active">
+      <div id="metricGrid" class="metric-grid"></div>
+      <section class="panel"><div class="panel-title"><h2>门店外储需求排行</h2><input id="overviewSearch" type="search" placeholder="搜索门店"></div><div id="storeRank" class="table-wrap"></div></section>
+    </section>
+    <section id="store" class="view">
+      <div id="storeHeader" class="store-header"></div>
+      <section class="panel"><div class="panel-title"><h2>门店商品执行明细</h2><input id="storeSearch" type="search" placeholder="搜索商品或类目"></div><div id="storeDetail" class="table-wrap"></div></section>
+    </section>
+    <section id="goods" class="view"><section class="panel"><div class="panel-title controls"><h2>全量商品明细</h2><input id="goodsSearch" type="search" placeholder="搜索门店、商品、类目"><select id="levelFilter"><option value="">全部等级</option></select></div><div id="goodsTable" class="table-wrap"></div></section></section>
+
+    <section id="productpool" class="view"><section class="panel"><div class="panel-title controls"><h2>产品池管理</h2><input id="poolSearch" type="search" placeholder="搜索商品、条码、类目"><button id="addPoolSkuBtn" type="button">新增空白SKU</button><button id="importPoolBtn" type="button">导入粘贴内容</button><button id="deleteDisabledPoolBtn" type="button">删除未启用SKU</button></div><div class="help">可从Excel复制粘贴。表头支持：商品名称、条码、等级、综合排名、二级类目、三级类目、四级类目、长、宽、高、体积、箱规、日销、日销额、起订量。产品池变化不会自动改变门店陈列，需要通过单店试算或全店上新应用。删除未启用SKU只会清理产品池中的停用条目，不会自动改动已执行门店方案。</div><textarea id="poolImportBox" placeholder="从Excel复制产品池数据后粘贴到这里，第一行建议带表头"></textarea><div id="poolTable" class="table-wrap"></div></section></section>
+    <section id="risk" class="view"><section class="panel"><div class="panel-title controls"><h2>外储周转风险</h2><input id="riskSearch" type="search" placeholder="搜索门店、商品、类目"><select id="riskFilter"><option value="">全部风险</option></select></div><div id="riskTable" class="table-wrap"></div></section></section>
+    <section id="replenish" class="view"><div id="replenishCards" class="metric-grid"></div><section class="panel"><div class="panel-title"><h2>补货测算</h2><input id="replenishSearch" type="search" placeholder="搜索商品"></div><div class="help">录入当前在架库存、当前外储已占用L和计划补货箱数后，系统会告诉门店最多可补多少，是否会超过754L。</div><div class="inline-form"><label>当前外储已占用L<input id="currentExternalL" type="number" min="0" step="1" value="0"></label></div><div id="replenishTable" class="table-wrap"></div></section></section>
+    <section id="allocation" class="view"><section class="panel"><div class="panel-title controls"><h2>排柜调整</h2><input id="allocationSearch" type="search" placeholder="搜索商品、条码、类目"><input id="allocationCabinetSearch" type="search" placeholder="搜索陈列柜段"><select id="allocationSceneFilter"><option value="">全部场景</option></select><select id="allocationTypeFilter"><option value="">全部冰柜类型</option></select><select id="allocationCabNoFilter"><option value="">全部陈列柜</option></select><select id="allocationPosFilter"><option value="">全部位置</option></select><button id="removeExcludedBtn" type="button">删除未纳入SKU</button></div><div class="help">筛选方式：商品搜索查商品/条码/类目；陈列柜段搜索查“立柜3m-柜1 第4层”这类位置；右侧下拉可按冰柜类型、陈列柜、具体位置筛选。可改字段：纳入、商品、等级、类目、条码、箱规、日销、体积、陈列柜段、陈列列数、单列容量、单列占宽。修改后门店执行、补货测算、柜段余量和空位建议都会联动。</div><div id="allocationTable" class="table-wrap"></div></section></section>
+    <section id="cabinets" class="view"><section class="panel"><div class="panel-title"><h2>柜段余量</h2><input id="cabinetSearch" type="search" placeholder="搜索柜型、柜号、位置"></div><div id="cabinetTable" class="table-wrap"></div></section></section>
+    <section id="suggestions" class="view"><section class="panel"><div class="panel-title controls"><h2>空位再分配建议</h2><select id="suggestCabinet"></select><button id="manualAddSkuBtn" type="button">手动新增SKU到该柜段</button></div><div class="help">建议不会自动应用。淘汰品释放柜段后，系统会按同柜别、空间不超宽、外储不超754L的条件，给出原位扩陈、移位移入或移位扩陈方案。</div><div class="trial-box"><h3>新品试算区</h3><div class="trial-grid"><label>商品名称<input id="newSkuName" type="text" placeholder="如：新品"></label><label>条码<input id="newSkuBarcode" type="text" placeholder="可不填"></label><label>等级<input id="newSkuGrade" type="text" value="A"></label><label>三级类目<input id="newSkuCategory" type="text" placeholder="如：预制菜"></label><label>长mm<input id="newSkuLength" type="number" min="0" step="1"></label><label>宽mm<input id="newSkuWidth" type="number" min="0" step="1"></label><label>高mm<input id="newSkuHeight" type="number" min="0" step="1"></label><label>体积L<input id="newSkuVolume" type="number" min="0" step="0.01" placeholder="可自动算"></label><label>箱规<input id="newSkuCarton" type="number" min="1" step="1" value="1"></label><label>日销<input id="newSkuDaily" type="number" min="0" step="0.001" value="0"></label><label>陈列列数<input id="newSkuCols" type="number" min="1" step="1" value="1"></label><label>单列容量<input id="newSkuPerCol" type="number" min="0" step="0.1" placeholder="可自动估"></label><button id="trialNewSkuBtn" type="button">试算推荐位置</button><button id="allStoreTrialBtn" type="button">一键测算全店上新</button></div><div id="newSkuPositionSuggestions" class="table-wrap"></div><h3>全店上新方案</h3><div id="allStoreSkuSuggestions" class="table-wrap"></div><div class="toolbar"><button id="applyAllStoreSkuBtn" type="button">应用勾选门店方案</button></div></div><div class="suggestion-full"><h3>快销品扩陈候选</h3><div id="expandSuggestions" class="table-wrap"></div></div></section></section>
+
+    <section id="newstore" class="view"><section class="panel"><div class="panel-title"><h2>新增门店测算</h2></div><div class="help">按实际冰柜录入配置，每行一个冰柜或一组同型号冰柜。格式：冰柜类型, 型号/名称, 数量, 内径尺寸。卧柜/冰淇淋柜尺寸可写“1988*697*459+360*697*199”；立柜可写“门数=4,层数=6,710*534*250”，系统只用第1-5层陈列，第6层为存储位。系统会先生成柜段，再按当前产品池、10%触发、754L外储、四级类目集中、柜段不超宽进行严格测算。</div><div class="trial-box"><h3>门店与冰柜配置</h3><div class="trial-grid"><label>门店名称<input id="newStoreName" type="text" placeholder="如：某某生活馆"></label><label>门店类型<input id="newStoreType" type="text" value="新店"></label><label>外储上限L<input id="newStoreExternalCap" type="number" min="0" step="1" value="754"></label><button id="loadStoreExampleBtn" type="button">填入示例</button><button id="trialStoreBtn" type="button">严格测算新增门店</button><button id="applyStoreBtn" type="button">追加为运营草稿</button></div><textarea id="newStoreCabinetConfig" placeholder="例：
+卧柜,2500,3,1988*697*459+360*697*199
+卧柜,2000,1,1488*697*459+360*697*199
+冰淇淋柜,1900,1,1386*697.5*424+325*697.5*164
+立柜,3m,1,门数=4,层数=6,710*534*250"></textarea></div><div id="newStoreSummary" class="metric-grid"></div><section class="panel"><div class="panel-title"><h2>新增门店柜段预览</h2></div><div id="newStoreCabinetPreview" class="table-wrap"></div></section><section class="panel"><div class="panel-title"><h2>新增门店SKU严格测算</h2></div><div id="newStoreSkuPreview" class="table-wrap"></div></section></section></section>
+    <section id="io" class="view"><section class="panel"><div class="panel-title"><h2>导入导出</h2></div><div class="toolbar"><button id="exportJsonBtn" type="button">导出当前方案JSON</button><button id="exportCsvBtn" type="button">导出排柜CSV</button><button id="restoreBtn" type="button" class="danger">恢复初始数据</button></div><textarea id="importBox" placeholder="粘贴之前导出的JSON"></textarea><div class="toolbar"><button id="importJsonBtn" type="button">导入方案JSON</button></div></section></section>
+
+    <section id="displaymap" class="view"><section class="panel"><div class="panel-title controls"><h2>门店陈列图</h2><button id="syncDisplayMapBtn" type="button">同步陈列图</button><button id="exportDisplayMapBtn" type="button">导出陈列图图片</button></div><div class="help">立柜按6层展示，第1-5层为陈列位，第6层固定为存储位；卧柜按分区展示，冰淇淋柜单独展示。现在支持整层拖动：把一整层或一整分区拖到目标层，系统会整层交换，不会出现单个SKU拖来拖去导致超宽。陈列图按当前同步/运营状态生成。</div><div id="displayMapCanvas" class="display-map"></div></section></section>
+    <section id="logic" class="view"><div class="logic-grid"><section class="panel"><h2>核心口径</h2><div id="logicRules" class="logic-text"></div></section><section class="panel"><h2>指标解释</h2><div class="logic-text"><p><strong>触发库存：</strong>满陈数的10%，低于或等于该水位时触发补货。</p><p><strong>最多可补箱数：</strong>同时考虑柜内剩余空间和754L外储上限，告诉门店本次最多能补几箱。</p><p><strong>动态P95峰值：</strong>按动态平均外储体积乘P95折算系数，作为偏保守的高峰容量参考。</p><p><strong>空位建议：</strong>释放柜段后，优先给出同柜别、不会超宽、不会超外储上限的扩陈或移位方案。</p></div></section></div></section>
+  </main>
+  <script src="data.js?v=20260709_final2_v2"></script>
+  <script src="app.js?v=20260709_final2_interactive_v2"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
