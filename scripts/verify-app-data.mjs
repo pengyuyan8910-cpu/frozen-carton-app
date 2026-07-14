@@ -65,8 +65,20 @@ export function verifyAppData(data) {
     if (box.used > 0 && !isIceCabinet(c) && left > 300) largeUsedLeft.push({ store: c.store, cabinet: c.label, position: c.position, left });
     if (box.used === 0) reserveEmptySegments.push({ store: c.store, cabinet: c.label, position: c.position, length: num(c.length) });
   }
-  if (overCabinets.length) errors.push(`柜段超宽 ${overCabinets.length} 个`);
-  if (largeUsedLeft.length) errors.push(`已陈列柜段剩余宽度大于300mm ${largeUsedLeft.length} 个`);
+  if (overCabinets.length) {
+    const details = overCabinets
+      .slice(0, 10)
+      .map(r => `${r.store}-${r.cabinet}-${r.position}（已用${r.used}mm/总${r.length}mm，超出${r.over}mm）`)
+      .join("；");
+    errors.push(`柜段超宽 ${overCabinets.length} 个：${details}`);
+  }
+  if (largeUsedLeft.length) {
+    const details = largeUsedLeft
+      .slice(0, 10)
+      .map(r => `${r.store}-${r.cabinet}-${r.position}（剩余${r.left}mm）`)
+      .join("；");
+    errors.push(`已陈列柜段剩余宽度大于300mm ${largeUsedLeft.length} 个：${details}`);
+  }
 
   const newStores = new Set((data.stores || []).filter(s => text(s.type).includes("新店")).map(s => s.store));
   const reservedRows = included.filter(r => {
