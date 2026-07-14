@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
@@ -45,6 +45,11 @@ async function main() {
   const oldData = await readLegacyData();
   const data = await sourceToAppData(sourcePath, oldData);
   const report = verifyAppData(data);
+  const sourceErrors = Array.isArray(data.meta?.sourceErrors) ? data.meta.sourceErrors : [];
+  if (sourceErrors.length) {
+    report.errors.push(...sourceErrors);
+    report.passed = false;
+  }
   const version = {
     sourceName: path.basename(sourcePath),
     sourcePath: path.relative(root, sourcePath).replace(/\\/g, "/"),
@@ -60,6 +65,13 @@ async function main() {
   if (!report.passed) {
     console.error("底表复核失败，已停止更新 app-data.json：");
     console.error(report.errors.join("\n"));
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      fs.appendFileSync(
+        process.env.GITHUB_STEP_SUMMARY,
+        `## 底表复核未通过\n\n${report.errors.map(error => `- ${error}`).join("\n")}\n\n未覆盖当前已发布的小程序数据。\n`,
+        "utf8"
+      );
+    }
     process.exit(1);
   }
   fs.writeFileSync(appDataPath, JSON.stringify(data, null, 2), "utf8");
@@ -71,6 +83,3 @@ main().catch(err => {
   console.error(err?.stack || err);
   process.exit(1);
 });
-
-
-
