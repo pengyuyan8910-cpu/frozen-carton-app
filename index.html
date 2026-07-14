@@ -58,15 +58,17 @@
 卧柜,2000,1,1488*697*459+360*697*199
 冰淇淋柜,1900,1,1386*697.5*424+325*697.5*164
 立柜,3m,1,门数=4,层数=6,710*534*250"></textarea></div><div id="newStoreSummary" class="metric-grid"></div><section class="panel"><div class="panel-title"><h2>新增门店柜段预览</h2></div><div id="newStoreCabinetPreview" class="table-wrap"></div></section><section class="panel"><div class="panel-title"><h2>新增门店SKU严格测算</h2></div><div id="newStoreSkuPreview" class="table-wrap"></div></section></section></section>
-    <section id="io" class="view"><section class="panel"><div class="panel-title"><h2>导入导出</h2></div><div class="toolbar"><button id="exportJsonBtn" type="button">导出当前方案JSON</button><button id="exportCsvBtn" type="button">导出排柜CSV</button><button id="restoreBtn" type="button" class="danger">恢复初始数据</button></div><textarea id="importBox" placeholder="粘贴之前导出的JSON"></textarea><div class="toolbar"><button id="importJsonBtn" type="button">导入方案JSON</button></div></section></section>
+    <section id="io" class="view"><section class="panel"><div class="panel-title"><h2>导入导出</h2></div><div class="help">双向更新：小程序调整、新增门店或全店上新后，先导出回传底表JSON；你可以把它上传到 GitHub 的 data/source/整箱到店数据测算_当前版.json，系统会自动复核并更新公共网址。CSV用于人工核对，不作为自动发布主入口。</div><div class="toolbar"><button id="exportJsonBtn" type="button">导出回传底表JSON</button><button id="exportCsvBtn" type="button">导出排柜CSV</button><button id="restoreBtn" type="button" class="danger">恢复初始数据</button></div><textarea id="importBox" placeholder="粘贴之前导出的JSON"></textarea><div class="toolbar"><button id="importJsonBtn" type="button">导入方案JSON</button></div></section></section>
 
     <section id="displaymap" class="view"><section class="panel"><div class="panel-title controls"><h2>门店陈列图</h2><button id="syncDisplayMapBtn" type="button">同步陈列图</button><button id="exportDisplayMapBtn" type="button">导出陈列图图片</button></div><div class="help">立柜按6层展示，第1-5层为陈列位，第6层固定为存储位；卧柜按分区展示，冰淇淋柜单独展示。现在支持整层拖动：把一整层或一整分区拖到目标层，系统会整层交换，不会出现单个SKU拖来拖去导致超宽。陈列图按当前同步/运营状态生成。</div><div id="displayMapCanvas" class="display-map"></div></section></section>
     <section id="logic" class="view"><div class="logic-grid"><section class="panel"><h2>核心口径</h2><div id="logicRules" class="logic-text"></div></section><section class="panel"><h2>指标解释</h2><div class="logic-text"><p><strong>触发库存：</strong>满陈数的10%，低于或等于该水位时触发补货。</p><p><strong>最多可补箱数：</strong>同时考虑柜内剩余空间和754L外储上限，告诉门店本次最多能补几箱。</p><p><strong>动态P95峰值：</strong>按动态平均外储体积乘P95折算系数，作为偏保守的高峰容量参考。</p><p><strong>空位建议：</strong>释放柜段后，优先给出同柜别、不会超宽、不会超外储上限的扩陈或移位方案。</p></div></section></div></section>
   </main>
-  <script src="data.js?v=20260709_final2_v2"></script>
-  <script src="app.js?v=20260709_final2_interactive_v2"></script>
+  <script src="bootstrap.js?v=20260713_auto_data"></script>
 </body>
 </html>
+
+
+
 
 
 

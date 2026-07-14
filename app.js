@@ -642,7 +642,7 @@ const opsViews=new Set(["replenish","allocation","cabinets","suggestions","newst
 if(!isOps&&opsViews.has(当前.页面)){当前.页面="store"}
 const banner=q("#modeBanner");
 if(banner)banner.textContent=isOps?"当前为运营模式：排柜调整、补货测算、柜段余量、空位建议可编辑；点击“同步至店员端”后，门店执行页按当前方案展示。":"";
-q("#dataNote").textContent=状态.meta.version+"｜初始数据："+状态.meta.source+"｜生成："+状态.meta.generatedAt;
+const 当前版本=window.UNIFIED_CARTON_VERSION||{};const 当前报告=window.UNIFIED_CARTON_REPORT||{};q("#dataNote").textContent=(状态.meta.version||"10%触发")+"｜底表："+(当前版本.sourceName||状态.meta.source||"当前版")+"｜"+(当前报告.passed===false?"复核失败":"复核通过")+"｜生成："+(状态.meta.generatedAt||当前版本.generatedAt||"");
 渲染总览();
 渲染门店();
 渲染商品();
@@ -714,7 +714,7 @@ if(q("#syncStoreViewBtn")){q("#syncStoreViewBtn").onmousedown=e=>请求同步至
 q("#resetFilterBtn").onclick=()=>{["overviewSearch","storeSearch","goodsSearch","riskSearch","replenishSearch","cabinetSearch","allocationSearch","allocationCabinetSearch","allocationTypeFilter","allocationCabNoFilter","allocationPosFilter","allocationSceneFilter"].forEach(id=>{const el=q("#"+id);if(el)el.value=""});清空新品试算();window.全店上新缓存={};window.新增门店测算缓存=null;渲染全部();完成提示("筛选已重置：搜索条件、新品试算、全店上新方案和新增门店草稿已清空。")};
 q("#removeExcludedBtn").onclick=()=>{const before=状态.skus.length;const beforeCurrent=门店SKU().length;状态.skus=状态.skus.filter(r=>r.included);const removed=before-状态.skus.length;const removedCurrent=beforeCurrent-门店SKU().length;保存();渲染全部();完成提示(removed>0?"删除完成：已删除未纳入SKU "+removed+" 行，其中当前门店 "+removedCurrent+" 行。":"删除完成：当前没有未纳入SKU可删除。")};
 
-q("#exportJsonBtn").onclick=()=>{导出("冻品整箱到店统一小程序方案.json",JSON.stringify(状态,null,2),"application/json;charset=utf-8");完成提示("导出完成：当前方案JSON已生成。")};
+q("#exportJsonBtn").onclick=()=>{导出("整箱到店数据测算_当前版.json",JSON.stringify(状态,null,2),"application/json;charset=utf-8");完成提示("导出完成：回传底表JSON已生成，可上传到 GitHub 的 data/source/整箱到店数据测算_当前版.json。")};
 q("#exportCsvBtn").onclick=()=>{const heads=["门店","商品","条码","等级","三级类目","陈列柜","陈列位","列数","单列容量","满陈","箱规","需外储","外储L","风险"];
 const lines=[heads.join(",")];
 状态.skus.forEach(r=>{const c=计算SKU(r);
@@ -775,7 +775,7 @@ function 新店压缩到可执行(pre){
   }
   return pre;
 }
-function 严格复核新增门店(pre){
+严格复核新增门店=function(pre){
   const errors=[];const warnings=[];const summary=新店汇总(pre);
   const cabs=pre.cabinets.map(c=>({...c,left:数(c.sourceLeft),used:数(c.sourceUsed),over:数(c.sourceLeft)<-0.001}));
   if(summary.suggested>数(状态.params.externalCapL))errors.push('建议外储容量 '+summary.suggested+'L 超过 '+状态.params.externalCapL+'L');
@@ -805,7 +805,7 @@ window.改新增门店SKU=(id,k,v)=>{
   新店重算用量(pre);
   渲染新增门店();
 };
-function 渲染新增门店(){
+渲染新增门店=function(){
   if(!q('#newStoreSummary'))return;
   const pre=window.新增门店测算缓存;
   if(!pre){q('#newStoreSummary').innerHTML='';q('#newStoreCabinetPreview').innerHTML='<div class="empty">请先录入门店名称和冰柜配置后测算。</div>';q('#newStoreSkuPreview').innerHTML='<div class="empty">暂无严格测算结果。</div>';return}
@@ -820,6 +820,8 @@ function 渲染新增门店(){
 
 if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密码通过前不显示运营端
 渲染全部();
+
+
 
 
 
