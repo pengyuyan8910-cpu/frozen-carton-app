@@ -22,9 +22,17 @@ function sourceTime(file) {
 
 function latestSource() {
   // 只认这一份固定底表，避免多个上传文件之间发生误读。
-  const fixedSource = path.join(sourceDir, "整箱到店数据测算_当前版.xlsx");
+  const expectedName = "整箱到店数据测算_当前版.xlsx";
+  const fixedSource = path.join(sourceDir, expectedName);
+  const workbookFiles = fs.existsSync(sourceDir)
+    ? fs.readdirSync(sourceDir).filter(file => /\.xlsx$/i.test(file) && !file.startsWith("~$"))
+    : [];
+  const unexpectedFiles = workbookFiles.filter(file => file !== expectedName);
+  if (unexpectedFiles.length) {
+    throw new Error(`检测到非指定底表：${unexpectedFiles.join("、")}。系统只读取 data/source/${expectedName}，请改名替换或删除多余文件。`);
+  }
   if (!fs.existsSync(fixedSource)) {
-    throw new Error(`未找到指定底表：data/source/整箱到店数据测算_当前版.xlsx。请替换该文件后再提交。`);
+    throw new Error(`未找到指定底表：data/source/${expectedName}。请按该文件名上传后再提交。`);
   }
   return fixedSource;
 }
