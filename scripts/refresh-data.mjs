@@ -21,17 +21,12 @@ function sourceTime(file) {
 }
 
 function latestSource() {
-  const files = fs.existsSync(sourceDir)
-    ? fs.readdirSync(sourceDir)
-      .filter(f => /\.(xlsx|json)$/i.test(f) && !f.startsWith("~$"))
-      .map(f => path.join(sourceDir, f))
-    : [];
-  const workbookFiles = files.filter(file => /\.xlsx$/i.test(file));
-  const fallbackJsonFiles = files.filter(file => /\.json$/i.test(file));
-  // 底表更新必须优先读取Excel；JSON只用于没有底表时的应急恢复。
-  const candidates = workbookFiles.length ? workbookFiles : fallbackJsonFiles;
-  if (!candidates.length) throw new Error(`没有找到底表来源文件：${sourceDir}`);
-  return candidates.sort((a, b) => sourceTime(b) - sourceTime(a))[0];
+  // 只认这一份固定底表，避免多个上传文件之间发生误读。
+  const fixedSource = path.join(sourceDir, "整箱到店数据测算_当前版.xlsx");
+  if (!fs.existsSync(fixedSource)) {
+    throw new Error(`未找到指定底表：data/source/整箱到店数据测算_当前版.xlsx。请替换该文件后再提交。`);
+  }
+  return fixedSource;
 }
 
 async function readLegacyData() {
