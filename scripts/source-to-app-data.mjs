@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 
 const text = v => String(v ?? "").trim();
@@ -316,11 +316,22 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
     moqDays: num(first(p, ["起订量周转"]))
   })).filter(p => p.name);
 
+  // 汇总表的有效SKU池是业务口径，必须与有效SKU明细一致，不能静默覆盖。
+  const actualPoolCount = productPool.filter(p => p.active !== false).length;
+  const sourceErrors = storeRows
+    .map(r => ({
+      store: text(first(r, ["门店"])),
+      declaredPoolCount: num(first(r, ["有效SKU池"]))
+    }))
+    .filter(r => r.store && r.declaredPoolCount > 0 && r.declaredPoolCount !== actualPoolCount)
+    .map(r => `${r.store}：门店汇总“有效SKU池”为${r.declaredPoolCount}，但“71SKU有效池明细”实际为${actualPoolCount}个有效SKU。请补齐/删除明细后再上传。`);
+
   return reconcileStoreSummaries({
     meta: {
       source: sourceName,
       generatedAt: new Date().toLocaleString("zh-CN", { hour12: false }),
-      version: "10%触发-当前版-自动同步"
+      version: "10%触发-当前版-自动同步",
+      sourceErrors
     },
     params: {
       triggerRate: 0.1,
@@ -337,5 +348,3 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
     externalRows: sheets["10%触发_外储明细"] || []
   });
 }
-
-
