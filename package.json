@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "frozen-carton-unified-app",
   "version": "1.0.0",
   "private": true,
@@ -6,9 +6,10 @@
   "scripts": {
     "refresh-data": "node scripts/refresh-data.mjs",
     "verify:data": "node scripts/verify-app-data.mjs",
-    "check": "node --check app.js && node --check bootstrap.js && node --check scripts/refresh-data.mjs && node --check scripts/verify-app-data.mjs && node --check scripts/source-to-app-data.mjs"
+    "check": "node --check app.js && node --check bootstrap.js && node --check scripts/refresh-data.mjs && node --check scripts/verify-app-data.mjs && node --check scripts/source-to-app-data.mjs && node --check scripts/app-data-to-workbook.mjs"
   },
   "dependencies": {
     "xlsx": "^0.18.5"
   }
 }
+
