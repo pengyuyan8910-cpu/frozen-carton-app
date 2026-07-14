@@ -25,10 +25,13 @@ function latestSource() {
     ? fs.readdirSync(sourceDir)
       .filter(f => /\.(xlsx|json)$/i.test(f) && !f.startsWith("~$"))
       .map(f => path.join(sourceDir, f))
-      .sort((a, b) => sourceTime(b) - sourceTime(a))
     : [];
-  if (!files.length) throw new Error(`没有找到底表来源文件：${sourceDir}`);
-  return files[0];
+  const workbookFiles = files.filter(file => /\.xlsx$/i.test(file));
+  const fallbackJsonFiles = files.filter(file => /\.json$/i.test(file));
+  // 底表更新必须优先读取Excel；JSON只用于没有底表时的应急恢复。
+  const candidates = workbookFiles.length ? workbookFiles : fallbackJsonFiles;
+  if (!candidates.length) throw new Error(`没有找到底表来源文件：${sourceDir}`);
+  return candidates.sort((a, b) => sourceTime(b) - sourceTime(a))[0];
 }
 
 async function readLegacyData() {
