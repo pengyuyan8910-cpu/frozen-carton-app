@@ -61,7 +61,8 @@ export function verifyAppData(data) {
   for (const box of useMap.values()) {
     const c = box.cabinet;
     const left = num(c.length) - box.used;
-    if (left < -0.001) overCabinets.push({ store: c.store, cabinet: c.label, position: c.position, length: num(c.length), used: box.used, over: -left });
+    // 宽度数据有小数换算误差；超过1mm才视为实际无法陈列。
+    if (left < -1) overCabinets.push({ store: c.store, cabinet: c.label, position: c.position, length: num(c.length), used: box.used, over: -left });
     if (box.used > 0 && !isIceCabinet(c) && left > 300) largeUsedLeft.push({ store: c.store, cabinet: c.label, position: c.position, left });
     if (box.used === 0) reserveEmptySegments.push({ store: c.store, cabinet: c.label, position: c.position, length: num(c.length) });
   }
