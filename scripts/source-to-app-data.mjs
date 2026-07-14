@@ -24,7 +24,8 @@ function sheetRows(workbook, name) {
 }
 
 async function readWorkbook(filePath) {
-  const xlsx = await import("xlsx");
+  const xlsxModule = await import("xlsx");
+  const xlsx = xlsxModule.default || xlsxModule;
   const workbook = xlsx.readFile(filePath, { cellDates: false });
   workbook.utils = xlsx.utils;
   const sheets = {};
