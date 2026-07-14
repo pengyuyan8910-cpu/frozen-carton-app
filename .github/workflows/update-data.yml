@@ -3,7 +3,7 @@ name: 更新底表并发布小程序数据
 on:
   push:
     paths:
-      - "data/source/整箱到店数据测算_当前版.xlsx"
+      - "data/source/*.xlsx"
       - "scripts/**"
       - "package.json"
       - ".github/workflows/update-data.yml"
