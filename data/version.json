@@ -1,8 +1,8 @@
 {
-  "sourceName": "整箱到店数据测算_当前版.json",
-  "sourcePath": "data/source/整箱到店数据测算_当前版.json",
-  "generatedAt": "2026-07-14T07:54:25.028Z",
-  "appVersion": "10%触发-四级品类强集中-新店柜4预留修正版",
+  "sourceName": "整箱到店数据测算_当前版.xlsx",
+  "sourcePath": "data/source/整箱到店数据测算_当前版.xlsx",
+  "generatedAt": "2026-07-14T08:05:06.936Z",
+  "appVersion": "10%触发-当前版-自动同步",
   "verifyPassed": true,
   "verifyErrorCount": 0,
   "verifyWarningCount": 0
