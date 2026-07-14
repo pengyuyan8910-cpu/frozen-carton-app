@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 
 const text = v => String(v ?? "").trim();
@@ -174,3 +174,4 @@ if (import.meta.url === `file://${process.argv[1].replace(/\\/g, "/")}`) {
     process.exit(1);
   }
 }
+
