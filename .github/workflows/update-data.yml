@@ -1,9 +1,10 @@
-name: 更新底表并发布小程序数据
+﻿name: 更新底表并发布小程序数据
 
 on:
   push:
     paths:
       - "data/source/*.xlsx"
+      - "data/inbox/*.json"
       - "scripts/**"
       - "package.json"
       - ".github/workflows/update-data.yml"
@@ -12,7 +13,6 @@ on:
 permissions:
   contents: write
 
-# 连续上传或连续修改脚本时，只保留最后一次，避免两个任务同时推送数据。
 concurrency:
   group: frozen-carton-data-refresh
   cancel-in-progress: true
@@ -23,26 +23,22 @@ jobs:
     steps:
       - name: 拉取仓库
         uses: actions/checkout@v4
-
       - name: 准备 Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
       - name: 安装依赖
         run: npm install
-
       - name: 底表转换并复核
         run: npm run refresh-data
-
       - name: 提交已复核数据
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/app-data.json data/verify-report.json data/version.json
+          git add -A data/source data/inbox data/app-data.json data/verify-report.json data/version.json
           if git diff --cached --quiet; then
             echo "没有新的数据变更需要提交"
           else
-            git commit -m "chore: 自动更新小程序底表数据"
+            git commit -m "chore: 自动更新小程序与标准Excel底表"
             git push
           fi
