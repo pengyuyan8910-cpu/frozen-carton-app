@@ -1,8 +1,9 @@
 {
   "meta": {
     "source": "自动严格排柜草稿",
+    "configFile": "data/new-store/新增门店配置.xlsx",
     "version": "10%触发-新增门店严格草稿",
-    "generatedAt": "2026/7/21 11:07:31"
+    "generatedAt": "2026/7/21 11:11:15"
   },
   "params": {
     "triggerRate": 0.1,
