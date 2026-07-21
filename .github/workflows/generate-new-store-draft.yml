@@ -1,0 +1,38 @@
+﻿name: 新增门店严格排柜草稿
+on:
+  push:
+    paths:
+      - 'data/new-store/新增门店配置.xlsx'
+      - 'data/new-store/新增门店配置.json'
+      - 'scripts/generate-new-store-draft.mjs'
+      - 'scripts/source-to-app-data.mjs'
+      - 'scripts/app-data-to-workbook.mjs'
+      - 'package.json'
+      - '.github/workflows/generate-new-store-draft.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: frozen-carton-new-store-draft
+  cancel-in-progress: true
+jobs:
+  generate-draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: node scripts/generate-new-store-draft.mjs
+      - name: 提交草稿结果
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/drafts
+          if git diff --cached --quiet; then
+            echo "新增门店草稿没有变化"
+          else
+            git commit -m "chore: 自动生成新增门店严格排柜草稿"
+            git push
+          fi

@@ -1,0 +1,11 @@
+﻿{
+  "name": "示例生活馆",
+  "type": "新店",
+  "externalCapL": 754,
+  "cabinets": [
+    {"type":"卧柜","model":"2500mm","quantity":3,"dimensions":"1988*697*459+360*697*199"},
+    {"type":"卧柜","model":"2000mm","quantity":1,"dimensions":"1488*697*459+360*697*199"},
+    {"type":"冰淇淋柜","model":"1900mm","quantity":1,"dimensions":"1386*697.5*424+325*697.5*164"},
+    {"type":"立柜","model":"3m","quantity":1,"doors":4,"layers":6,"length":710,"depth":534,"height":250}
+  ]
+}
