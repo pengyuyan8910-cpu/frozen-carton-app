@@ -1,9 +1,9 @@
-﻿name: 新增门店严格排柜草稿
+name: 新增门店严格排柜草稿
 on:
   push:
     paths:
-      - 'data/new-store/新增门店配置.xlsx'
-      - 'data/new-store/新增门店配置.json'
+      - 'data/new-store/*.xlsx'
+      - 'data/new-store/*.json'
       - 'scripts/generate-new-store-draft.mjs'
       - 'scripts/source-to-app-data.mjs'
       - 'scripts/app-data-to-workbook.mjs'
@@ -24,8 +24,28 @@ jobs:
         with:
           node-version: 20
       - run: npm install
-      - run: node scripts/generate-new-store-draft.mjs
+      - name: 识别本次上传的门店配置
+        id: config
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            file=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" -- 'data/new-store/*.xlsx' 'data/new-store/*.json' | grep -v -E 'README|模板' | head -n 1 || true)
+            if [ -z "$file" ]; then
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            file='data/new-store/新增门店配置.xlsx'
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+          echo "path=$file" >> "$GITHUB_OUTPUT"
+      - name: 生成严格排柜草稿
+        if: steps.config.outputs.run == 'true'
+        env:
+          NEW_STORE_CONFIG_PATH: ${{ steps.config.outputs.path }}
+        run: node scripts/generate-new-store-draft.mjs
       - name: 提交草稿结果
+        if: steps.config.outputs.run == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
