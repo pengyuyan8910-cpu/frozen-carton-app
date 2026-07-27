@@ -37,7 +37,11 @@ jobs:
               exit 0
             fi
           else
-            file='data/new-store/新增门店配置.xlsx'
+            if [ -f 'data/new-store/新增门店配置.xlsx' ]; then
+              file='data/new-store/新增门店配置.xlsx'
+            else
+              file='data/new-store/新增门店配置.json'
+            fi
           fi
           echo "run=true" >> "$GITHUB_OUTPUT"
           echo "path=$file" >> "$GITHUB_OUTPUT"
