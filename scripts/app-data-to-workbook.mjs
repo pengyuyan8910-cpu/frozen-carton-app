@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 
 const text = value => String(value ?? "").trim();
@@ -22,13 +22,13 @@ function externalMetrics(row, data) {
   return { full, trigger, receivable, inShelf, external, staticL, avgL };
 }
 
-function sheet(xlsx, rows, name, widths = []) {
-  const ws = xlsx.utils.json_to_sheet(rows);
-  if (rows.length) ws['!autofilter'] = { ref: xlsx.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: Math.max(0, Object.keys(rows[0]).length - 1), r: rows.length } }) };
+function sheet(xlsx, rows, name, widths = [], emptyHeaders = []) {
+  const ws = rows.length ? xlsx.utils.json_to_sheet(rows) : xlsx.utils.aoa_to_sheet([emptyHeaders]);
+  const widthCount = rows.length ? Object.keys(rows[0]).length : emptyHeaders.length;
+  if (widthCount) ws['!autofilter'] = { ref: xlsx.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: widthCount - 1, r: Math.max(0, rows.length) } }) };
   if (widths.length) ws['!cols'] = widths.map(w => ({ wch: w }));
   return { name, ws };
 }
-
 function excelCol(index) {
   let value = index + 1;
   let out = '';
@@ -72,12 +72,12 @@ function applyFormulaDrivenNewStore(workbook, xlsx) {
 
   for (let row = 2; row <= sku.lastRow; row++) {
     const v = name => `$${c(name)}${row}`;
-    formula(skuWs, `${c('本柜占宽mm')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,${v('陈列列数')}*${v('单列占宽mm')})`);
-    formula(skuWs, `${c('最大限值满陈数')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,${v('陈列列数')}*${v('单列容量')})`);
-    formula(skuWs, `${c('陈列行满陈')}${row}`, `=${v('最大限值满陈数')}`);
-    formula(skuWs, `${c('同SKU合计满陈')}${row}`, `=SUMIFS(${skuRange('最大限值满陈数')},${skuRange('门店')},${v('门店')},${skuRange('条码')},${v('条码')})`);
+    formula(skuWs, `${c('占用总宽mm')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,${v('陈列列数')}*${v('单列占宽mm')})`);
+    formula(skuWs, `${c('陈列行满陈')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,${v('陈列列数')}*${v('单列容量')})`);
+    formula(skuWs, `${c('同SKU合计满陈')}${row}`, `=SUMIFS(${skuRange('陈列行满陈')},${skuRange('门店')},${v('门店')},${skuRange('条码')},${v('条码')})`);
     formula(skuWs, `${c('触发库存')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,ROUNDUP(${v('陈列行满陈')}*${params}2,0))`);
-    formula(skuWs, `${c('到货后可入柜件数')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,MIN(${v('箱规')},MAX(0,${v('陈列行满陈')}-${v('触发库存')})))`);
+    formula(skuWs, `${c('触发时陈列可收货量')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,MAX(0,${v('陈列行满陈')}-${v('触发库存')}))`);
+    formula(skuWs, `${c('到货后可入柜件数')}${row}`, `=IF(${v('纳入状态')}<>"纳入",0,MIN(${v('箱规')},${v('触发时陈列可收货量')}))`);
     formula(skuWs, `${c('需外储件数')}${row}`, `=IF(OR(${v('纳入状态')}<>"纳入",${v('是否计入外储汇总')}<>"是"),0,MAX(0,${v('箱规')}-${v('到货后可入柜件数')}))`);
     formula(skuWs, `${c('静态外储L')}${row}`, `=${v('需外储件数')}*${v('单品体积L')}`);
     formula(skuWs, `${c('动态平均外储L')}${row}`, `=${v('静态外储L')}/2`);
@@ -90,7 +90,7 @@ function applyFormulaDrivenNewStore(workbook, xlsx) {
 
   for (let row = 2; row <= cab.lastRow; row++) {
     const v = name => `$${b(name)}${row}`;
-    formula(cabinetWs, `${b('已用宽度mm')}${row}`, `=SUMIFS(${skuRange('本柜占宽mm')},${skuRange('门店')},${v('门店')},${skuRange('陈列柜')},${v('陈列柜')},${skuRange('具体位置')},${v('具体位置')},${skuRange('纳入状态')},"纳入")`);
+    formula(cabinetWs, `${b('已用宽度mm')}${row}`, `=SUMIFS(${skuRange('占用总宽mm')},${skuRange('门店')},${v('门店')},${skuRange('优化后陈列柜')},${v('陈列柜')},${skuRange('优化后具体位置')},${v('具体位置')},${skuRange('纳入状态')},"纳入")`);
     formula(cabinetWs, `${b('剩余宽度mm')}${row}`, `=${v('总宽度mm')}-${v('已用宽度mm')}`);
   }
 
@@ -144,22 +144,25 @@ export async function writeAppDataWorkbook(data, outputPath, options = {}) {
     const calc = externalMetrics(row, data);
     return {
       '门店': row.store, '商品名称': row.name, '条码': row.barcode, '等级': row.grade, '综合排名': row.rank,
-      '二级类目': row.category2, '三级类目': row.category3, '四级类目': row.category4, '场景分区': row.sceneGroup,
-      '四级品类集中组': row.familyGroup, '冰柜类型': row.cabinetTypeFilter, '陈列柜': row.cabinetLabel,
-      '具体位置': row.position, '陈列角色': row.placementRole, '纳入状态': row.included === false ? '暂不纳入' : '纳入', '陈列列数': row.displayCols,
-      '单列容量': row.perCol, '单列占宽mm': row.faceWidth, '本柜占宽mm': num(row.displayCols) * num(row.faceWidth), '最大限值满陈数': calc.full,
+      '二级类目': row.category2, '三级类目': row.category3, '场景分区': row.sceneGroup,
+      '四级品类集中组': row.familyGroup || row.category4, '三级类目集中组': row.category3,
+      '冰柜类型': row.cabinetTypeFilter, '优化后陈列柜': row.cabinetLabel,
+      '优化后具体位置': row.position, '陈列角色': row.placementRole || '单陈列', '主/副陈列': row.placementRole || '主陈列', '纳入状态': row.included === false ? '暂不纳入' : '纳入',
+      '箱规': row.carton, '陈列列数': row.displayCols, '单列占宽mm': row.faceWidth,
+      '占用总宽mm': num(row.displayCols) * num(row.faceWidth), '单列容量': row.perCol,
       '陈列行满陈': row.rowFull || calc.full, '同SKU合计满陈': row.skuFull || calc.full,
-      '箱规': row.carton, '单品长毫米': row.length, '单品宽毫米': row.width, '单品高毫米': row.height,
-      '单品体积L': row.volume, '标准化单店日销件': row.dailyQty, '标准化单店日销额': row.dailySales,
-      '起订量': row.moq, '起订量周转': row.moqDays, '触发库存': calc.trigger,
+      '触发库存': calc.trigger, '触发时陈列可收货量': calc.receivable,
       '到货后可入柜件数': calc.inShelf, '需外储件数': calc.external,
       '静态外储L': round(calc.staticL, 4), '动态平均外储L': round(calc.avgL, 4),
       '在架库存周转天数': num(row.dailyQty) ? round(calc.full / num(row.dailyQty), 2) : '',
-      '外储周转天数': row.externalDaysOverride || (num(row.dailyQty) ? round(calc.external / num(row.dailyQty), 2) : ''), '外储周转风险': row.riskOverride,
-      '是否计入外储汇总': row.externalOwner === false ? '否' : '是'
+      '外储周转天数': row.externalDaysOverride || (num(row.dailyQty) ? round(calc.external / num(row.dailyQty), 2) : ''),
+      '外储周转风险': row.riskOverride, '标准化单店日销件': row.dailyQty, '标准化单店日销额': row.dailySales,
+      '起订量': row.moq, '起订量周转': row.moqDays,
+      '单品长毫米': row.length, '单品宽毫米': row.width, '单品高毫米': row.height, '单品体积L': row.volume,
+      '是否计入外储汇总': row.externalOwner === false ? '否' : '是',
+      '场景优化说明': row.sourceNote || '新增门店严格排柜初始方案'
     };
   });
-
   const usedByCabinet = new Map();
   for (const row of data.skus || []) {
     if (row.included === false || !row.cabinetKey) continue;
@@ -182,23 +185,32 @@ export async function writeAppDataWorkbook(data, outputPath, options = {}) {
   }));
   const products = (data.productPool || []).map(row => ({
     '商品名称': row.name, '条码': row.barcode, '等级': row.grade, '综合排名': row.rank,
-    '二级类目': row.category2, '三级类目': row.category3, '四级类目': row.category4,
+    '二级类目': row.category2, '三级类目': row.category3, '场景分区': row.sceneGroup, '四级品类集中组': row.familyGroup || row.category4, '四级类目': row.category4,
     '单品长毫米': row.length, '单品宽毫米': row.width, '单品高毫米': row.height, '单品体积L': row.volume,
     '箱规': row.carton, '标准化单店日销件': row.dailyQty, '标准化单店日销额': row.dailySales,
     '起订量': row.moq, '起订量周转': row.moqDays, '有效可排柜': row.active === false ? '否' : '是'
   }));
   const external = (data.skus || []).filter(row => externalMetrics(row, data).external > 0).map(row => {
     const calc = externalMetrics(row, data);
-    return { '门店': row.store, '商品名称': row.name, '条码': row.barcode, '等级': row.grade, '陈列柜': row.cabinetLabel,
-      '具体位置': row.position, '箱规': row.carton, '需外储件数': calc.external, '单品体积L': row.volume,
-      '静态外储L': round(calc.staticL, 4), '动态平均外储L': round(calc.avgL, 4), '外储周转天数': row.externalDaysOverride,
-      '外储周转风险': row.riskOverride };
+    return {
+      '门店': row.store, '商品名称': row.name, '条码': row.barcode, '等级': row.grade, '综合排名': row.rank,
+      '三级类目': row.category3, '场景分区': row.sceneGroup, '四级品类集中组': row.familyGroup || row.category4,
+      '冰柜类型': row.cabinetTypeFilter, '陈列柜': row.cabinetLabel, '具体位置': row.position,
+      '主/副陈列': row.placementRole || '主陈列', '箱规': row.carton,
+      '同SKU合计满陈': row.skuFull || calc.full, '触发库存': calc.trigger,
+      '触发时陈列可收货量': calc.receivable, '到货后可入柜件数': calc.inShelf,
+      '需外储件数': calc.external, '单品体积L': row.volume,
+      '静态外储L': round(calc.staticL, 4), '动态平均外储L': round(calc.avgL, 4),
+      '外储周转天数': row.externalDaysOverride || (num(row.dailyQty) ? round(calc.external / num(row.dailyQty), 2) : ''),
+      '外储周转风险': row.riskOverride
+    };
   });
-  const ruleRows = (data.rules || []).length ? data.rules : [{ '规则': '10%触发', '说明': '库存小于等于最大限值满陈数的10%时触发整箱补货。' }];
+  const externalHeaders = ['门店','商品名称','条码','等级','综合排名','三级类目','场景分区','四级品类集中组','冰柜类型','陈列柜','具体位置','主/副陈列','箱规','同SKU合计满陈','触发库存','触发时陈列可收货量','到货后可入柜件数','需外储件数','单品体积L','静态外储L','动态平均外储L','外储周转天数','外储周转风险'];
+  const excludedHeaders = ['门店','触发口径','执行状态','暂不纳入原因','等级','综合排名','二级类目','三级类目','四级类目','商品名称','条码'];  const ruleRows = (data.rules || []).length ? data.rules : [{ '规则': '10%触发', '说明': '库存小于等于最大限值满陈数的10%时触发整箱补货。' }];
   const entries = [
     sheet(xlsx, stores, '10%触发_门店汇总'), sheet(xlsx, skus, '10%触发_SKU明细'),
-    sheet(xlsx, external, '10%触发_外储明细'), sheet(xlsx, cabinets, '10%触发_柜段余量'),
-    sheet(xlsx, excluded, '10%触发_未排入SKU清单'), sheet(xlsx, products, '71SKU有效池明细'),
+    sheet(xlsx, external, '10%触发_外储明细', [], externalHeaders), sheet(xlsx, cabinets, '10%触发_柜段余量'),
+    sheet(xlsx, excluded, '10%触发_未排入SKU清单', [], excludedHeaders), sheet(xlsx, products, '71SKU有效池明细'),
     sheet(xlsx, ruleRows, '测算规则说明')
   ];
   if (formulaDriven) entries.push(sheet(xlsx, [
@@ -212,6 +224,10 @@ export async function writeAppDataWorkbook(data, outputPath, options = {}) {
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   xlsx.writeFile(workbook, outputPath, { compression: true });
 }
+
+
+
+
 
 
 
