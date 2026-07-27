@@ -2,16 +2,16 @@
   "passed": true,
   "errors": [],
   "warnings": [
-    "excluded sku count: 17"
+    "excluded sku count: 14"
   ],
   "metrics": {
-    "skuCount": 54,
-    "missingSkuCount": 17,
-    "directSku": 24,
-    "externalSku": 30,
-    "staticExternalL": 999.7,
-    "dynamicAvgExternalL": 499.8,
-    "dynamicP95L": 620.7,
-    "suggestedExternalL": 745
+    "skuCount": 57,
+    "missingSkuCount": 14,
+    "directSku": 26,
+    "externalSku": 31,
+    "staticExternalL": 971.7,
+    "dynamicAvgExternalL": 485.8,
+    "dynamicP95L": 603.3,
+    "suggestedExternalL": 724
   }
 }
