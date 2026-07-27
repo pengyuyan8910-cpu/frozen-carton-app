@@ -1,21 +1,21 @@
 {
   "passed": true,
-  "generatedAt": "2026-07-27T08:55:39.415Z",
+  "generatedAt": "2026-07-27T10:53:36.727Z",
   "source": "整箱到店数据测算_当前版.xlsx",
   "version": "10%触发-当前版-自动同步",
   "errors": [],
   "warnings": [],
   "metrics": {
-    "storeCount": 29,
-    "skuRows": 1897,
-    "includedRows": 1897,
+    "storeCount": 30,
+    "skuRows": 1970,
+    "includedRows": 1970,
     "uniqueSkuPool": 71,
-    "cabinetRows": 704,
+    "cabinetRows": 742,
     "excludedRows": 222,
     "productPool": 71,
     "overCabinetCount": 0,
     "largeUsedLeftCount": 0,
-    "reserveEmptySegmentCount": 15,
+    "reserveEmptySegmentCount": 23,
     "newStoreReservedRows": 0,
     "sameTypeSplitCount": 0,
     "iceWrongCount": 0,
@@ -114,6 +114,54 @@
         "cabinet": "卧柜2505-柜3",
         "position": "分区2",
         "length": 400
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜1",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜2",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜3",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第1层",
+        "length": 710
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第3层",
+        "length": 710
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第4层",
+        "length": 710
+      },
+      {
+        "store": "和县生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第6层",
+        "length": 710
       }
     ],
     "sameTypeSplit": [],
@@ -378,6 +426,15 @@
         "dynamicAvgL": 443.1,
         "dynamicP95L": 548.3,
         "suggestedExternalL": 658
+      },
+      {
+        "store": "和县生活馆",
+        "includedSku": 71,
+        "directSku": 54,
+        "externalSku": 17,
+        "dynamicAvgL": 179.6,
+        "dynamicP95L": 275,
+        "suggestedExternalL": 331
       }
     ]
   }
