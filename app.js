@@ -1026,6 +1026,26 @@ function cloudAccountNote(msg, isError) {
   const el = document.getElementById('cloudAccountStatus');
   if (el) { el.textContent = msg; el.className = 'admin-note' + (isError ? ' error' : ''); }
 }
+function translateCloudError(msg) {
+  if (!msg || typeof msg !== 'string') return '发生未知错误，请稍后重试。';
+  const map = {
+    'Invalid login credentials': '邮箱或密码错误，请检查后重试。',
+    'Email not confirmed': '邮箱尚未验证，请查收验证邮件后登录。',
+    'User already registered': '该邮箱已注册，请直接登录。',
+    'Password should be at least 6 characters': '密码长度不足，请至少输入6位。',
+    'Unable to validate email address: invalid format': '邮箱格式不正确，请检查后重试。',
+    'Signup requires a valid password': '请输入有效的密码。',
+    'Email rate limit exceeded': '操作过于频繁，请稍后再试。',
+    'User not found': '用户不存在，请检查邮箱或注册新账号。',
+    'JWT expired': '登录已过期，请重新登录。',
+    'column carton_documents.revision does not exist': '数据库配置异常，请刷新页面后重试。',
+    'CONFLICT:': '数据版本冲突，系统将自动合并。',
+  };
+  for (const key in map) {
+    if (msg.includes(key) || msg.toLowerCase().includes(key.toLowerCase())) return map[key];
+  }
+  return msg;
+}
 
 async function refreshCloudAccount() {
   if (!cloudClient) { cloudAccountNote('云端组件未配置。请先创建 Supabase 项目，然后将 URL 和 Key 填入 app.js 中的 SUPABASE_URL 和 SUPABASE_ANON_KEY。', true); return null; }
@@ -1041,20 +1061,20 @@ async function cloudSignUp() {
   const email = q('#cloudEmail').value.trim(), pwd = q('#cloudPassword').value;
   if (!email || pwd.length < 8) return cloudNote('请填写邮箱和至少 8 位密码。', true);
   const { error } = await cloudClient.auth.signUp({ email, password: pwd, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
-  if (error) return cloudNote(error.message, true);
+  if (error) return cloudNote(translateCloudError(error.message), true);
   cloudNote('注册成功，请前往邮箱完成验证后再登录。');
 }
 async function cloudResendVerification() {
   const email = q('#cloudEmail').value.trim();
   if (!email) return cloudNote('请先填写邮箱。', true);
   const { error } = await cloudClient.auth.resend({ type: 'signup', email, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
-  if (error) return cloudNote(error.message, true);
+  if (error) return cloudNote(translateCloudError(error.message), true);
   cloudNote('验证邮件已重新发送，请查收邮箱和垃圾邮件夹。');
 }
 async function cloudSignIn() {
   const email = q('#cloudEmail').value.trim(), pwd = q('#cloudPassword').value;
   const { error } = await cloudClient.auth.signInWithPassword({ email, password: pwd });
-  if (error) return cloudNote(error.message, true);
+  if (error) return cloudNote(translateCloudError(error.message), true);
   await refreshCloudAccount();
   cloudNote('登录成功，请先拉取云端数据。');
 }
@@ -1074,8 +1094,8 @@ async function requireCloudSession() {
 async function pullCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在拉取云端数据...');
-  const { data, error } = await cloudClient.from('carton_documents').select('payload,revision,updated_at').eq('id', 'main').maybeSingle();
-  if (error) return cloudNote(error.message, true);
+  const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
+  if (error) return cloudNote(translateCloudError(error.message), true);
   if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
   const p = data.payload;
   if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
@@ -1104,7 +1124,7 @@ async function pushCloudData() {
   cloudNote('正在保存至云端...');
   const payload = cloudCopyState(发布状态);
   const { data, error } = await cloudClient.rpc('save_carton_document', { p_payload: payload, p_expected_revision: docRevision });
-  if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(error.message, true); }
+  if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : docRevision + 1;
   cloudBaseData = structuredClone(payload);
@@ -1146,8 +1166,8 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
 }
 
 async function autoMergeCloudConflict() {
-  const { data: remote, error } = await cloudClient.from('carton_documents').select('payload,revision').eq('id', 'main').maybeSingle();
-  if (error || !remote) return cloudNote(error ? error.message : '无法读取云端最新版本。', true);
+  const { data: remote, error } = await cloudClient.from('carton_documents').select('payload,doc_revision').eq('id', 'main').maybeSingle();
+  if (error || !remote) return cloudNote(error ? translateCloudError(error.message) : '无法读取云端最新版本。', true);
 
   const conflicts = [];
   const base = cloudBaseData || remote.payload;
