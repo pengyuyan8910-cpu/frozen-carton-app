@@ -1009,7 +1009,7 @@ const SUPABASE_URL = 'https://pdlxrolyftdolkwmdwrg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ehwIMLAALRzB4VRZwQ4quA_yS7Yh7Gg';
 
 let cloudClient = null;
-let cloudRevision = 0;
+let docRevision = 0;
 let cloudBaseData = null;
 
 (function initCloud() {
@@ -1060,7 +1060,7 @@ async function cloudSignIn() {
 }
 async function cloudSignOut() {
   await cloudClient.auth.signOut();
-  cloudRevision = 0; cloudBaseData = null;
+  docRevision = 0; cloudBaseData = null;
   await refreshCloudAccount();
   cloudNote('已退出云端账号。');
 }
@@ -1076,7 +1076,7 @@ async function pullCloudData() {
   cloudNote('正在拉取云端数据...');
   const { data, error } = await cloudClient.from('carton_documents').select('payload,revision,updated_at').eq('id', 'main').maybeSingle();
   if (error) return cloudNote(error.message, true);
-  if (!data) { cloudRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
+  if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
   const p = data.payload;
   if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
 
@@ -1087,11 +1087,11 @@ async function pullCloudData() {
   草稿状态 = 清理计算缓存(读取本地(草稿保存键) || cloudState);
   发布状态 = 清理计算缓存(读取本地(发布保存键) || cloudState);
   切换数据源();
-  cloudRevision = data.revision;
+  docRevision = data.doc_revision;
   cloudBaseData = structuredClone(p);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
-  cloudNote('已拉取云端第 ' + cloudRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
+  cloudNote('已拉取云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
 }
 
 /* --- 保存至云端 --- */
@@ -1103,15 +1103,15 @@ async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
   const payload = cloudCopyState(发布状态);
-  const { data, error } = await cloudClient.rpc('save_carton_document', { p_payload: payload, p_expected_revision: cloudRevision });
+  const { data, error } = await cloudClient.rpc('save_carton_document', { p_payload: payload, p_expected_revision: docRevision });
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(error.message, true); }
   const row = Array.isArray(data) ? data[0] : data;
-  cloudRevision = row ? row.revision : cloudRevision + 1;
+  docRevision = row ? row.doc_revision : docRevision + 1;
   cloudBaseData = structuredClone(payload);
   安全保存本地(草稿保存键, payload);
   草稿状态 = 清理计算缓存(payload);
   if (!当前是否运营()) 发布状态 = 草稿状态;
-  cloudNote('已保存至云端第 ' + cloudRevision + ' 版。');
+  cloudNote('已保存至云端第 ' + docRevision + ' 版。');
 }
 
 /* --- 冲突自动合并 --- */
@@ -1161,17 +1161,17 @@ async function autoMergeCloudConflict() {
     return cloudNote('发现 ' + conflicts.length + ' 处数据冲突：' + list + '。冲突处已采用云端版本，请核对后重新保存。', true);
   }
 
-  const { data, error: saveErr } = await cloudClient.rpc('save_carton_document', { p_payload: merged, p_expected_revision: remote.revision });
+  const { data, error: saveErr } = await cloudClient.rpc('save_carton_document', { p_payload: merged, p_expected_revision: remote.doc_revision });
   if (saveErr) return cloudNote(saveErr.message, true);
   const row = Array.isArray(data) ? data[0] : data;
-  cloudRevision = row ? row.revision : remote.revision + 1;
+  docRevision = row ? row.doc_revision : remote.doc_revision + 1;
   cloudBaseData = structuredClone(merged);
   安全保存本地(草稿保存键, merged);
   安全保存本地(发布保存键, merged);
   草稿状态 = 清理计算缓存(merged); 发布状态 = 草稿状态; 切换数据源();
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
-  cloudNote('已自动合并无冲突修改并保存为第 ' + cloudRevision + ' 版。');
+  cloudNote('已自动合并无冲突修改并保存为第 ' + docRevision + ' 版。');
 }
 
 /* --- 事件绑定（延迟等待 DOM 就绪） --- */
