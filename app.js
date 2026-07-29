@@ -999,3 +999,198 @@ window.改新增门店SKU=(id,k,v)=>{
 
 if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密码通过前不显示运营端
 渲染全部();
+
+/* ==================== Supabase 云端多人协作 ====================
+ * 配置说明：创建 Supabase 项目后，将以下两个占位符替换为实际值
+ *   SUPABASE_URL: 项目 URL (Settings → API → Project URL)
+ *   SUPABASE_ANON_KEY: 匿名公钥 (Settings → API → anon/public key)
+ * ================================================================= */
+const SUPABASE_URL = '__SUPABASE_URL__';
+const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+
+let cloudClient = null;
+let cloudRevision = 0;
+let cloudBaseData = null;
+
+(function initCloud() {
+  if (window.supabase && SUPABASE_URL !== '__SUPABASE_URL__' && SUPABASE_URL.length > 10) {
+    cloudClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+})();
+
+function cloudNote(msg, isError) {
+  const el = document.getElementById('cloudSyncStatus');
+  if (el) { el.textContent = msg; el.className = 'admin-note' + (isError ? ' error' : ''); }
+}
+function cloudAccountNote(msg, isError) {
+  const el = document.getElementById('cloudAccountStatus');
+  if (el) { el.textContent = msg; el.className = 'admin-note' + (isError ? ' error' : ''); }
+}
+
+async function refreshCloudAccount() {
+  if (!cloudClient) { cloudAccountNote('云端组件未配置。请先创建 Supabase 项目，然后将 URL 和 Key 填入 app.js 中的 SUPABASE_URL 和 SUPABASE_ANON_KEY。', true); return null; }
+  try {
+    const { data: { session } } = await cloudClient.auth.getSession();
+    if (session && session.user) cloudAccountNote('已登录：' + session.user.email + '。');
+    else cloudAccountNote('尚未登录云端协作账号。');
+    return session;
+  } catch (e) { cloudAccountNote('云端连接失败：' + (e.message || '未知错误'), true); return null; }
+}
+
+async function cloudSignUp() {
+  const email = q('#cloudEmail').value.trim(), pwd = q('#cloudPassword').value;
+  if (!email || pwd.length < 8) return cloudNote('请填写邮箱和至少 8 位密码。', true);
+  const { error } = await cloudClient.auth.signUp({ email, password: pwd, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
+  if (error) return cloudNote(error.message, true);
+  cloudNote('注册成功，请前往邮箱完成验证后再登录。');
+}
+async function cloudResendVerification() {
+  const email = q('#cloudEmail').value.trim();
+  if (!email) return cloudNote('请先填写邮箱。', true);
+  const { error } = await cloudClient.auth.resend({ type: 'signup', email, options: { emailRedirectTo: window.location.origin + window.location.pathname } });
+  if (error) return cloudNote(error.message, true);
+  cloudNote('验证邮件已重新发送，请查收邮箱和垃圾邮件夹。');
+}
+async function cloudSignIn() {
+  const email = q('#cloudEmail').value.trim(), pwd = q('#cloudPassword').value;
+  const { error } = await cloudClient.auth.signInWithPassword({ email, password: pwd });
+  if (error) return cloudNote(error.message, true);
+  await refreshCloudAccount();
+  cloudNote('登录成功，请先拉取云端数据。');
+}
+async function cloudSignOut() {
+  await cloudClient.auth.signOut();
+  cloudRevision = 0; cloudBaseData = null;
+  await refreshCloudAccount();
+  cloudNote('已退出云端账号。');
+}
+async function requireCloudSession() {
+  const session = await refreshCloudAccount();
+  if (!session) { cloudNote('请先登录云端协作账号。', true); return null; }
+  return session;
+}
+
+/* --- 拉取云端数据 --- */
+async function pullCloudData() {
+  if (!await requireCloudSession()) return;
+  cloudNote('正在拉取云端数据...');
+  const { data, error } = await cloudClient.from('carton_documents').select('payload,revision,updated_at').eq('id', 'main').maybeSingle();
+  if (error) return cloudNote(error.message, true);
+  if (!data) { cloudRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
+  const p = data.payload;
+  if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
+
+  const cloudState = structuredClone(p);
+  确保产品池(cloudState);
+  安全保存本地(草稿保存键, cloudState);
+  安全保存本地(发布保存键, cloudState);
+  草稿状态 = 清理计算缓存(读取本地(草稿保存键) || cloudState);
+  发布状态 = 清理计算缓存(读取本地(发布保存键) || cloudState);
+  切换数据源();
+  cloudRevision = data.revision;
+  cloudBaseData = structuredClone(p);
+  建立基准(草稿状态); 建立基准(发布状态);
+  渲染全部();
+  cloudNote('已拉取云端第 ' + cloudRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
+}
+
+/* --- 保存至云端 --- */
+const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+function cloudCopyState(st) { return JSON.parse(JSON.stringify(清理交互痕迹(st))); }
+
+async function pushCloudData() {
+  if (!await requireCloudSession()) return;
+  cloudNote('正在保存至云端...');
+  const payload = cloudCopyState(发布状态);
+  const { data, error } = await cloudClient.rpc('save_carton_document', { p_payload: payload, p_expected_revision: cloudRevision });
+  if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(error.message, true); }
+  const row = Array.isArray(data) ? data[0] : data;
+  cloudRevision = row ? row.revision : cloudRevision + 1;
+  cloudBaseData = structuredClone(payload);
+  安全保存本地(草稿保存键, payload);
+  草稿状态 = 清理计算缓存(payload);
+  if (!当前是否运营()) 发布状态 = 草稿状态;
+  cloudNote('已保存至云端第 ' + cloudRevision + ' 版。');
+}
+
+/* --- 冲突自动合并 --- */
+function mergeRecord(base, local, remote, label, conflicts) {
+  if (cloudSame(local, base)) return remote;
+  if (cloudSame(remote, base)) return local;
+  if (cloudSame(local, remote)) return local;
+  if (!base || !local || !remote || typeof base !== 'object' || Array.isArray(base)) { conflicts.push(label); return remote; }
+  const merged = { ...remote };
+  const keys = new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(remote)]);
+  for (const k of keys) {
+    if (k === 'id' || k === 'key' || k === 'store') continue;
+    const bv = base[k], lv = local[k], rv = remote[k];
+    if (cloudSame(lv, bv)) continue;
+    if (cloudSame(rv, bv) || cloudSame(lv, rv)) { merged[k] = lv; continue; }
+    conflicts.push(label + '.' + k);
+  }
+  return merged;
+}
+
+function mergeListByKey(baseList, localList, remoteList, keyField, label, conflicts) {
+  const idx = list => { const m = new Map(); for (const x of (list || [])) { const k = x[keyField]; if (k != null) m.set(k, x); } return m; };
+  const bm = idx(baseList), lm = idx(localList), rm = idx(remoteList);
+  const allKeys = [...new Set([...rm.keys(), ...lm.keys()])];
+  return allKeys.map(k => {
+    const b = bm.get(k), l = lm.get(k), r = rm.get(k);
+    if (!l && r) return r;
+    if (l && !r) return l;
+    if (!l && !r) return null;
+    return mergeRecord(b, l, r, label + '#' + k, conflicts);
+  }).filter(Boolean);
+}
+
+async function autoMergeCloudConflict() {
+  const { data: remote, error } = await cloudClient.from('carton_documents').select('payload,revision').eq('id', 'main').maybeSingle();
+  if (error || !remote) return cloudNote(error ? error.message : '无法读取云端最新版本。', true);
+
+  const conflicts = [];
+  const base = cloudBaseData || remote.payload;
+  const local = cloudCopyState(发布状态);
+  const merged = structuredClone(remote.payload);
+  merged.stores = mergeListByKey(base.stores, local.stores, remote.payload.stores, 'store', '门店', conflicts);
+  merged.skus = mergeListByKey(base.skus, local.skus, remote.payload.skus, 'id', 'SKU', conflicts);
+  merged.cabinets = mergeListByKey(base.cabinets, local.cabinets, remote.payload.cabinets, 'key', '柜段', conflicts);
+  if (conflicts.length) {
+    const list = conflicts.slice(0, 5).join('、');
+    return cloudNote('发现 ' + conflicts.length + ' 处数据冲突：' + list + '。冲突处已采用云端版本，请核对后重新保存。', true);
+  }
+
+  const { data, error: saveErr } = await cloudClient.rpc('save_carton_document', { p_payload: merged, p_expected_revision: remote.revision });
+  if (saveErr) return cloudNote(saveErr.message, true);
+  const row = Array.isArray(data) ? data[0] : data;
+  cloudRevision = row ? row.revision : remote.revision + 1;
+  cloudBaseData = structuredClone(merged);
+  安全保存本地(草稿保存键, merged);
+  安全保存本地(发布保存键, merged);
+  草稿状态 = 清理计算缓存(merged); 发布状态 = 草稿状态; 切换数据源();
+  建立基准(草稿状态); 建立基准(发布状态);
+  渲染全部();
+  cloudNote('已自动合并无冲突修改并保存为第 ' + cloudRevision + ' 版。');
+}
+
+/* --- 事件绑定（延迟等待 DOM 就绪） --- */
+(function bindCloudEvents() {
+  var tries = 0;
+  function tryBind() {
+    var cloudBtn = document.getElementById('cloudBtn');
+    if (!cloudBtn) { if (++tries < 30) setTimeout(tryBind, 100); return; }
+    function on(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
+    on('cloudBtn', function () { document.getElementById('cloudDialog').showModal(); refreshCloudAccount(); });
+    on('closeCloudBtn', function () { document.getElementById('cloudDialog').close(); });
+    on('cloudSignUpBtn', cloudSignUp);
+    on('cloudResendBtn', cloudResendVerification);
+    on('cloudSignInBtn', cloudSignIn);
+    on('cloudSignOutBtn', cloudSignOut);
+    on('cloudPullBtn', pullCloudData);
+    on('cloudPushBtn', pushCloudData);
+    var dialog = document.getElementById('cloudDialog');
+    if (dialog) dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });
+  }
+  tryBind();
+})();

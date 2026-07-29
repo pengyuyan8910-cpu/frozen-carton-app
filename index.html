@@ -20,6 +20,7 @@
       <select id="storeSelect" aria-label="选择门店"></select>
       <label class="switch"><input id="opsMode" type="checkbox"><span>运营模式</span></label>
       <button id="syncStoreViewBtn" class="ops-only sync-btn" type="button">同步并退出到店员端</button>
+      <button id="cloudBtn" type="button">☁ 云端协作</button>
       <button id="resetFilterBtn" type="button">重置筛选</button>
     </div>
   </header>
@@ -64,6 +65,41 @@
   </main>
   <script src="bootstrap.js?v=20260713_auto_data"></script>
 <script src="layout-preview-v5.js?v=20260728_layout_preview_5"></script>
+
+<dialog id="cloudDialog" class="editor-dialog admin-dialog">
+  <div class="dialog-header">
+    <div>
+      <p class="cloud-eyebrow">多人协作</p>
+      <h2>云端数据协作</h2>
+    </div>
+    <button id="closeCloudBtn" class="icon-btn" type="button">&times;</button>
+  </div>
+  <div id="cloudAccountStatus" class="admin-note">尚未登录云端协作账号。</div>
+  <section class="admin-section">
+    <h3>1. 登录或注册</h3>
+    <p>使用白名单内的邮箱注册或登录。注册后需前往邮箱完成验证。</p>
+    <label class="field">Email <input id="cloudEmail" type="email" autocomplete="email" placeholder="name@example.com"></label>
+    <label class="field">密码 <input id="cloudPassword" type="password" minlength="8" autocomplete="current-password" placeholder="至少 8 位"></label>
+    <div class="dialog-actions">
+      <button id="cloudSignInBtn" class="btn-primary" type="button">登录</button>
+      <button id="cloudSignUpBtn" type="button">注册</button>
+      <button id="cloudResendBtn" type="button">重发验证邮件</button>
+      <button id="cloudSignOutBtn" class="danger" type="button">退出登录</button>
+    </div>
+  </section>
+  <section class="admin-section">
+    <h3>2. 拉取与保存</h3>
+    <p>请先拉取最新云端版本，修改后保存。若其他成员已更新，系统会自动合并不冲突的修改。</p>
+    <div class="dialog-actions">
+      <button id="cloudPullBtn" type="button">拉取云端数据</button>
+      <button id="cloudPushBtn" class="btn-primary" type="button">保存至云端</button>
+    </div>
+    <div id="cloudSyncStatus" class="admin-note">等待登录后操作。</div>
+  </section>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js?v=20260729_cloud_collab"></script>
 </body>
 </html>
 
