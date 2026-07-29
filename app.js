@@ -1005,8 +1005,8 @@ if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密�
  *   SUPABASE_URL: 项目 URL (Settings → API → Project URL)
  *   SUPABASE_ANON_KEY: 匿名公钥 (Settings → API → anon/public key)
  * ================================================================= */
-const SUPABASE_URL = '__SUPABASE_URL__';
-const SUPABASE_ANON_KEY = '__SUPABASE_ANON_KEY__';
+const SUPABASE_URL = 'https://pdlxrolyftdolkwmdwrg.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ehwIMLAALRzB4VRZwQ4quA_yS7Yh7Gg';
 
 let cloudClient = null;
 let cloudRevision = 0;
