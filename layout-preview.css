@@ -1,0 +1,40 @@
+/* Local layout preview only. No business data, calculations, or interactions are changed. */
+#displaymap .planogram-panel { padding: 28px !important; background: #f5f7f8 !important; border: 1px solid #d9e2e1 !important; border-radius: 14px !important; box-shadow: none !important; }
+#displaymap .planogram-head { display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 20px !important; padding: 0 0 20px !important; margin-bottom: 22px !important; border-bottom: 1px solid #dce5e3 !important; }
+#displaymap .planogram-head h2 { font-size: 24px !important; line-height: 1.2 !important; margin: 0 !important; color: #18343a !important; }
+#displaymap .planogram-controls { padding: 14px !important; background: #fff !important; border: 1px solid #d9e4e2 !important; border-radius: 10px !important; gap: 14px !important; margin-bottom: 24px !important; }
+#displaymap .display-map-layout { grid-template-columns: minmax(0, 1fr) 440px !important; gap: 28px !important; align-items: start !important; }
+#displaymap .display-map-shell { min-width: 0 !important; overflow: visible !important; background: #fff !important; border: 1px solid #d9e4e2 !important; border-radius: 12px !important; padding: 20px !important; }
+#displaymap .display-map { display: grid !important; grid-template-columns: 1fr !important; gap: 24px !important; min-width: 0 !important; zoom: var(--planogram-scale, 1) !important; }
+#displaymap .map-cabinet { border: 1px solid #cfdedb !important; border-radius: 12px !important; background: #fff !important; padding: 16px !important; box-shadow: 0 5px 16px rgba(31,65,61,.06) !important; }
+#displaymap .map-cabinet-head { padding: 0 2px 14px !important; margin-bottom: 14px !important; border-bottom: 1px solid #e2e9e7 !important; font-size: 18px !important; }
+#displaymap .map-grid.vertical, #displaymap .map-grid.chest { grid-template-columns: 1fr !important; gap: 16px !important; }
+#displaymap .map-layer[data-cab-key] { display: grid !important; grid-template-columns: 190px minmax(0, 1fr) !important; gap: 16px !important; align-items: stretch !important; min-height: 142px !important; padding: 12px !important; background: #f7faf9 !important; border: 1px solid #d9e5e1 !important; border-radius: 10px !important; }
+#displaymap .map-layer > .layer-monitor { grid-column: 1 !important; grid-row: 1 !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-self: stretch !important; min-height: unset !important; padding: 15px !important; background: #f1f5f4 !important; border: 1px solid #d2dfdc !important; border-radius: 9px !important; box-shadow: none !important; }
+#displaymap .layer-monitor-title { font-size: 17px !important; color: #173f42 !important; }
+#displaymap .layer-monitor-stats { display: grid !important; grid-template-columns: 1fr !important; gap: 9px !important; margin-top: 10px !important; }
+#displaymap .layer-monitor-stats span { display: flex !important; justify-content: space-between !important; align-items: baseline !important; gap: 8px !important; font-size: 12px !important; color: #5c6c69 !important; }
+#displaymap .layer-monitor-stats strong { font-size: 17px !important; color: #1b3737 !important; }
+#displaymap .layer-monitor-bar { margin-top: 12px !important; height: 8px !important; }
+#displaymap .map-layer > .map-layer-content { grid-column: 2 !important; grid-row: 1 !important; min-width: 0 !important; display: flex !important; align-content: flex-start !important; align-items: stretch !important; flex-wrap: wrap !important; gap: 12px !important; padding: 2px !important; background: transparent !important; }
+#displaymap .map-item { min-width: 145px !important; max-width: 260px !important; min-height: 94px !important; padding: 12px !important; border: 1px solid #cbd9e6 !important; border-radius: 9px !important; box-shadow: 0 2px 7px rgba(30,55,75,.06) !important; }
+#displaymap .map-item-name { font-size: 14px !important; line-height: 1.4 !important; }
+#displaymap .map-item-meta { margin-top: 7px !important; font-size: 12px !important; line-height: 1.45 !important; }
+#displaymap .display-monitor { position: sticky !important; top: 18px !important; max-height: calc(100vh - 36px) !important; overflow: auto !important; padding: 16px !important; gap: 16px !important; background: #fff !important; border: 1px solid #d8e3e1 !important; border-radius: 12px !important; box-shadow: 0 9px 24px rgba(31,65,61,.10) !important; }
+#displaymap .monitor-title { font-size: 20px !important; color: #173f42 !important; margin: 0 !important; }
+#displaymap .monitor-help { padding: 10px 12px !important; background: #f5f8f7 !important; border: 1px solid #e0e8e5 !important; border-radius: 8px !important; font-size: 13px !important; }
+#displaymap .selection-card { padding: 16px !important; background: #eef7ff !important; border: 2px solid #2f80ed !important; border-radius: 12px !important; box-shadow: none !important; }
+#displaymap .selection-head strong { font-size: 18px !important; color: #18334a !important; }
+#displaymap .side-summary, #displaymap .selection-editor, #displaymap .frozen-metrics { padding: 12px 0 !important; gap: 9px !important; }
+#displaymap .side-summary div, #displaymap .frozen-metrics div { padding: 9px !important; border-radius: 7px !important; }
+#displaymap .external-watch { padding: 12px !important; border-radius: 8px !important; font-size: 13px !important; }
+#displaymap .side-pool { padding: 14px !important; border-radius: 10px !important; background: #fff !important; }
+#displaymap .pool-tabs { gap: 8px !important; margin: 10px 0 !important; }
+#displaymap .pool-tabs button { padding: 8px 6px !important; border-radius: 7px !important; font-size: 12px !important; }
+#displaymap .pool-list { gap: 10px !important; max-height: 48vh !important; }
+#displaymap .pool-item { display: block !important; padding: 12px !important; border-radius: 9px !important; }
+#displaymap .pool-item-main span { font-size: 14px !important; white-space: normal !important; line-height: 1.35 !important; }
+#displaymap .pool-item-main small { white-space: normal !important; line-height: 1.45 !important; margin: 6px 0 !important; }
+#displaymap .staging-zone { left: 24px !important; right: auto !important; bottom: 24px !important; width: min(420px, calc(100vw - 48px)) !important; max-height: 34vh !important; border-radius: 12px !important; }
+@media (max-width: 1380px) { #displaymap .display-map-layout { grid-template-columns: 1fr !important; } #displaymap .display-monitor { position: static !important; max-height: none !important; grid-column: 1 !important; } #displaymap .pool-list { max-height: 300px !important; } }
+@media (max-width: 760px) { #displaymap .planogram-panel { padding: 14px !important; } #displaymap .planogram-head { align-items: flex-start !important; flex-direction: column !important; } #displaymap .map-layer[data-cab-key] { grid-template-columns: 1fr !important; } #displaymap .map-layer > .layer-monitor, #displaymap .map-layer > .map-layer-content { grid-column: 1 !important; } #displaymap .map-layer > .layer-monitor { grid-row: 1 !important; } #displaymap .map-layer > .map-layer-content { grid-row: 2 !important; } #displaymap .staging-zone { left: 12px !important; bottom: 12px !important; width: calc(100vw - 24px) !important; } }

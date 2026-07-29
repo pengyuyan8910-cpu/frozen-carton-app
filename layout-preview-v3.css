@@ -1,0 +1,9 @@
+/* Preview v3: staging is a temporary working dock, not part of the right product panel. */
+#displaymap .staging-zone { order: initial !important; position: fixed !important; left: 26px !important; right: auto !important; bottom: 24px !important; width: min(400px, calc(100vw - 52px)) !important; max-height: 34vh !important; overflow: auto !important; padding: 14px !important; border: 2px dashed #c99028 !important; border-radius: 12px !important; background: #fffaf0 !important; box-shadow: 0 16px 36px rgba(92,57,10,.22) !important; z-index: 650 !important; }
+#displaymap .staging-zone:before { position: absolute !important; right: 12px !important; top: -13px !important; display: inline-flex !important; margin: 0 !important; background: #9a6411 !important; }
+#displaymap .staging-zone h3 { margin: 0 0 5px !important; font-size: 17px !important; }
+#displaymap .staging-zone p { margin: 0 0 10px !important; }
+#displaymap .staging-items { display: grid !important; grid-template-columns: 1fr !important; gap: 8px !important; min-height: 48px !important; }
+#displaymap .staging-item { display: block !important; width: auto !important; min-height: 52px !important; padding: 10px !important; border: 1px dashed #c99028 !important; border-radius: 8px !important; background: #fff !important; }
+#displaymap .display-monitor > .staging-zone { grid-column: auto !important; }
+@media (max-width: 760px) { #displaymap .staging-zone { left: 12px !important; bottom: 12px !important; width: calc(100vw - 24px) !important; } }
