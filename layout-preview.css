@@ -36,5 +36,33 @@
 #displaymap .pool-item-main span { font-size: 14px !important; white-space: normal !important; line-height: 1.35 !important; }
 #displaymap .pool-item-main small { white-space: normal !important; line-height: 1.45 !important; margin: 6px 0 !important; }
 #displaymap .staging-zone { left: 24px !important; right: auto !important; bottom: 24px !important; width: min(420px, calc(100vw - 48px)) !important; max-height: 34vh !important; border-radius: 12px !important; }
+
+/* Fixed category picker: always opens below and never covers the top navigation. */
+#displaymap .planogram-controls label:has(#displayMapCategoryFilter) { position: relative !important; overflow: visible !important; z-index: 80 !important; }
+#displaymap .category-filter-native-hidden { position: absolute !important; width: 1px !important; height: 1px !important; opacity: 0 !important; pointer-events: none !important; }
+#displaymap .planogram-category-picker { position: relative !important; min-width: 190px !important; }
+#displaymap .category-picker-toggle { width: 100% !important; min-width: 190px !important; padding: 0 34px 0 12px !important; text-align: left !important; font-weight: 600 !important; background: #fff !important; position: relative !important; }
+#displaymap .category-picker-toggle:after { content: '▾'; position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: #66756e; }
+#displaymap .category-picker-menu { position: absolute !important; left: 0 !important; top: calc(100% + 6px) !important; z-index: 1200 !important; width: min(320px, calc(100vw - 48px)) !important; padding: 10px !important; border: 1px solid #cbd9d2 !important; border-radius: 10px !important; background: #fff !important; box-shadow: 0 14px 34px rgba(25,54,43,.18) !important; }
+#displaymap .category-picker-menu[hidden] { display: none !important; }
+#displaymap .category-picker-search { width: 100% !important; margin-bottom: 8px !important; border-color: #b8cbc1 !important; }
+#displaymap .category-picker-options { display: grid !important; gap: 4px !important; max-height: 320px !important; overflow: auto !important; }
+#displaymap .category-picker-option { height: auto !important; min-height: 34px !important; padding: 7px 9px !important; border: 0 !important; border-radius: 7px !important; text-align: left !important; background: #fff !important; font-weight: 500 !important; }
+#displaymap .category-picker-option:hover { background: #edf6f1 !important; }
+#displaymap .category-picker-option.active { background: #17694b !important; color: #fff !important; font-weight: 800 !important; }
+
+/* The right search field remains focusable and filters in place without rebuilding itself. */
+#displaymap #displayMapPoolSearch { pointer-events: auto !important; user-select: text !important; position: relative !important; z-index: 5 !important; }
+#displaymap .pool-filter-empty { grid-column: 1 / -1 !important; }
+
+#displaymap .pool-item[hidden], #displaymap .category-picker-option[hidden], #displaymap .pool-filter-empty[hidden] { display: none !important; }
+
+/* Remove artificial trailing height and stop scroll anchoring jumps. */
+body.planogram-active main { min-height: 0 !important; padding-bottom: 14px !important; }
+#displaymap.view.active, #displaymap .planogram-panel, #displaymap .display-map-layout, #displaymap .display-map-shell, #displaymap .display-map { min-height: 0 !important; height: auto !important; }
+#displaymap .planogram-panel { padding-bottom: 16px !important; margin-bottom: 0 !important; }
+#displaymap .display-map-layout, #displaymap .display-map-shell, #displaymap .display-map, #displaymap .display-monitor { overflow-anchor: none !important; }
+#displaymap #displayStagingHost:empty, #displaymap #displayStagingHost[hidden] { display: none !important; }
+
 @media (max-width: 1380px) { #displaymap .display-map-layout { grid-template-columns: 1fr !important; } #displaymap .display-monitor { position: static !important; max-height: none !important; grid-column: 1 !important; } #displaymap .pool-list { max-height: 300px !important; } }
-@media (max-width: 760px) { #displaymap .planogram-panel { padding: 14px !important; } #displaymap .planogram-head { align-items: flex-start !important; flex-direction: column !important; } #displaymap .map-layer[data-cab-key] { grid-template-columns: 1fr !important; } #displaymap .map-layer > .layer-monitor, #displaymap .map-layer > .map-layer-content { grid-column: 1 !important; } #displaymap .map-layer > .layer-monitor { grid-row: 1 !important; } #displaymap .map-layer > .map-layer-content { grid-row: 2 !important; } #displaymap .staging-zone { left: 12px !important; bottom: 12px !important; width: calc(100vw - 24px) !important; } }
+@media (max-width: 760px) { #displaymap .planogram-panel { padding: 14px !important; } #displaymap .planogram-head { align-items: flex-start !important; flex-direction: column !important; } #displaymap .map-layer[data-cab-key] { grid-template-columns: 1fr !important; } #displaymap .map-layer > .layer-monitor, #displaymap .map-layer > .map-layer-content { grid-column: 1 !important; } #displaymap .map-layer > .layer-monitor { grid-row: 1 !important; } #displaymap .map-layer > .map-layer-content { grid-row: 2 !important; } #displaymap .staging-zone { left: 12px !important; bottom: 12px !important; width: calc(100vw - 24px) !important; } #displaymap .planogram-category-picker, #displaymap .category-picker-toggle { min-width: 160px !important; width: 100% !important; } }
