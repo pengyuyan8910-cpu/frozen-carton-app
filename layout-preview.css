@@ -66,3 +66,13 @@ body.planogram-active main { min-height: 0 !important; padding-bottom: 14px !imp
 
 @media (max-width: 1380px) { #displaymap .display-map-layout { grid-template-columns: 1fr !important; } #displaymap .display-monitor { position: static !important; max-height: none !important; grid-column: 1 !important; } #displaymap .pool-list { max-height: 300px !important; } }
 @media (max-width: 760px) { #displaymap .planogram-panel { padding: 14px !important; } #displaymap .planogram-head { align-items: flex-start !important; flex-direction: column !important; } #displaymap .map-layer[data-cab-key] { grid-template-columns: 1fr !important; } #displaymap .map-layer > .layer-monitor, #displaymap .map-layer > .map-layer-content { grid-column: 1 !important; } #displaymap .map-layer > .layer-monitor { grid-row: 1 !important; } #displaymap .map-layer > .map-layer-content { grid-row: 2 !important; } #displaymap .staging-zone { left: 12px !important; bottom: 12px !important; width: calc(100vw - 24px) !important; } #displaymap .planogram-category-picker, #displaymap .category-picker-toggle { min-width: 160px !important; width: 100% !important; } }
+
+/* v20260730_v6: stable right-side search and compact lifecycle/planogram height. */
+#displaymap .pool-search { position: relative !important; z-index: 30 !important; pointer-events: auto !important; }
+#displaymap .pool-search input,
+#displaymap #displayMapPoolSearch { display: block !important; width: 100% !important; min-width: 0 !important; max-width: none !important; pointer-events: auto !important; user-select: text !important; touch-action: manipulation !important; background: #fff !important; }
+#displaymap .pool-list { min-height: 0 !important; }
+#displaymap .pool-list > .empty[hidden] { display: none !important; }
+#displaymap .display-monitor { overflow-anchor: none !important; }
+#lifecycle.product-lifecycle-host { min-height: 0 !important; height: auto !important; overflow-anchor: none !important; }
+#productLifecycleFrame { display: block !important; width: 100% !important; min-height: 0 !important; height: 620px; border: 0 !important; overflow-anchor: none !important; }

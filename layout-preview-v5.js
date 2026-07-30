@@ -1,4 +1,4 @@
-/* Planogram fixes: stable filters/search, compact scrolling, and editable Excel export. */
+/* Planogram fixes v20260730_v6: stable search, compact iframe height, and editable Excel export. */
 (function () {
   'use strict';
 
@@ -8,6 +8,9 @@
   let poolQuery = '';
   let excelJsPromise = null;
   let categoryObserver = null;
+  let planogramObserver = null;
+  let lifecycleResizeQueued = false;
+  const lifecycleObservedDocs = new WeakSet();
 
   function text(node) {
     return (node && node.textContent || '').trim();
@@ -192,21 +195,23 @@
     if (!monitor) return;
     const input = monitor.querySelector('#displayMapPoolSearch');
     if (input && input.value !== poolQuery) input.value = poolQuery;
-    const query = poolQuery.trim().toLowerCase();
+    const query = poolQuery.trim().toLocaleLowerCase('zh-CN');
     const list = monitor.querySelector('.pool-list');
     if (!list) return;
     let visible = 0;
     list.querySelectorAll('.pool-item').forEach(function (item) {
-      const matched = !query || item.textContent.toLowerCase().includes(query);
+      const matched = !query || item.textContent.toLocaleLowerCase('zh-CN').includes(query);
       item.hidden = !matched;
       if (matched) visible += 1;
     });
+    const originalEmpty = list.querySelector(':scope > .empty:not(.pool-filter-empty)');
+    if (originalEmpty) originalEmpty.hidden = Boolean(query);
     let empty = list.querySelector('.pool-filter-empty');
     if (!visible && query) {
       if (!empty) {
         empty = document.createElement('div');
         empty.className = 'empty pool-filter-empty';
-        empty.textContent = '没有匹配的商品';
+        empty.textContent = '没有匹配的SKU';
         list.appendChild(empty);
       }
       empty.hidden = false;
@@ -215,17 +220,44 @@
     }
   }
 
+  function bindPoolSearchElement() {
+    const input = document.querySelector('#displayMapMonitor #displayMapPoolSearch');
+    if (!input) return false;
+    input.oninput = null;
+    input.onchange = null;
+    if (input.value !== poolQuery) input.value = poolQuery;
+    if (input.dataset.stablePoolSearchBound !== 'true') {
+      const handle = function (event) {
+        poolQuery = input.value;
+        event.stopImmediatePropagation();
+        applyPoolFilter();
+      };
+      input.addEventListener('input', handle, true);
+      input.addEventListener('search', handle, true);
+      input.addEventListener('keydown', function (event) { event.stopPropagation(); }, true);
+      input.addEventListener('click', function (event) { event.stopPropagation(); }, true);
+      input.dataset.stablePoolSearchBound = 'true';
+    }
+    applyPoolFilter();
+    return true;
+  }
+
   function installPoolSearchFix() {
-    document.addEventListener('input', function (event) {
+    const intercept = function (event) {
       const input = event.target;
-      if (!(input instanceof HTMLInputElement) || input.id !== 'displayMapPoolSearch') return;
+      if (!input || input.id !== 'displayMapPoolSearch') return;
       poolQuery = input.value;
       event.stopImmediatePropagation();
       applyPoolFilter();
+    };
+    document.addEventListener('input', intercept, true);
+    document.addEventListener('search', intercept, true);
+    document.addEventListener('focusin', function (event) {
+      if (event.target?.id === 'displayMapPoolSearch') bindPoolSearchElement();
     }, true);
-
     document.getElementById('storeSelect')?.addEventListener('change', function () {
       poolQuery = '';
+      requestAnimationFrame(bindPoolSearchElement);
     });
   }
 
@@ -313,6 +345,99 @@
     else if (host) host.hidden = false;
   }
 
+  function lifecycleContentHeight(frame) {
+    try {
+      const doc = frame?.contentDocument;
+      if (!doc?.body) return 0;
+      const bodyRect = doc.body.getBoundingClientRect();
+      const candidates = [
+        doc.querySelector('.topbar'),
+        doc.querySelector('.safe-banner'),
+        doc.querySelector('.tabs'),
+        doc.querySelector('main'),
+        ...doc.querySelectorAll('dialog[open]')
+      ].filter(Boolean);
+      let bottom = 0;
+      candidates.forEach(function (node) {
+        const rect = node.getBoundingClientRect();
+        if (Number.isFinite(rect.bottom)) bottom = Math.max(bottom, rect.bottom - bodyRect.top);
+      });
+      return Math.max(520, Math.ceil(bottom + 10));
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  function resizeLifecycleFrameNow() {
+    lifecycleResizeQueued = false;
+    const frame = document.getElementById('productLifecycleFrame');
+    if (!frame) return;
+    const height = lifecycleContentHeight(frame);
+    if (!height) return;
+    const currentHeight = parseFloat(frame.style.height || getComputedStyle(frame).height || '0');
+    if (Math.abs(currentHeight - height) > 2) frame.style.height = height + 'px';
+  }
+
+  function scheduleLifecycleResize() {
+    if (lifecycleResizeQueued) return;
+    lifecycleResizeQueued = true;
+    requestAnimationFrame(function () {
+      requestAnimationFrame(resizeLifecycleFrameNow);
+    });
+  }
+
+  function observeLifecycleDocument() {
+    const frame = document.getElementById('productLifecycleFrame');
+    const doc = frame?.contentDocument;
+    if (!doc?.body || lifecycleObservedDocs.has(doc)) {
+      scheduleLifecycleResize();
+      return;
+    }
+    lifecycleObservedDocs.add(doc);
+    const target = doc.querySelector('main') || doc.body;
+    try {
+      const ResizeObserverCtor = frame.contentWindow?.ResizeObserver || window.ResizeObserver;
+      if (ResizeObserverCtor) {
+        const resizeObserver = new ResizeObserverCtor(scheduleLifecycleResize);
+        resizeObserver.observe(target);
+      }
+    } catch (_) {}
+    try {
+      const MutationObserverCtor = frame.contentWindow?.MutationObserver || window.MutationObserver;
+      const mutationObserver = new MutationObserverCtor(scheduleLifecycleResize);
+      mutationObserver.observe(doc.body, { childList: true, subtree: true, attributes: true, characterData: true });
+    } catch (_) {}
+    ['click', 'input', 'change'].forEach(function (name) {
+      doc.addEventListener(name, function () { setTimeout(scheduleLifecycleResize, 0); }, true);
+    });
+    scheduleLifecycleResize();
+  }
+
+  function installLifecycleHeightFix() {
+    window.addEventListener('message', function (event) {
+      if (event.data?.type !== 'plm:resize') return;
+      event.stopImmediatePropagation();
+      scheduleLifecycleResize();
+    }, true);
+    const frame = document.getElementById('productLifecycleFrame');
+    if (!frame) return;
+    frame.style.minHeight = '0';
+    frame.addEventListener('load', observeLifecycleDocument);
+    if (frame.contentDocument?.readyState === 'complete') observeLifecycleDocument();
+    document.querySelector('.tabs button[data-view="lifecycle"]')?.addEventListener('click', function () {
+      setTimeout(observeLifecycleDocument, 0);
+    });
+  }
+
+  function syncExportButton() {
+    const button = document.getElementById('exportDisplayMapBtn');
+    if (!button) return false;
+    if (!button.disabled || !/正在生成/.test(button.textContent || '')) button.textContent = '导出Excel陈列图';
+    button.title = '导出可在Excel或WPS中手工修改的陈列图';
+    button.dataset.excelExportReady = 'true';
+    return true;
+  }
+
   function watchPlanogram() {
     const monitor = document.getElementById('displayMapMonitor');
     const displaymap = document.getElementById('displaymap');
@@ -320,18 +445,32 @@
       setTimeout(watchPlanogram, 120);
       return;
     }
-    new MutationObserver(function () {
-      enhanceSelectedCard();
-      applyPoolFilter();
-      syncCategoryPicker();
-      trimPlanogramSpace();
-    }).observe(displaymap, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    if (!planogramObserver) {
+      planogramObserver = new MutationObserver(function () {
+        enhanceSelectedCard();
+        bindPoolSearchElement();
+        syncCategoryPicker();
+        syncExportButton();
+        trimPlanogramSpace();
+      });
+      planogramObserver.observe(displaymap, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    }
     document.querySelectorAll('.tabs button').forEach(function (button) {
-      button.addEventListener('click', function () { requestAnimationFrame(trimPlanogramSpace); });
+      if (button.dataset.planogramFixBound === 'true') return;
+      button.dataset.planogramFixBound = 'true';
+      button.addEventListener('click', function () {
+        requestAnimationFrame(function () {
+          trimPlanogramSpace();
+          bindPoolSearchElement();
+          syncExportButton();
+          scheduleLifecycleResize();
+        });
+      });
     });
     enhanceSelectedCard();
-    applyPoolFilter();
+    bindPoolSearchElement();
     syncCategoryPicker();
+    syncExportButton();
     trimPlanogramSpace();
   }
 
@@ -735,38 +874,44 @@
   }
 
   function bindExportButton() {
-    const button = document.getElementById('exportDisplayMapBtn');
-    if (!button) return false;
-    button.textContent = '导出Excel陈列图';
-    button.title = '导出可在Excel/WPS中手工修改的陈列图';
-    button.onclick = function (event) {
+    syncExportButton();
+    return Boolean(document.getElementById('exportDisplayMapBtn'));
+  }
+
+  function installExportCapture() {
+    syncExportButton();
+    document.addEventListener('click', function (event) {
+      const button = event.target?.closest?.('#exportDisplayMapBtn');
+      if (!button) return;
       event.preventDefault();
-      event.stopPropagation();
+      event.stopImmediatePropagation();
       exportExcelPlanogram();
-    };
-    button.dataset.excelExportBound = 'true';
-    return true;
+    }, true);
+    document.addEventListener('pointerenter', function (event) {
+      if (event.target?.closest?.('#exportDisplayMapBtn')) ensureExcelJS().catch(function () {});
+    }, true);
   }
 
   function waitForApp() {
     let attempts = 0;
     const timer = setInterval(function () {
       attempts += 1;
+      bindExportButton();
+      bindPoolSearchElement();
       let ready = false;
       try { ready = typeof 门店名 === 'function' && typeof 纳入SKU === 'function'; } catch (_) {}
       if (ready) {
-        clearInterval(timer);
         installLocateOverride();
-        bindExportButton();
-        watchPlanogram();
-      } else if (attempts > 160) {
         clearInterval(timer);
-        bindExportButton();
-        watchPlanogram();
+      } else if (attempts > 200) {
+        clearInterval(timer);
       }
-    }, 100);
+    }, 80);
   }
 
   installPoolSearchFix();
+  installExportCapture();
+  installLifecycleHeightFix();
+  watchPlanogram();
   waitForApp();
 })();
