@@ -1,4 +1,4 @@
-/* Planogram fixes v20260730_v6: stable search, compact iframe height, and editable Excel export. */
+/* Planogram fixes v20260730_v7: prevent observer feedback loops; stable search, compact height, editable Excel export. */
 (function () {
   'use strict';
 
@@ -331,8 +331,10 @@
     });
 
     if (!categoryObserver) {
-      categoryObserver = new MutationObserver(syncCategoryPicker);
-      categoryObserver.observe(select, { childList: true, subtree: true, attributes: true });
+      categoryObserver = new MutationObserver(function () {
+        requestAnimationFrame(syncCategoryPicker);
+      });
+      categoryObserver.observe(select, { childList: true, subtree: true });
       select.addEventListener('change', syncCategoryPicker);
     }
   }
@@ -402,11 +404,6 @@
         resizeObserver.observe(target);
       }
     } catch (_) {}
-    try {
-      const MutationObserverCtor = frame.contentWindow?.MutationObserver || window.MutationObserver;
-      const mutationObserver = new MutationObserverCtor(scheduleLifecycleResize);
-      mutationObserver.observe(doc.body, { childList: true, subtree: true, attributes: true, characterData: true });
-    } catch (_) {}
     ['click', 'input', 'change'].forEach(function (name) {
       doc.addEventListener(name, function () { setTimeout(scheduleLifecycleResize, 0); }, true);
     });
@@ -432,9 +429,13 @@
   function syncExportButton() {
     const button = document.getElementById('exportDisplayMapBtn');
     if (!button) return false;
-    if (!button.disabled || !/正在生成/.test(button.textContent || '')) button.textContent = '导出Excel陈列图';
-    button.title = '导出可在Excel或WPS中手工修改的陈列图';
-    button.dataset.excelExportReady = 'true';
+    const generating = button.disabled && /正在生成/.test(button.textContent || '');
+    if (!generating && button.textContent !== '导出Excel陈列图') {
+      button.textContent = '导出Excel陈列图';
+    }
+    const title = '导出可在Excel或WPS中手工修改的陈列图';
+    if (button.title !== title) button.title = title;
+    if (button.dataset.excelExportReady !== 'true') button.dataset.excelExportReady = 'true';
     return true;
   }
 
@@ -446,14 +447,20 @@
       return;
     }
     if (!planogramObserver) {
+      let observerQueued = false;
       planogramObserver = new MutationObserver(function () {
-        enhanceSelectedCard();
-        bindPoolSearchElement();
-        syncCategoryPicker();
-        syncExportButton();
-        trimPlanogramSpace();
+        if (observerQueued) return;
+        observerQueued = true;
+        requestAnimationFrame(function () {
+          observerQueued = false;
+          enhanceSelectedCard();
+          bindPoolSearchElement();
+          syncCategoryPicker();
+          syncExportButton();
+          trimPlanogramSpace();
+        });
       });
-      planogramObserver.observe(displaymap, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+      planogramObserver.observe(displaymap, { childList: true, subtree: true });
     }
     document.querySelectorAll('.tabs button').forEach(function (button) {
       if (button.dataset.planogramFixBound === 'true') return;
