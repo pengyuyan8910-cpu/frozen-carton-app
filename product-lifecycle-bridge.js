@@ -1,14 +1,45 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "frozen_product_lifecycle_management_v1";
-  const VERSION = 1;
+  const STORAGE_KEY = "frozen_product_lifecycle_management_v2";
+  const VERSION = 2;
+  const FORMAL_DATA_ERROR = "正式底表加载失败，请检查 GitHub Actions。";
   let dataRef = null;
   let stateRef = null;
   let initialized = false;
 
   const clone = value => JSON.parse(JSON.stringify(value));
   const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+
+  function isFormalData(data) {
+    return Boolean(
+      data &&
+      Array.isArray(data.stores) &&
+      Array.isArray(data.skus) &&
+      Array.isArray(data.cabinets)
+    );
+  }
+
+  function showFormalDataError() {
+    const view = document.getElementById("lifecycle");
+    if (!view) return;
+    let message = view.querySelector(".lifecycle-load-error");
+    if (!message) {
+      message = document.createElement("div");
+      message.className = "lifecycle-load-error";
+      message.setAttribute("role", "alert");
+      message.style.cssText = "margin:24px;padding:20px;border:1px solid #dc2626;border-radius:8px;background:#fef2f2;color:#991b1b;font-weight:700;";
+      view.prepend(message);
+    }
+    message.textContent = FORMAL_DATA_ERROR;
+  }
+
+  function loadLifecycleFrame() {
+    const frame = document.getElementById("productLifecycleFrame");
+    if (!frame || frame.getAttribute("src")) return;
+    const source = frame.dataset.lifecycleSrc;
+    if (source) frame.setAttribute("src", source);
+  }
 
   function blankState() {
     return {
@@ -114,8 +145,13 @@
   }
 
   function prepareData(data) {
+    if (!isFormalData(data)) {
+      dataRef = null;
+      showFormalDataError();
+      return false;
+    }
     dataRef = data;
-    const embedded = data?.lifecycle && typeof data.lifecycle === "object" ? data.lifecycle : null;
+    const embedded = data.lifecycle && typeof data.lifecycle === "object" ? data.lifecycle : null;
     const local = readLocalState();
     const state = embedded && (embedded.updatedAt || embedded.tasks?.length || embedded.committedPatches?.length)
       ? normalizeState(embedded)
@@ -123,7 +159,8 @@
     stateRef = state;
     applyCommittedPatches(dataRef, stateRef);
     writeState(stateRef);
-    return dataRef;
+    loadLifecycleFrame();
+    return true;
   }
 
   function getProduct(task) {
@@ -308,6 +345,10 @@
     bindFrameMessages();
     const frame = document.getElementById("productLifecycleFrame");
     frame?.addEventListener("load", syncSelectedStoreToFrame);
+    if (isFormalData(dataRef || window.UNIFIED_CARTON_DATA)) {
+      if (!dataRef) prepareData(window.UNIFIED_CARTON_DATA);
+      else loadLifecycleFrame();
+    }
   }
 
   function resetState() {
@@ -321,6 +362,7 @@
   window.ProductLifecycle = {
     version: VERSION,
     prepareData,
+    isFormalData,
     init,
     getData: () => dataRef || window.UNIFIED_CARTON_DATA || null,
     getState: () => clone(stateRef || readLocalState()),

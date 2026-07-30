@@ -345,8 +345,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
 </dialog>
 
 <script>
-const LIVE_DATA_URL="https://pengyuyan8910-cpu.github.io/frozen-carton-app/data/app-data.json";
-const PREVIEW_KEY="frozen_product_lifecycle_management_v1";
+const PREVIEW_KEY="frozen_product_lifecycle_management_v2";
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
 const fmt=(v,d=0)=>num(v).toFixed(d).replace(/\.0+$/,"");
@@ -379,56 +378,32 @@ function saveState(){
  }catch(e){console.error("生命周期状态保存失败",e)}
 }
 function toast(msg){const el=document.createElement("div");el.className="toast";el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2300)}
-function fallbackData(){
- const stores=["合肥包河万达生活馆","芜湖镜湖万达生活馆","蚌埠香榭兰庭生活馆mini"].map((store,i)=>({store,type:i===2?"mini":"生活馆"}));
- const cabinets=[];let c=1;
- for(const s of stores){
-   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__卧柜2505-柜1__分区1",label:"卧柜2505-柜1",position:"分区1",kind:"卧柜",length:1988,depth:697,height:459});
-   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__卧柜2505-柜1__分区2",label:"卧柜2505-柜1",position:"分区2",kind:"卧柜",length:360,depth:697,height:199});
-   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__立柜3m-柜1__第1层",label:"立柜3m-柜1",position:"第1层",kind:"立柜",length:710,depth:534,height:250});
-   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__立柜3m-柜1__第2层",label:"立柜3m-柜1",position:"第2层",kind:"立柜",length:710,depth:534,height:250});
+const FORMAL_DATA_ERROR="正式底表加载失败，请检查 GitHub Actions。";
+function isFormalData(value){
+ return Boolean(value&&Array.isArray(value.stores)&&Array.isArray(value.skus)&&Array.isArray(value.cabinets));
+}
+function showFormalDataError(error){
+ console.error(FORMAL_DATA_ERROR,error||"");
+ const status=document.getElementById("dataStatus");
+ if(status)status.textContent=FORMAL_DATA_ERROR;
+ const main=document.querySelector("main");
+ if(main){
+  const panel=document.createElement("section");
+  panel.className="panel";
+  panel.setAttribute("role","alert");
+  panel.innerHTML=`<h2>产品生命周期管理</h2><p>${FORMAL_DATA_ERROR}</p>`;
+  main.replaceChildren(panel);
  }
- const pool=[
-  {id:"p1",active:true,name:"原切肥牛卷",barcode:"690001",grade:"A",rank:1,category3:"火锅食材",category4:"牛肉卷",length:220,width:160,height:55,volume:1.94,carton:12,dailyQty:2.1},
-  {id:"p2",active:true,name:"荠菜猪肉水饺",barcode:"690002",grade:"A",rank:2,category3:"预制主食",category4:"水饺",length:260,width:180,height:45,volume:2.11,carton:10,dailyQty:1.8},
-  {id:"p3",active:true,name:"香酥鸡米花",barcode:"690003",grade:"B",rank:8,category3:"预制菜",category4:"炸物",length:230,width:170,height:60,volume:2.35,carton:12,dailyQty:1.2},
-  {id:"p4",active:true,name:"手抓饼",barcode:"690004",grade:"B",rank:9,category3:"预制主食",category4:"饼类",length:270,width:270,height:35,volume:2.55,carton:8,dailyQty:1.1},
-  {id:"p5",active:true,name:"黑椒牛排",barcode:"690005",grade:"C",rank:25,category3:"冷冻食材",category4:"牛排",length:250,width:180,height:40,volume:1.8,carton:12,dailyQty:.45},
-  {id:"p6",active:true,name:"火山石烤肠",barcode:"690006",grade:"C",rank:30,category3:"火锅食材",category4:"烤肠",length:210,width:150,height:50,volume:1.58,carton:20,dailyQty:.6},
-  {id:"p7",active:true,name:"榴莲披萨",barcode:"690007",grade:"B",rank:12,category3:"预制菜",category4:"披萨",length:280,width:280,height:35,volume:2.74,carton:8,dailyQty:.8},
-  {id:"p8",active:true,name:"巧克力脆筒",barcode:"690008",grade:"B",rank:15,category3:"雪糕冰品",category4:"甜筒",length:210,width:90,height:60,volume:1.13,carton:18,dailyQty:1.3}
- ];
- const skus=[];let i=1;
- for(const s of stores){
-  const cabRows=cabinets.filter(x=>x.store===s.store);
-  pool.slice(0,s.type==="mini"?6:7).forEach((p,idx)=>{
-   const cab=cabRows[idx%cabRows.length];
-   const face=Math.min(p.length,p.width,p.height);
-   skus.push({id:"s"+i++,store:s.store,included:true,...p,cabinetKey:cab.key,cabinetLabel:cab.label,position:cab.position,displayCols:idx%3===0?2:1,perCol:cab.kind==="立柜"?2:4,faceWidth:face});
-  });
- }
- return {meta:{source:"演示数据",version:"产品生命周期预览"},params:{triggerRate:.1,externalCapL:754},stores,cabinets,skus,productPool:pool};
+ notifyParentSize();
 }
 async function loadData(){
- let source="演示数据";
- try{
-  if(window.parent!==window&&window.parent.ProductLifecycle?.getData){
-   const parentData=window.parent.ProductLifecycle.getData();
-   if(parentData&&Array.isArray(parentData.stores)&&Array.isArray(parentData.skus)&&Array.isArray(parentData.cabinets)){
-    data=parentData;source="当前统一底表";
-   }
-  }
-  if(!data&&window.UNIFIED_CARTON_DATA){
-   data=window.UNIFIED_CARTON_DATA;source="当前统一底表";
-  }
-  if(!data){
-   const ctl=new AbortController();setTimeout(()=>ctl.abort(),4200);
-   const res=await fetch("data/app-data.json?v="+Date.now(),{cache:"no-store",signal:ctl.signal});
-   if(res.ok)data=await res.json();
-   if(data)source="当前统一底表";
-  }
- }catch(e){console.warn("统一底表读取失败，切换演示数据",e)}
- if(!data)data=fallbackData();
+ let source="当前统一底表";
+ if(window.parent!==window&&window.parent.ProductLifecycle?.getData){
+  const parentData=window.parent.ProductLifecycle.getData();
+  if(isFormalData(parentData))data=parentData;
+ }
+ if(!data&&isFormalData(window.UNIFIED_CARTON_DATA))data=window.UNIFIED_CARTON_DATA;
+ if(!isFormalData(data))throw new Error(FORMAL_DATA_ERROR);
  normalizeData();
  const productCount=allProducts().length;
  document.getElementById("dataStatus").textContent=`${source}｜${data.stores.length}家门店｜${productCount}个商品｜任务完成后同步正式陈列图`;
@@ -1320,7 +1295,7 @@ if("ResizeObserver" in window){
 
 (async function init(){
  document.getElementById("launchDate").value=dateISO(7);document.getElementById("retireDate").value=dateISO(7);document.getElementById("restoreDate").value=dateISO(7);
- bind();await loadData();renderAll();notifyParentSize();
+ bind();try{await loadData();renderAll();notifyParentSize();}catch(error){showFormalDataError(error);}
 })();
 </script>
 </body>

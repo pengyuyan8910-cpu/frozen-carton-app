@@ -16,10 +16,10 @@
     if (!data || !Array.isArray(data.stores) || !Array.isArray(data.skus) || !Array.isArray(data.cabinets)) {
       throw new Error("app-data.json 缺少门店/SKU/柜段数据");
     }
-    if (window.ProductLifecycle?.prepareData) window.ProductLifecycle.prepareData(data);
     window.UNIFIED_CARTON_DATA = data;
     window.UNIFIED_CARTON_REPORT = report || {};
     window.UNIFIED_CARTON_VERSION = version || {};
+    if (window.ProductLifecycle?.prepareData) window.ProductLifecycle.prepareData(data);
     const status = report?.passed === false ? "复核失败" : "复核通过";
     setNote(`${data.meta?.version || "10%触发"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
     const app = document.createElement("script");
