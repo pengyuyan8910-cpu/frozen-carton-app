@@ -1,0 +1,35 @@
+#lifecycle.product-lifecycle-host {
+  padding: 0;
+  background: #f4f7f5;
+}
+#productLifecycleFrame {
+  display: block;
+  width: 100%;
+  min-height: 900px;
+  border: 0;
+  border-radius: 16px;
+  background: #f4f7f5;
+}
+.tabs button[data-view="lifecycle"] {
+  position: relative;
+}
+.tabs button[data-view="lifecycle"]::after {
+  content: "NEW";
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  padding: 1px 4px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.tabs button[data-view="lifecycle"].active::after {
+  background: rgba(255,255,255,.22);
+  color: #fff;
+}
+@media (max-width: 900px) {
+  #productLifecycleFrame { min-height: 1100px; }
+}

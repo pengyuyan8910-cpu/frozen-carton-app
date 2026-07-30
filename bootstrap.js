@@ -16,6 +16,7 @@
     if (!data || !Array.isArray(data.stores) || !Array.isArray(data.skus) || !Array.isArray(data.cabinets)) {
       throw new Error("app-data.json 缺少门店/SKU/柜段数据");
     }
+    if (window.ProductLifecycle?.prepareData) window.ProductLifecycle.prepareData(data);
     window.UNIFIED_CARTON_DATA = data;
     window.UNIFIED_CARTON_REPORT = report || {};
     window.UNIFIED_CARTON_VERSION = version || {};
@@ -23,6 +24,7 @@
     setNote(`${data.meta?.version || "10%触发"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
     const app = document.createElement("script");
     app.src = `app.js?v=${Date.now()}`;
+    app.onload = () => window.ProductLifecycle?.init?.();
     app.onerror = () => setNote("程序加载失败，请联系运营");
     document.body.appendChild(app);
   } catch (err) {

@@ -1,0 +1,1327 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>产品生命周期管理</title>
+<style>
+:root{
+  --bg:#f4f7f5;--panel:#fff;--ink:#17211d;--muted:#66756e;--line:#dbe4df;
+  --green:#167a5a;--green-dark:#0f5d44;--green-soft:#e8f5ef;--blue:#2563eb;
+  --amber:#b7791f;--amber-soft:#fff7df;--red:#c2413a;--red-soft:#fff0ee;
+  --slate:#52615b;--shadow:0 14px 34px rgba(31,56,46,.08);--radius:18px;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft YaHei","PingFang SC",system-ui,-apple-system,sans-serif}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.lifecycle-topbar{border-radius:16px 16px 0 0}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding:25px 32px 20px;background:linear-gradient(135deg,#113e30,#176348);color:#fff}
+.topbar h1{margin:3px 0 7px;font-size:26px;line-height:1.25}
+.topbar p{margin:0;color:#cce7da;font-size:13px}
+.eyebrow{font-size:11px;letter-spacing:.14em;font-weight:800;color:#a9dfc8}
+.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.preview-badge{display:inline-flex;align-items:center;padding:8px 12px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.1);font-size:12px;font-weight:700}
+.safe-banner{padding:11px 32px;background:#e9f5ef;border-bottom:1px solid #c7e5d6;color:#285b48;font-size:13px}
+.tabs{display:flex;gap:6px;padding:12px 24px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;overflow:auto}
+.tabs button{white-space:nowrap;border:0;background:transparent;color:#5f6e67;padding:10px 15px;border-radius:10px;font-weight:700}
+.tabs button:hover{background:#f1f6f3;color:#1b5c45}
+.tabs button.active{background:var(--green);color:#fff;box-shadow:0 7px 16px rgba(22,122,90,.2)}
+main{padding:22px 24px 48px;max-width:1680px;margin:auto}
+.view{display:none}.view.active{display:block}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:18px;overflow:hidden}
+.panel-title{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:18px 20px;border-bottom:1px solid var(--line)}
+.panel-title h2{font-size:18px;margin:0 0 4px}.panel-title p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+.panel-title.controls{align-items:center}
+.metric-grid{display:grid;grid-template-columns:repeat(6,minmax(130px,1fr));gap:12px;margin-bottom:18px}
+.metric-grid.compact{grid-template-columns:repeat(4,minmax(120px,1fr));padding:16px 0 0;margin:0 20px 12px}
+.metric{background:#fff;border:1px solid var(--line);border-radius:15px;padding:15px 16px;box-shadow:0 8px 20px rgba(31,56,46,.05)}
+.metric .label{color:var(--muted);font-size:12px;margin-bottom:8px}.metric .value{font-size:24px;font-weight:850;line-height:1}.metric .sub{font-size:11px;color:#83918b;margin-top:8px}
+.metric.warn{background:var(--amber-soft);border-color:#efdc9d}.metric.danger{background:var(--red-soft);border-color:#f1c1bc}.metric.good{background:var(--green-soft);border-color:#b9ddcd}
+.toolbar{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.toolbar.end{justify-content:flex-end;margin-top:18px}
+.btn{border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:#fff;color:#33423c;font-weight:750}
+.btn:hover{transform:translateY(-1px);box-shadow:0 6px 14px rgba(31,56,46,.09)}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn.success{background:#167a5a;color:#fff;border-color:#167a5a}
+.btn.danger{background:var(--red);color:#fff;border-color:var(--red)}
+.btn.ghost{background:transparent;color:inherit}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+input,select{height:39px;border:1px solid #ccd7d1;border-radius:10px;padding:0 11px;background:#fff;color:#24332d;min-width:150px}
+input:focus,select:focus{outline:3px solid rgba(22,122,90,.12);border-color:#63a98e}
+.table-wrap{overflow:auto;max-width:100%}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:1020px;font-size:13px}
+th{position:sticky;top:0;background:#f3f7f5;color:#54635d;font-size:12px;text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);z-index:2}
+td{padding:11px 12px;border-bottom:1px solid #edf1ef;vertical-align:middle}
+tr:hover td{background:#fbfdfc}
+td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:11px;font-weight:800;white-space:nowrap;background:#eef2f0;color:#53615c}
+.tag.a{background:#dff4e9;color:#0f6a49}.tag.b{background:#e8f0ff;color:#285bb8}.tag.c{background:#fff3d8;color:#996515}.tag.d{background:#fde9e7;color:#aa3d37}
+.tag.status-normal{background:#e4f5ec;color:#116444}.tag.status-launch{background:#e8efff;color:#285ac0}.tag.status-retire{background:#fff1dc;color:#9b6410}.tag.status-archived{background:#ecefed;color:#5f6b66}
+.coverage{display:flex;align-items:center;gap:8px}.coverage-bar{width:82px;height:7px;background:#e5ebe8;border-radius:999px;overflow:hidden}.coverage-bar i{display:block;height:100%;background:var(--green);border-radius:999px}
+.empty{padding:40px 20px;text-align:center;color:#7a8982}
+.workspace-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px}
+.form-panel{padding-bottom:18px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px 20px 0}.field{display:grid;gap:6px}.field.full{grid-column:1/-1}.field span{font-size:12px;color:#596861;font-weight:750}.field input,.field select{width:100%}
+.store-picker{display:flex;flex-wrap:wrap;gap:7px;max-height:180px;overflow:auto;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fafcfb}
+.store-check{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px}.store-check input{min-width:0;width:15px;height:15px}
+.product-card{margin:16px 20px 0;padding:15px 16px;border:1px solid #cfe0d8;background:#f4faf7;border-radius:14px;display:grid;grid-template-columns:1fr auto;gap:12px}
+.product-card h3{margin:0 0 5px;font-size:16px}.product-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+.side-note{padding:20px}.side-note h3{margin:0 0 13px;font-size:16px}.side-note ol{padding-left:20px;margin:0;color:#5b6963;font-size:13px;line-height:1.9}.side-note p{color:#5f6f68;font-size:13px;line-height:1.7}
+.legend-stack,.planogram-legend{display:flex;gap:8px;flex-wrap:wrap}.legend-chip{display:inline-flex;align-items:center;padding:6px 9px;border-radius:8px;font-size:11px;font-weight:800}
+.legend-chip.base{background:#e6f2ec;color:#236149}.legend-chip.retire{background:#fff0d6;color:#96600c}.legend-chip.release{background:#fff5e8;color:#a25a11;border:1px dashed #d99c50}.legend-chip.free{background:#edf0ef;color:#596660;border:1px dashed #9aa7a1}.legend-chip.launch{background:#e8efff;color:#285bbf}
+.task-detail{padding:18px 20px}.task-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:14px}.task-head h3{margin:0 0 5px}.task-head p{margin:0;color:var(--muted);font-size:12px}
+.planogram-panel{overflow:visible}.inline-field{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:750;color:#596861}
+.planogram-layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;padding:0 20px 20px}
+.planogram-canvas{min-width:0}.planogram-monitor{border:1px solid var(--line);border-radius:15px;background:#f9fbfa;padding:16px;position:sticky;top:74px;align-self:start;max-height:76vh;overflow:auto}
+.cabinet-group{margin-bottom:16px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}.cabinet-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:10px 12px;background:#f2f6f4;border-bottom:1px solid var(--line)}.cabinet-head strong{font-size:13px}.cabinet-head span{font-size:11px;color:var(--muted)}
+.cabinet-row{display:grid;grid-template-columns:105px minmax(0,1fr);border-bottom:1px solid #edf1ef;min-height:85px}.cabinet-row:last-child{border-bottom:0}.cabinet-pos{padding:13px 10px;background:#fafcfb;border-right:1px solid var(--line);font-size:12px;font-weight:800}.cabinet-pos small{display:block;color:var(--muted);font-weight:500;margin-top:6px}
+.shelf{display:flex;align-items:stretch;gap:4px;padding:8px;min-width:0;overflow-x:auto;background:linear-gradient(#fff,#fafcfb)}
+.sku-block{position:relative;flex:0 0 var(--basis,120px);min-width:84px;max-width:260px;border-radius:10px;padding:9px 8px;border:1px solid #b9d8c9;background:#eaf6f0;color:#164f3a;overflow:hidden}
+.sku-block:hover{outline:3px solid rgba(22,122,90,.13)}.sku-block strong{display:block;font-size:11px;line-height:1.4}.sku-block small{display:block;font-size:10px;margin-top:6px;opacity:.8;line-height:1.45}
+.sku-block.retire{background:#fff4dd;border-color:#e3b762;color:#87540a}.sku-block.launch{background:#eaf0ff;border-color:#94acee;color:#244da2}.sku-block.free{background:repeating-linear-gradient(135deg,#f1f4f2,#f1f4f2 8px,#e7ebe9 8px,#e7ebe9 16px);border:1px dashed #8f9d96;color:#52615b}.sku-block.completed{box-shadow:inset 0 0 0 2px rgba(22,122,90,.3)}
+.monitor-title{margin:0 0 7px;font-size:16px}.monitor-status{margin-bottom:12px}.monitor-grid{display:grid;grid-template-columns:100px 1fr;gap:8px 10px;font-size:12px}.monitor-grid dt{color:var(--muted)}.monitor-grid dd{margin:0;font-weight:700}.monitor-note{margin-top:14px;padding:11px;border-radius:10px;background:#eef5f1;color:#4f6259;font-size:12px;line-height:1.65}
+.dialog{width:min(620px,calc(100% - 28px));border:0;border-radius:18px;padding:0;box-shadow:0 24px 70px rgba(0,0,0,.25)}.dialog::backdrop{background:rgba(16,30,24,.5)}.dialog form{padding-bottom:18px}.dialog-head{display:flex;justify-content:space-between;align-items:flex-start;padding:20px;border-bottom:1px solid var(--line)}.dialog-head h2{margin:4px 0 0}.icon-btn{border:1px solid var(--line);background:#fff;width:34px;height:34px;border-radius:9px;font-size:20px}
+.toast{position:fixed;right:18px;bottom:18px;background:#173d30;color:#fff;padding:12px 15px;border-radius:11px;box-shadow:0 14px 30px rgba(0,0,0,.2);z-index:100;font-size:13px}
+.mini-actions{display:flex;gap:6px}.mini-btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 8px;font-size:11px;font-weight:750}.mini-btn.primary{background:var(--green);color:#fff;border-color:var(--green)}.mini-btn.danger{color:var(--red);border-color:#e5aaa6;background:#fff7f6}
+
+.strategy-options{display:flex;flex-wrap:wrap;gap:8px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fafcfb}
+.strategy-check{display:inline-flex;align-items:center;gap:6px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:12px}
+.strategy-check input{min-width:0;width:15px;height:15px}
+.scheme-select{min-width:250px;max-width:340px}
+.scheme-meta{display:flex;gap:5px;flex-wrap:wrap;margin-top:6px}
+.plan-count{display:inline-flex;padding:3px 7px;border-radius:999px;background:#edf2ef;color:#607068;font-size:10px;font-weight:800}
+.plan-count.recommended{background:#dff4e9;color:#0f6a49}
+.sku-block.adjusted{background:#f3ecff;border-color:#b59ae8;color:#6842a4}
+.sku-block.move{background:#e9f3ff;border-color:#8eb6e8;color:#265e9e}
+.sku-block.replace{background:#fff0d6;border-color:#dfaa48;color:#8a5609}
+.sku-block.restore{background:#efeaff;border-color:#a48cdf;color:#5c3f9a}
+.tag.status-restore{background:#eee8ff;color:#6444a0}
+.restore-choice{min-width:285px;max-width:390px}
+
+@media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.workspace-grid,.planogram-layout{grid-template-columns:1fr}.planogram-monitor{position:static}.side-note{order:-1}}
+@media(max-width:700px){.topbar{padding:20px;display:block}.top-actions{margin-top:14px}.safe-banner{padding:10px 20px}.tabs{padding:10px}.panel-title{display:block}.panel-title .toolbar{margin-top:12px}.metric-grid,.metric-grid.compact{grid-template-columns:repeat(2,1fr)}main{padding:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cabinet-row{grid-template-columns:82px minmax(0,1fr)}}
+</style>
+</head>
+<body>
+
+<header class="topbar lifecycle-topbar">
+  <div>
+    <div class="eyebrow">PRODUCT LIFECYCLE MANAGEMENT</div>
+    <h1>产品生命周期管理</h1>
+    <p id="dataStatus">正在读取统一底表……</p>
+  </div>
+  <div class="top-actions">
+    <button id="resetPreviewBtn" class="btn ghost" type="button">清空生命周期任务</button>
+  </div>
+</header>
+<div class="safe-banner">
+  <strong>统一数据联动：</strong>上新、淘汰和恢复先形成任务；任务完成后同步门店SKU、柜段余量和正式陈列图。
+</div>
+
+
+<nav class="tabs">
+  <button class="active" data-view="pool">产品总池</button>
+  <button data-view="launch">批量上新</button>
+  <button data-view="retire">批量淘汰</button>
+  <button data-view="restore">恢复在售</button>
+  <button data-view="slots">坑位资源池</button>
+  <button data-view="tasks">任务中心</button>
+  <button data-view="planogram">联动陈列图</button>
+</nav>
+
+<main>
+<section id="pool" class="view active">
+  <div id="poolMetrics" class="metric-grid"></div>
+  <section class="panel">
+    <div class="panel-title controls">
+      <div><h2>产品总池</h2><p>统一查看商品生命周期、门店覆盖率和批量操作入口。</p></div>
+      <div class="toolbar">
+        <input id="poolSearch" type="search" placeholder="搜索商品、条码、类目">
+        <select id="poolStatusFilter"><option value="">全部状态</option><option>正常在售</option><option>待上新</option><option>待淘汰</option><option>恢复中</option><option>已淘汰</option></select>
+        <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button>
+      </div>
+    </div>
+    <div id="poolTable" class="table-wrap"></div>
+  </section>
+</section>
+
+<section id="launch" class="view">
+  <div class="workspace-grid">
+    <section class="panel form-panel">
+      <div class="panel-title"><div><h2>创建批量上新任务</h2><p>同一批次可覆盖全部门店或指定多店，每家门店独立推荐陈列位置。</p></div></div>
+      <div class="form-grid">
+        <label class="field full"><span>上新商品</span><select id="launchProduct"></select></label>
+        <label class="field"><span>上新范围</span><select id="launchScope"><option value="missing">尚未陈列该商品的门店</option><option value="all">全部门店</option><option value="selected">指定门店</option></select></label>
+        <label class="field"><span>计划上新日期</span><input id="launchDate" type="date"></label>
+        <label class="field"><span>推荐策略偏好</span>
+          <select id="launchStrategy">
+            <option value="smart">系统智能推荐</option>
+            <option value="released">优先承接淘汰坑位</option>
+            <option value="natural">优先利用自然余量</option>
+            <option value="category">优先保持类目集中</option>
+            <option value="minimal">优先最少移动商品</option>
+            <option value="external">优先减少新品外储</option>
+          </select>
+        </label>
+        <label class="field"><span>最少陈列列数</span><input id="launchMinCols" type="number" min="1" max="6" value="1"></label>
+        <label class="field"><span>最多陈列列数</span><input id="launchMaxCols" type="number" min="1" max="6" value="2"></label>
+        <div class="field full"><span>允许系统生成的调位方式</span>
+          <div class="strategy-options">
+            <label class="strategy-check"><input id="allowReleased" type="checkbox" checked>承接已释放/待释放坑位</label>
+            <label class="strategy-check"><input id="allowShrink" type="checkbox" checked>压缩相邻商品排面</label>
+            <label class="strategy-check"><input id="allowReplace" type="checkbox" checked>替换低优先级商品</label>
+            <label class="strategy-check"><input id="allowMove" type="checkbox" checked>跨柜段移动商品</label>
+            <label class="strategy-check"><input id="allowPartial" type="checkbox" checked>允许部分门店暂不上新</label>
+          </div>
+        </div>
+        <div class="field full"><span>指定门店</span><div id="launchStorePicker" class="store-picker"></div></div>
+      </div>
+      <div id="launchProductCard" class="product-card"></div>
+      <div class="toolbar end"><button id="simulateLaunchBtn" class="btn primary">生成多策略上新方案</button><button id="applyLaunchPreviewBtn" class="btn success" disabled>应用所选方案到联动陈列图</button></div>
+    </section>
+    <aside class="panel side-note">
+      <h3>本版会同时测算</h3>
+      <ol>
+        <li>承接已释放或待淘汰坑位</li>
+        <li>利用柜段自然余量直接上新</li>
+        <li>压缩相邻低优先级商品排面</li>
+        <li>替换待淘汰或低优先级商品</li>
+        <li>跨柜段移动原商品后腾出连续位置</li>
+        <li>不满足硬约束时暂不上新</li>
+      </ol>
+      <p>每家门店最多展示5套候选方案。系统给出推荐方案，但你可以逐店切换为备选方案，再应用到联动陈列图。</p>
+    </aside>
+  </div>
+  <section class="panel"><div class="panel-title"><div><h2>门店多策略上新方案</h2><p>逐店选择推荐方案或备选方案；只有当前选中的方案会进入任务中心和陈列图。</p></div></div><div id="launchResult" class="table-wrap"><div class="empty">请选择商品并生成方案。</div></div></section>
+</section>
+
+<section id="retire" class="view">
+  <div class="workspace-grid">
+    <section class="panel form-panel">
+      <div class="panel-title"><div><h2>创建批量淘汰任务</h2><p>淘汰不删除历史数据，原商品和原坑位均保留状态痕迹。</p></div></div>
+      <div class="form-grid">
+        <label class="field full"><span>淘汰商品</span><select id="retireProduct"></select></label>
+        <label class="field"><span>淘汰方式</span><select id="retireMode"><option value="sellthrough">停止补货，售罄后撤柜</option><option value="immediate">立即撤柜并释放坑位</option><option value="scheduled">指定日期统一撤柜</option></select></label>
+        <label class="field"><span>计划撤柜日期</span><input id="retireDate" type="date"></label>
+        <div class="field full"><span>执行门店</span><div id="retireStorePicker" class="store-picker"></div></div>
+      </div>
+      <div id="retireProductCard" class="product-card"></div>
+      <div class="toolbar end"><button id="simulateRetireBtn" class="btn danger">扫描影响门店与坑位</button><button id="applyRetirePreviewBtn" class="btn success" disabled>应用到联动陈列图</button></div>
+    </section>
+    <aside class="panel side-note">
+      <h3>淘汰后的显示</h3>
+      <div class="legend-stack"><span class="legend-chip retire">待淘汰商品</span><span class="legend-chip release">待释放坑位</span><span class="legend-chip free">已释放空位</span></div>
+      <p>商品不会立刻从陈列图消失。完成撤柜前显示“待淘汰”，撤柜后变为带宽度信息的可用坑位。</p>
+    </aside>
+  </div>
+  <section class="panel"><div class="panel-title"><div><h2>淘汰影响扫描</h2><p>展示每家门店原位置、释放宽度和后续坑位状态。</p></div></div><div id="retireResult" class="table-wrap"><div class="empty">请选择商品并扫描影响。</div></div></section>
+</section>
+
+
+<section id="restore" class="view">
+  <div class="workspace-grid">
+    <section class="panel form-panel">
+      <div class="panel-title">
+        <div>
+          <h2>恢复待淘汰商品</h2>
+          <p>逐店判断原位是否仍可使用；原位被占用时再进入多策略重新排位。</p>
+        </div>
+      </div>
+      <div class="form-grid">
+        <label class="field full">
+          <span>恢复商品</span>
+          <select id="restoreProduct"></select>
+        </label>
+        <label class="field">
+          <span>恢复范围</span>
+          <select id="restoreScope">
+            <option value="all">全部涉及淘汰的门店</option>
+            <option value="original">只恢复原位可用门店</option>
+            <option value="selected">逐店选择</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>恢复策略</span>
+          <select id="restoreStrategy">
+            <option value="originalFirst">原位优先，冲突时重新排位</option>
+            <option value="replanAll">全部重新测算位置</option>
+            <option value="originalOnly">仅原位恢复，不重新排位</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>计划恢复日期</span>
+          <input id="restoreDate" type="date">
+        </label>
+        <label class="field">
+          <span>原位被新品预留时</span>
+          <select id="restoreConflictPolicy">
+            <option value="manual">逐店人工选择</option>
+            <option value="restoreOriginal">优先取消新品预留，恢复原商品</option>
+            <option value="keepNew">保留新品，原商品重新排位</option>
+          </select>
+        </label>
+        <div class="field full">
+          <span>涉及门店</span>
+          <div id="restoreStorePicker" class="store-picker"></div>
+        </div>
+      </div>
+      <div id="restoreProductCard" class="product-card"></div>
+      <div class="toolbar end">
+        <button id="simulateRestoreBtn" class="btn primary">扫描原位与冲突</button>
+        <button id="applyRestorePreviewBtn" class="btn success" disabled>应用所选恢复方案</button>
+      </div>
+    </section>
+    <aside class="panel side-note">
+      <h3>恢复判断顺序</h3>
+      <ol>
+        <li>尚未撤柜：取消淘汰，原位直接恢复</li>
+        <li>已撤柜但原坑位为空：恢复原坑位</li>
+        <li>原坑位已预留新品：显示任务冲突</li>
+        <li>原坑位已被占用：重新生成多策略位置</li>
+        <li>无可执行位置：该门店暂不恢复</li>
+      </ol>
+      <p>恢复不会静默删除新品任务。涉及新品预留时，必须明确选择保留哪一方或重新排位。</p>
+    </aside>
+  </div>
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>门店恢复方案</h2>
+        <p>每家门店可分别选择原位恢复、新位置恢复、解决新品冲突或暂不恢复。</p>
+      </div>
+    </div>
+    <div id="restoreResult" class="table-wrap">
+      <div class="empty">请选择待淘汰商品并扫描。</div>
+    </div>
+  </section>
+</section>
+
+<section id="slots" class="view">
+  <div id="slotMetrics" class="metric-grid"></div>
+  <section class="panel">
+    <div class="panel-title controls">
+      <div><h2>坑位资源池</h2><p>统一承接淘汰释放空间、新品预留和待门店执行位置。</p></div>
+      <div class="toolbar"><input id="slotSearch" type="search" placeholder="搜索门店、柜段、原商品"><select id="slotStatusFilter"><option value="">全部状态</option><option>待释放</option><option>已释放未分配</option><option>已预留给新品</option><option>待门店执行</option></select></div>
+    </div>
+    <div id="slotTable" class="table-wrap"></div>
+  </section>
+</section>
+
+<section id="tasks" class="view">
+  <div id="taskMetrics" class="metric-grid"></div>
+  <section class="panel"><div class="panel-title"><div><h2>变更任务中心</h2><p>任务类型永久保留历史；商品当前状态、任务执行状态和完成进度分别展示。</p></div></div><div id="taskTable" class="table-wrap"></div></section>
+  <section class="panel"><div class="panel-title"><div><h2>任务明细</h2><p>点击任务查看门店级变更前后位置。</p></div></div><div id="taskDetail" class="task-detail"><div class="empty">暂无选中任务。</div></div></section>
+</section>
+
+<section id="planogram" class="view">
+  <section class="panel planogram-panel">
+    <div class="panel-title controls">
+      <div><h2>产品生命周期联动陈列图</h2><p>上新、淘汰、坑位释放和新品预留会在同一张图中实时变化。</p></div>
+      <div class="toolbar"><label class="inline-field">门店<select id="planogramStore"></select></label><button id="openCurrentTaskBtn" class="btn">定位当前任务</button></div>
+    </div>
+    <div id="planogramMetrics" class="metric-grid compact"></div>
+    <div class="planogram-legend" style="padding:0 20px 14px"><span class="legend-chip base">正常陈列</span><span class="legend-chip retire">待淘汰</span><span class="legend-chip launch">待上新</span><span class="legend-chip" style="background:#efeaff;color:#5c3f9a">恢复中</span><span class="legend-chip free">释放空位</span></div>
+    <div class="planogram-layout"><div id="planogramCanvas" class="planogram-canvas"></div><aside id="planogramMonitor" class="planogram-monitor"><div class="empty">点击商品或坑位查看联动详情。</div></aside></div>
+  </section>
+</section>
+</main>
+
+<dialog id="draftProductDialog" class="dialog">
+<form id="draftProductForm">
+  <div class="dialog-head"><div><div class="eyebrow">NEW PRODUCT DRAFT</div><h2>新增新品草稿</h2></div><button type="button" id="closeDraftDialog" class="icon-btn">×</button></div>
+  <div class="form-grid">
+    <label class="field full"><span>商品名称</span><input name="name" required placeholder="如：黑椒牛肉披萨"></label>
+    <label class="field"><span>条码</span><input name="barcode" placeholder="可暂不填写"></label>
+    <label class="field"><span>等级</span><select name="grade"><option>A</option><option selected>B</option><option>C</option><option>D</option></select></label>
+    <label class="field"><span>三级类目</span><input name="category3" required placeholder="如：预制菜"></label>
+    <label class="field"><span>四级类目</span><input name="category4" required placeholder="如：披萨"></label>
+    <label class="field"><span>长 mm</span><input name="length" type="number" min="1" required></label>
+    <label class="field"><span>宽 mm</span><input name="width" type="number" min="1" required></label>
+    <label class="field"><span>高 mm</span><input name="height" type="number" min="1" required></label>
+    <label class="field"><span>箱规</span><input name="carton" type="number" min="1" value="12" required></label>
+    <label class="field"><span>单品体积 L</span><input name="volume" type="number" min="0" step="0.01" placeholder="可自动计算"></label>
+  </div>
+  <div class="toolbar end" style="padding:0 20px"><button type="button" id="cancelDraftProduct" class="btn">取消</button><button class="btn primary">保存新品草稿</button></div>
+</form>
+</dialog>
+
+<script>
+const LIVE_DATA_URL="https://pengyuyan8910-cpu.github.io/frozen-carton-app/data/app-data.json";
+const PREVIEW_KEY="frozen_product_lifecycle_management_v1";
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
+const fmt=(v,d=0)=>num(v).toFixed(d).replace(/\.0+$/,"");
+const keyOf=p=>String(p.barcode||p.name||"").trim();
+const skuWidth=r=>Math.max(0,num(r.displayCols)*num(r.faceWidth));
+const storeName=s=>typeof s==="string"?s:s.store;
+const dateISO=offset=>{const d=new Date();d.setDate(d.getDate()+offset);return d.toISOString().slice(0,10)};
+let data=null;
+let launchPlans=[];
+let retirePlans=[];
+let restorePlans=[];
+let selectedTaskId=null;
+let state=loadState();
+
+function loadState(){
+ try{
+  if(window.parent!==window&&window.parent.ProductLifecycle?.getState){
+   return window.parent.ProductLifecycle.getState()||{draftProducts:[],tasks:[],slots:[],committedPatches:[]};
+  }
+  return JSON.parse(localStorage.getItem(PREVIEW_KEY))||{draftProducts:[],tasks:[],slots:[],committedPatches:[]};
+ }catch(e){return{draftProducts:[],tasks:[],slots:[],committedPatches:[]}}
+}
+function saveState(){
+ try{
+  if(window.parent!==window&&window.parent.ProductLifecycle?.saveState){
+   window.parent.ProductLifecycle.saveState(state);
+  }else{
+   localStorage.setItem(PREVIEW_KEY,JSON.stringify(state));
+  }
+ }catch(e){console.error("生命周期状态保存失败",e)}
+}
+function toast(msg){const el=document.createElement("div");el.className="toast";el.textContent=msg;document.body.appendChild(el);setTimeout(()=>el.remove(),2300)}
+function fallbackData(){
+ const stores=["合肥包河万达生活馆","芜湖镜湖万达生活馆","蚌埠香榭兰庭生活馆mini"].map((store,i)=>({store,type:i===2?"mini":"生活馆"}));
+ const cabinets=[];let c=1;
+ for(const s of stores){
+   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__卧柜2505-柜1__分区1",label:"卧柜2505-柜1",position:"分区1",kind:"卧柜",length:1988,depth:697,height:459});
+   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__卧柜2505-柜1__分区2",label:"卧柜2505-柜1",position:"分区2",kind:"卧柜",length:360,depth:697,height:199});
+   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__立柜3m-柜1__第1层",label:"立柜3m-柜1",position:"第1层",kind:"立柜",length:710,depth:534,height:250});
+   cabinets.push({id:"c"+c++,store:s.store,key:s.store+"__立柜3m-柜1__第2层",label:"立柜3m-柜1",position:"第2层",kind:"立柜",length:710,depth:534,height:250});
+ }
+ const pool=[
+  {id:"p1",active:true,name:"原切肥牛卷",barcode:"690001",grade:"A",rank:1,category3:"火锅食材",category4:"牛肉卷",length:220,width:160,height:55,volume:1.94,carton:12,dailyQty:2.1},
+  {id:"p2",active:true,name:"荠菜猪肉水饺",barcode:"690002",grade:"A",rank:2,category3:"预制主食",category4:"水饺",length:260,width:180,height:45,volume:2.11,carton:10,dailyQty:1.8},
+  {id:"p3",active:true,name:"香酥鸡米花",barcode:"690003",grade:"B",rank:8,category3:"预制菜",category4:"炸物",length:230,width:170,height:60,volume:2.35,carton:12,dailyQty:1.2},
+  {id:"p4",active:true,name:"手抓饼",barcode:"690004",grade:"B",rank:9,category3:"预制主食",category4:"饼类",length:270,width:270,height:35,volume:2.55,carton:8,dailyQty:1.1},
+  {id:"p5",active:true,name:"黑椒牛排",barcode:"690005",grade:"C",rank:25,category3:"冷冻食材",category4:"牛排",length:250,width:180,height:40,volume:1.8,carton:12,dailyQty:.45},
+  {id:"p6",active:true,name:"火山石烤肠",barcode:"690006",grade:"C",rank:30,category3:"火锅食材",category4:"烤肠",length:210,width:150,height:50,volume:1.58,carton:20,dailyQty:.6},
+  {id:"p7",active:true,name:"榴莲披萨",barcode:"690007",grade:"B",rank:12,category3:"预制菜",category4:"披萨",length:280,width:280,height:35,volume:2.74,carton:8,dailyQty:.8},
+  {id:"p8",active:true,name:"巧克力脆筒",barcode:"690008",grade:"B",rank:15,category3:"雪糕冰品",category4:"甜筒",length:210,width:90,height:60,volume:1.13,carton:18,dailyQty:1.3}
+ ];
+ const skus=[];let i=1;
+ for(const s of stores){
+  const cabRows=cabinets.filter(x=>x.store===s.store);
+  pool.slice(0,s.type==="mini"?6:7).forEach((p,idx)=>{
+   const cab=cabRows[idx%cabRows.length];
+   const face=Math.min(p.length,p.width,p.height);
+   skus.push({id:"s"+i++,store:s.store,included:true,...p,cabinetKey:cab.key,cabinetLabel:cab.label,position:cab.position,displayCols:idx%3===0?2:1,perCol:cab.kind==="立柜"?2:4,faceWidth:face});
+  });
+ }
+ return {meta:{source:"演示数据",version:"产品生命周期预览"},params:{triggerRate:.1,externalCapL:754},stores,cabinets,skus,productPool:pool};
+}
+async function loadData(){
+ let source="演示数据";
+ try{
+  if(window.parent!==window&&window.parent.ProductLifecycle?.getData){
+   const parentData=window.parent.ProductLifecycle.getData();
+   if(parentData&&Array.isArray(parentData.stores)&&Array.isArray(parentData.skus)&&Array.isArray(parentData.cabinets)){
+    data=parentData;source="当前统一底表";
+   }
+  }
+  if(!data&&window.UNIFIED_CARTON_DATA){
+   data=window.UNIFIED_CARTON_DATA;source="当前统一底表";
+  }
+  if(!data){
+   const ctl=new AbortController();setTimeout(()=>ctl.abort(),4200);
+   const res=await fetch("data/app-data.json?v="+Date.now(),{cache:"no-store",signal:ctl.signal});
+   if(res.ok)data=await res.json();
+   if(data)source="当前统一底表";
+  }
+ }catch(e){console.warn("统一底表读取失败，切换演示数据",e)}
+ if(!data)data=fallbackData();
+ normalizeData();
+ const productCount=allProducts().length;
+ document.getElementById("dataStatus").textContent=`${source}｜${data.stores.length}家门店｜${productCount}个商品｜任务完成后同步正式陈列图`;
+ notifyParentSize();
+}
+function normalizeData(){
+ data.stores=(data.stores||[]).map(s=>typeof s==="string"?{store:s}:s).filter(s=>s.store);
+ data.cabinets=(data.cabinets||[]).map((c,i)=>({...c,id:c.id||"cab_"+i,key:c.key||`${c.store}__${c.label}__${c.position}`,length:num(c.length)||710,depth:num(c.depth)||534,height:num(c.height)||250}));
+ data.skus=(data.skus||[]).filter(r=>r.included!==false);
+ if(!Array.isArray(data.productPool)||!data.productPool.length){
+  const m=new Map();data.skus.forEach(r=>{const k=keyOf(r);if(k&&!m.has(k))m.set(k,{...r,id:"pool_"+m.size,active:true})});data.productPool=[...m.values()];
+ }
+}
+function allProducts(){
+ const map=new Map();[...(data?.productPool||[]),...(state.draftProducts||[])].forEach(p=>{const k=keyOf(p);if(k&&!map.has(k))map.set(k,p)});
+ return [...map.values()];
+}
+function productByKey(k){return allProducts().find(p=>keyOf(p)===k)}
+function rowsForProduct(k){return data.skus.filter(r=>keyOf(r)===k)}
+function currentStoreRows(store){
+ const removedStatuses=new Set(["已释放未分配","已预留给新品"]);
+ const removedIds=new Set(state.slots.filter(s=>s.store===store&&removedStatuses.has(s.status)).map(s=>s.originalSkuId));
+ return data.skus.filter(r=>r.store===store&&!removedIds.has(r.id));
+}
+function launchTaskRows(store){
+ return state.tasks.filter(t=>t.type==="上新"&&t.status!=="已撤销").flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="位置冲突已撤销").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
+}
+function restoreTaskRows(store){
+ return state.tasks.filter(t=>t.type==="恢复"&&!["已撤销"].includes(t.status)).flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="暂不恢复").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
+}
+function productStatus(p){
+ const k=keyOf(p);
+ const ignored=new Set(["已撤销","部分撤销"]);
+ const latest=state.tasks.find(t=>t.productKey===k&&!ignored.has(t.status));
+ if(latest){
+  if(latest.type==="恢复"){
+   if(latest.status==="已完成")return "正常在售";
+   if(latest.status==="已撤销")return "待淘汰";
+   return "恢复中";
+  }
+  if(latest.type==="淘汰"){
+   if(["已撤回","部分撤回"].includes(latest.status))return latest.status==="已撤回"?"正常在售":"恢复中";
+   if(latest.status==="已完成")return "已淘汰";
+   return "待淘汰";
+  }
+  if(latest.type==="上新"){
+   return latest.status==="已完成"?"正常在售":"待上新";
+  }
+ }
+ if(state.draftProducts.some(x=>keyOf(x)===k))return "待上新";
+ if(p.active===false)return "已淘汰";
+ return "正常在售";
+}
+function coverageCount(k){
+ const set=new Set();
+ currentStores().forEach(s=>{
+  if(currentStoreRows(s).some(r=>keyOf(r)===k)||launchTaskRows(s).some(r=>r.productKey===k&&r.taskStatus==="已完成"))set.add(s);
+ });
+ return set.size;
+}
+function currentStores(){return data.stores.map(storeName)}
+function gradeTag(g){const x=String(g||"").toLowerCase();return `<span class="tag ${x}">${esc(g||"未评级")}</span>`}
+function statusTag(s){const cls=s==="正常在售"?"status-normal":s==="待上新"?"status-launch":s==="待淘汰"?"status-retire":s==="恢复中"?"status-restore":"status-archived";return `<span class="tag ${cls}">${esc(s)}</span>`}
+function metric(label,value,sub="",cls=""){return `<div class="metric ${cls}"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`}
+function table(cols,rows){
+ if(!rows.length)return `<div class="empty">没有匹配数据。</div>`;
+ return `<table><thead><tr>${cols.map(c=>`<th>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr>${cols.map(c=>`<td class="${c.cls||""}">${c.render?c.render(r,i):esc(r[c.key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function switchView(id){
+ document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
+ document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
+ if(id==="planogram")renderPlanogram();
+}
+function renderAll(){
+ renderSelectors();renderPool();renderRestore();renderSlots();renderTasks();renderPlanogram();
+}
+function renderSelectors(){
+ const products=allProducts().sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
+ const opts=products.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(p.category4||p.category3||"未分类")}</option>`).join("");
+ const lp=document.getElementById("launchProduct"),rp=document.getElementById("retireProduct"),xrp=document.getElementById("restoreProduct");
+ const lv=lp.value,rv=rp.value,xv=xrp.value;
+ lp.innerHTML=opts;rp.innerHTML=opts;
+ const restoreProducts=products.filter(p=>state.tasks.some(t=>t.type==="淘汰"&&t.productKey===keyOf(p)&&!["已撤销","已撤回"].includes(t.status)));
+ xrp.innerHTML=restoreProducts.length?restoreProducts.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(productStatus(p))}</option>`).join(""):`<option value="">暂无待恢复商品</option>`;
+ if(products.some(p=>keyOf(p)===lv))lp.value=lv;
+ if(products.some(p=>keyOf(p)===rv))rp.value=rv;
+ if(restoreProducts.some(p=>keyOf(p)===xv))xrp.value=xv;
+ const stores=currentStores();
+ document.getElementById("planogramStore").innerHTML=stores.map(s=>`<option>${esc(s)}</option>`).join("");
+ renderStorePickers();renderRestoreStorePicker();renderProductCards();
+}
+function renderStorePickers(){
+ const launchKey=document.getElementById("launchProduct").value;
+ const retireKey=document.getElementById("retireProduct").value;
+ document.getElementById("launchStorePicker").innerHTML=currentStores().map(s=>{
+  const has=currentStoreRows(s).some(r=>keyOf(r)===launchKey);
+  return `<label class="store-check"><input type="checkbox" value="${esc(s)}" ${has?"":"checked"}>${esc(s)}${has?"（已陈列）":""}</label>`;
+ }).join("");
+ document.getElementById("retireStorePicker").innerHTML=currentStores().map(s=>{
+  const has=currentStoreRows(s).some(r=>keyOf(r)===retireKey);
+  return `<label class="store-check" style="${has?"":"opacity:.45"}"><input type="checkbox" value="${esc(s)}" ${has?"checked":""} ${has?"":"disabled"}>${esc(s)}${has?"":"（未陈列）"}</label>`;
+ }).join("");
+}
+
+function retireRowsForProduct(productKey){
+ return state.tasks
+  .filter(t=>t.type==="淘汰"&&t.productKey===productKey&&!["已撤销","已撤回"].includes(t.status))
+  .flatMap(t=>t.rows.map(r=>({...r,retireTaskId:t.id,retireTaskStatus:t.status})));
+}
+function renderRestoreStorePicker(){
+ const el=document.getElementById("restoreStorePicker");if(!el)return;
+ const key=document.getElementById("restoreProduct").value;
+ const stores=[...new Set(retireRowsForProduct(key).map(r=>r.store))];
+ el.innerHTML=stores.length?stores.map(s=>`<label class="store-check"><input type="checkbox" value="${esc(s)}" checked>${esc(s)}</label>`).join(""):`<div class="empty" style="padding:10px">暂无涉及淘汰的门店</div>`;
+}
+
+function renderProductCards(){
+ const render=(id,key)=>{
+  const p=productByKey(key);const el=document.getElementById(id);if(!p){el.innerHTML="<div>请选择商品</div>";return}
+  el.innerHTML=`<div><h3>${esc(p.name)}</h3><p>${gradeTag(p.grade)}　${esc(p.category3||"")} / ${esc(p.category4||"")}<br>尺寸 ${fmt(p.length)}×${fmt(p.width)}×${fmt(p.height)}mm｜箱规 ${fmt(p.carton)}｜体积 ${fmt(p.volume||num(p.length)*num(p.width)*num(p.height)/1e6,2)}L</p></div><div>${statusTag(productStatus(p))}</div>`;
+ };
+ render("launchProductCard",document.getElementById("launchProduct").value);
+ render("retireProductCard",document.getElementById("retireProduct").value);
+ render("restoreProductCard",document.getElementById("restoreProduct").value);
+}
+function renderPool(){
+ const products=allProducts();const totalStores=currentStores().length;
+ const statuses=products.map(productStatus);
+ document.getElementById("poolMetrics").innerHTML=[
+  metric("有效商品",products.filter(p=>p.active!==false).length,"产品池当前可用"),
+  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"未进入变更任务","good"),
+  metric("待上新",statuses.filter(x=>x==="待上新").length,"含新品草稿与任务",""),
+  metric("待淘汰",statuses.filter(x=>x==="待淘汰").length,"等待门店执行","warn"),
+  metric("恢复中",statuses.filter(x=>x==="恢复中").length,"恢复原位或重新排位"),
+  metric("坑位资源",state.slots.length,"释放与预留位置"),
+  metric("进行中任务",state.tasks.filter(t=>!["已完成","已撤销"].includes(t.status)).length,"上新、淘汰与恢复")
+ ].join("");
+ const q=document.getElementById("poolSearch").value.trim(),sf=document.getElementById("poolStatusFilter").value;
+ const rows=products.filter(p=>{const s=[p.name,p.barcode,p.category3,p.category4].join(" ");return(!q||s.includes(q))&&(!sf||productStatus(p)===sf)}).sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
+ document.getElementById("poolTable").innerHTML=table([
+  {name:"商品",cls:"name",render:p=>`<strong>${esc(p.name)}</strong><br><small>${esc(p.barcode||"暂无条码")}</small>`},
+  {name:"等级",render:p=>gradeTag(p.grade)},
+  {name:"三级/四级类目",render:p=>`${esc(p.category3||"-")} / ${esc(p.category4||"-")}`},
+  {name:"尺寸",render:p=>`${fmt(p.length)}×${fmt(p.width)}×${fmt(p.height)}mm`},
+  {name:"箱规",render:p=>fmt(p.carton)},
+  {name:"门店覆盖",render:p=>{const c=coverageCount(keyOf(p)),pct=totalStores?Math.round(c/totalStores*100):0;return `<div class="coverage"><div class="coverage-bar"><i style="width:${pct}%"></i></div><span>${c}/${totalStores}</span></div>`}},
+  {name:"生命周期",render:p=>statusTag(productStatus(p))},
+  {name:"操作",render:p=>{
+   const s=productStatus(p),k=esc(keyOf(p));
+   if(s==="待淘汰")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看任务</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">恢复在售</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">继续淘汰</button></div>`;
+   if(s==="恢复中")return `<div class="mini-actions"><button class="mini-btn primary" onclick="openProductTask('${k}','恢复')">查看恢复</button><button class="mini-btn" onclick="prefillRestore('${k}')">调整方案</button></div>`;
+   if(s==="待上新")return `<div class="mini-actions"><button class="mini-btn primary" onclick="prefillLaunch('${k}')">调整上新</button><button class="mini-btn" onclick="openProductTask('${k}','上新')">查看任务</button></div>`;
+   return `<div class="mini-actions"><button class="mini-btn primary" onclick="prefillLaunch('${k}')">上新</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
+  }}
+ ],rows);
+}
+function cabinetRows(store){
+ const map=new Map(data.cabinets.filter(c=>c.store===store).map(c=>[c.key,{...c,used:0,items:[]}]));
+ currentStoreRows(store).forEach(r=>{const c=map.get(r.cabinetKey);if(c){c.used+=skuWidth(r);c.items.push(r)}});
+ launchTaskRows(store).forEach(r=>{if(r.taskStatus!=="已撤销"){const c=map.get(r.cabinetKey);if(c){c.used+=num(r.needWidth);c.items.push(r)}}});
+ for(const c of map.values())c.left=Math.max(0,num(c.length)-c.used);
+ return [...map.values()];
+}
+function isIceProduct(p){return /雪糕|冰品|冰淇淋|甜筒|冰棒|冰杯/.test([p.name,p.category3,p.category4].join(" "))}
+function isIceCabinet(c){return /雪糕|冰品|冰淇淋/.test([c.kind,c.label].join(" "))}
+function orientationFor(p,c){
+ const L=num(p.length),W=num(p.width),H=num(p.height);
+ const opts=[{face:L,depth:W,h:H,label:"长做陈列面"},{face:W,depth:L,h:H,label:"宽做陈列面"},{face:H,depth:W,h:L,label:"高做陈列面"}].filter(o=>o.face>0&&o.depth>0&&o.h>0);
+ const fit=opts.filter(o=>(!c.depth||o.depth<=num(c.depth)+.1)&&(!c.height||o.h<=num(c.height)+.1)).map(o=>{
+  let per=Math.max(1,Math.floor(num(c.depth||o.depth)/o.depth));
+  if(!/立柜/.test(c.kind||c.label))per*=Math.max(1,Math.floor(num(c.height||o.h)/o.h));
+  return {...o,per};
+ }).sort((a,b)=>b.per-a.per||a.face-b.face);
+ return fit[0]||{face:Math.min(...[L,W,H].filter(Boolean),100),depth:0,h:0,per:1,label:"尺寸待复核"};
+}
+function selectedStores(pickerId){return [...document.querySelectorAll(`#${pickerId} input:checked`)].map(x=>x.value)}
+
+function launchSettings(){
+ const minCols=Math.max(1,Math.floor(num(document.getElementById("launchMinCols").value)||1));
+ const maxCols=Math.max(minCols,Math.floor(num(document.getElementById("launchMaxCols").value)||minCols));
+ return{
+  strategy:document.getElementById("launchStrategy").value,
+  minCols,maxCols,
+  allowReleased:document.getElementById("allowReleased").checked,
+  allowShrink:document.getElementById("allowShrink").checked,
+  allowReplace:document.getElementById("allowReplace").checked,
+  allowMove:document.getElementById("allowMove").checked,
+  allowPartial:document.getElementById("allowPartial").checked
+ };
+}
+function storeBaselineExternalL(store){
+ return currentStoreRows(store).reduce((sum,r)=>sum+num(r.staticVol||r.externalVolL||0),0);
+}
+function candidateQtyMetrics(p,o,cols,store){
+ const fullQty=Math.max(1,num(o.per))*cols;
+ const trigger=Math.ceil(fullQty*num(data.params?.triggerRate||.1));
+ const receivable=Math.max(0,fullQty-trigger);
+ const carton=Math.max(1,num(p.carton||p.caseQty||1));
+ const inShelf=Math.min(carton,receivable);
+ const externalQty=Math.max(0,carton-inShelf);
+ const volume=num(p.volume)||num(p.length)*num(p.width)*num(p.height)/1e6;
+ const externalL=externalQty*volume;
+ return{fullQty,trigger,receivable,inShelf,externalQty,externalL,totalExternalL:storeBaselineExternalL(store)+externalL};
+}
+function sameCategoryScore(c,p){
+ const same4=c.items.filter(x=>x.category4&&x.category4===p.category4).length;
+ const same3=c.items.filter(x=>x.category3&&x.category3===p.category3).length;
+ return{same4,same3,points:same4*18+same3*7};
+}
+function preferredCols(maxFit,s){
+ return Math.max(s.minCols,Math.min(s.maxCols,maxFit));
+}
+function makeLaunchCandidate(p,store,c,o,cols,method,extra={}){
+ const q=candidateQtyMetrics(p,o,cols,store);
+ const cat=sameCategoryScore(c,p);
+ const baseScores={released:105,pending:98,natural:90,shrink:74,replace:66,move:58};
+ let score=baseScores[method]||50;
+ score+=cat.points+Math.min(10,cols*3)-Math.min(20,q.externalL*.08);
+ const s=launchSettings();
+ if(s.strategy==="released"&&["released","pending"].includes(method))score+=35;
+ if(s.strategy==="natural"&&method==="natural")score+=35;
+ if(s.strategy==="category")score+=cat.points*1.7;
+ if(s.strategy==="minimal")score+=method==="natural"?32:method==="released"?28:method==="pending"?20:-10;
+ if(s.strategy==="external")score+=Math.max(0,38-q.externalL*.5)+cols*4;
+ const methodName={released:"承接已释放坑位",pending:"承接待淘汰坑位",natural:"利用柜段自然余量",shrink:"压缩相邻商品排面",replace:"替换低优先级商品",move:"跨柜段调位"}[method]||method;
+ const adjustment={released:"无需移动商品",pending:"等待原商品撤柜",natural:"无需移动商品",shrink:"调整1个商品排面",replace:"淘汰并替换1个商品",move:"跨柜移动1个商品"}[method]||"";
+ return{
+  id:`${store}__${method}__${c.key}__${cols}__${extra.shrinkSkuId||extra.replaceSkuId||extra.moveSkuId||extra.sourceSlotId||""}`,
+  store,feasible:true,status:["natural","released"].includes(method)?"可直接上新":"需调整后上新",
+  method,scheme:methodName,cabinetKey:c.key,cabinetLabel:c.label,position:c.position,
+  needWidth:o.face*cols,faceWidth:o.face,displayCols:cols,perCol:o.per,orientation:o.label,
+  score,categoryScore:cat.points,adjustment,...q,...extra
+ };
+}
+function dedupeCandidates(list){
+ const seen=new Set();
+ return list.filter(c=>{
+  const k=[c.method,c.cabinetKey,c.displayCols,c.shrinkSkuId,c.replaceSkuId,c.moveSkuId,c.sourceSlotId].join("|");
+  if(seen.has(k))return false;seen.add(k);return true;
+ });
+}
+function simulateLaunch(){
+ const p=productByKey(document.getElementById("launchProduct").value);if(!p)return;
+ const scope=document.getElementById("launchScope").value;let targets=scope==="selected"?selectedStores("launchStorePicker"):currentStores();
+ if(scope==="missing")targets=targets.filter(s=>!currentStoreRows(s).some(r=>keyOf(r)===keyOf(p)));
+ launchPlans=targets.map(store=>buildLaunchPlan(p,store));
+ const executable=launchPlans.some(x=>x.candidates.some(c=>c.feasible));
+ document.getElementById("applyLaunchPreviewBtn").disabled=!executable;
+ renderLaunchResult();
+ const methods=new Set(launchPlans.flatMap(x=>x.candidates.filter(c=>c.feasible).map(c=>c.method)));
+ toast(`已生成${launchPlans.length}家门店、${methods.size}类入坑逻辑的候选方案`);
+}
+function buildLaunchPlan(p,store){
+ if(currentStoreRows(store).some(r=>keyOf(r)===keyOf(p))){
+  return{store,selectedIndex:0,candidates:[{store,feasible:false,status:"已陈列",method:"existing",scheme:"无需上新",reason:"当前门店已经陈列该商品"}]};
+ }
+ const s=launchSettings();
+ const cabs=cabinetRows(store).filter(c=>isIceCabinet(c)===isIceProduct(p));
+ const candidates=[];
+ const cap=num(data.params?.externalCapL||754);
+
+ if(s.allowReleased){
+  const slots=state.slots.filter(x=>x.store===store&&["已释放未分配","待释放"].includes(x.status));
+  for(const slot of slots){
+   const c=cabs.find(x=>x.key===slot.cabinetKey);if(!c)continue;
+   const o=orientationFor(p,c);const maxFit=Math.floor(num(slot.width)/Math.max(1,o.face));
+   if(maxFit>=s.minCols){
+    const cols=preferredCols(maxFit,s);
+    const method=slot.status==="已释放未分配"?"released":"pending";
+    candidates.push(makeLaunchCandidate(p,store,c,o,cols,method,{
+     sourceSlotId:slot.id,
+     sourceSlotStatus:slot.status,
+     sourceProduct:slot.originalProduct,
+     reason:`${method==="released"?"直接使用":"等待"}${slot.originalProduct||"原商品"}释放的${fmt(slot.width)}mm坑位`
+    }));
+   }
+  }
+ }
+
+ for(const c of cabs){
+  const o=orientationFor(p,c);
+  const maxFit=Math.floor(num(c.left)/Math.max(1,o.face));
+  if(maxFit>=s.minCols){
+   const cols=preferredCols(maxFit,s);
+   candidates.push(makeLaunchCandidate(p,store,c,o,cols,"natural",{
+    reason:`柜段当前剩余${fmt(c.left)}mm，新增${cols}列后预计余量${fmt(c.left-o.face*cols)}mm`
+   }));
+  }
+ }
+
+ if(s.allowShrink){
+  for(const c of cabs){
+   const o=orientationFor(p,c);
+   const reducers=c.items.filter(r=>num(r.displayCols)>1&&["B","C","D"].includes(String(r.grade||"").toUpperCase()))
+    .sort((a,b)=>({D:0,C:1,B:2,A:3}[a.grade]??2)-({D:0,C:1,B:2,A:3}[b.grade]??2)||num(a.dailyQty)-num(b.dailyQty));
+   for(const r of reducers.slice(0,2)){
+    const available=num(c.left)+num(r.faceWidth);
+    const maxFit=Math.floor(available/Math.max(1,o.face));
+    if(maxFit<s.minCols)continue;
+    const cols=preferredCols(maxFit,s);
+    const cand=makeLaunchCandidate(p,store,c,o,cols,"shrink",{
+     shrinkSkuId:r.id,shrinkName:r.name,shrinkFromCols:num(r.displayCols),shrinkToCols:num(r.displayCols)-1,
+     reason:`${r.name}由${fmt(r.displayCols)}列压缩为${fmt(num(r.displayCols)-1)}列，释放${fmt(r.faceWidth)}mm`
+    });
+    if(cand.totalExternalL<=cap||!cap)candidates.push(cand);
+   }
+  }
+ }
+
+ if(s.allowReplace){
+  for(const c of cabs){
+   const o=orientationFor(p,c);
+   const replacers=c.items.filter(r=>["B","C","D"].includes(String(r.grade||"").toUpperCase())&&skuWidth(r)>=o.face*s.minCols)
+    .sort((a,b)=>{
+      const ac=(a.category4===p.category4?0:a.category3===p.category3?1:2),bc=(b.category4===p.category4?0:b.category3===p.category3?1:2);
+      return ac-bc||({D:0,C:1,B:2,A:3}[a.grade]??2)-({D:0,C:1,B:2,A:3}[b.grade]??2)||num(a.dailyQty)-num(b.dailyQty);
+    });
+   for(const r of replacers.slice(0,2)){
+    const maxFit=Math.floor(skuWidth(r)/Math.max(1,o.face));if(maxFit<s.minCols)continue;
+    const cols=preferredCols(maxFit,s);
+    candidates.push(makeLaunchCandidate(p,store,c,o,cols,"replace",{
+     replaceSkuId:r.id,replaceName:r.name,replaceWidth:skuWidth(r),
+     reason:`原位替换${r.name}（${esc(r.grade||"未评级")}级，${fmt(skuWidth(r))}mm），需人工确认淘汰`
+    }));
+   }
+  }
+ }
+
+ if(s.allowMove){
+  for(const source of cabs){
+   const o=orientationFor(p,source);
+   const movable=source.items.filter(r=>["B","C","D"].includes(String(r.grade||"").toUpperCase()))
+    .sort((a,b)=>num(a.dailyQty)-num(b.dailyQty));
+   for(const r of movable.slice(0,2)){
+    const maxFit=Math.floor((num(source.left)+skuWidth(r))/Math.max(1,o.face));if(maxFit<s.minCols)continue;
+    const target=cabs.filter(d=>d.key!==source.key&&num(d.left)>=skuWidth(r)&&isIceCabinet(d)===isIceCabinet(source))
+      .sort((a,b)=>{
+       const ac=sameCategoryScore(a,r).points,bc=sameCategoryScore(b,r).points;
+       return bc-ac||(a.left-skuWidth(r))-(b.left-skuWidth(r));
+      })[0];
+    if(!target)continue;
+    const cols=preferredCols(maxFit,s);
+    candidates.push(makeLaunchCandidate(p,store,source,o,cols,"move",{
+     moveSkuId:r.id,moveName:r.name,moveWidth:skuWidth(r),
+     moveFromKey:source.key,moveFromLabel:source.label,moveFromPosition:source.position,
+     moveToKey:target.key,moveToLabel:target.label,moveToPosition:target.position,
+     reason:`将${r.name}移至${target.label} ${target.position}，在原位置腾出${fmt(skuWidth(r))}mm连续空间`
+    }));
+   }
+  }
+ }
+
+ let viable=dedupeCandidates(candidates)
+  .filter(c=>!cap||c.totalExternalL<=cap)
+  .sort((a,b)=>b.score-a.score)
+  .slice(0,5);
+
+ if(!viable.length){
+  viable=[{store,feasible:false,status:"暂不上新",method:"blocked",scheme:"无满足硬约束的位置",reason:"没有可承接坑位、自然余量或允许的调位方案；该门店保持未上新状态"}];
+ }
+ return{store,selectedIndex:0,candidates:viable};
+}
+function selectedLaunchCandidate(plan){return plan.candidates[Math.max(0,Math.min(plan.selectedIndex,plan.candidates.length-1))]}
+function selectLaunchCandidate(storeEncoded,index){
+ const store=decodeURIComponent(storeEncoded);const plan=launchPlans.find(x=>x.store===store);if(!plan)return;
+ plan.selectedIndex=Math.max(0,Math.min(Number(index)||0,plan.candidates.length-1));
+ renderLaunchResult();
+}
+function renderLaunchResult(){
+ if(!launchPlans.length){document.getElementById("launchResult").innerHTML='<div class="empty">请选择商品并生成方案。</div>';return}
+ document.getElementById("launchResult").innerHTML=table([
+  {name:"门店",cls:"name",render:r=>esc(r.store)},
+  {name:"方案选择",render:r=>{
+    const selected=selectedLaunchCandidate(r);
+    return `<select class="scheme-select" onchange="selectLaunchCandidate('${encodeURIComponent(r.store)}',this.value)">${r.candidates.map((c,i)=>`<option value="${i}" ${i===r.selectedIndex?"selected":""}>${i===0?"[推荐] ":"[备选] "}${esc(c.scheme)}</option>`).join("")}</select><div class="scheme-meta"><span class="plan-count recommended">共${r.candidates.length}套</span><span class="plan-count">${esc(selected.status)}</span></div>`;
+  }},
+  {name:"入坑逻辑",render:r=>esc(selectedLaunchCandidate(r).scheme)},
+  {name:"推荐位置",render:r=>{const c=selectedLaunchCandidate(r);return c.cabinetLabel?`${esc(c.cabinetLabel)} ${esc(c.position)}`:"-"}},
+  {name:"排面/满陈",render:r=>{const c=selectedLaunchCandidate(r);return c.feasible?`${fmt(c.displayCols)}列 / ${fmt(c.fullQty)}个`:"-"}},
+  {name:"预计新品外储",render:r=>{const c=selectedLaunchCandidate(r);return c.feasible?`${fmt(c.externalQty)}个 / ${fmt(c.externalL,1)}L`:"-"}},
+  {name:"涉及调整",render:r=>esc(selectedLaunchCandidate(r).adjustment||"-")},
+  {name:"说明",render:r=>esc(selectedLaunchCandidate(r).reason||"-")}
+ ],launchPlans);
+}
+function applyLaunch(){
+ const p=productByKey(document.getElementById("launchProduct").value);
+ const rows=launchPlans.map(plan=>({...selectedLaunchCandidate(plan),store:plan.store})).filter(x=>x.feasible);
+ if(!p||!rows.length)return;
+ const blocked=launchPlans.filter(plan=>!selectedLaunchCandidate(plan).feasible);
+ if(blocked.length&&!document.getElementById("allowPartial").checked){toast(`仍有${blocked.length}家门店无法执行，当前未允许部分门店暂不上新`);return}
+ const id="TASK-L-"+Date.now();
+ const task={id,type:"上新",productKey:keyOf(p),productName:p.name,date:document.getElementById("launchDate").value,status:"待门店执行",createdAt:new Date().toLocaleString("zh-CN"),strategy:document.getElementById("launchStrategy").value,blockedStores:blocked.map(x=>x.store),rows:rows.map((r,i)=>({...r,id:id+"-"+i,productKey:keyOf(p),productName:p.name,grade:p.grade,category3:p.category3,category4:p.category4,carton:p.carton,volume:p.volume}))};
+ state.tasks.unshift(task);
+ rows.forEach((r,i)=>{
+  if(r.sourceSlotId){
+   const s=state.slots.find(x=>x.id===r.sourceSlotId);
+   if(s){s.status="已预留给新品";s.targetProduct=p.name;s.targetProductKey=keyOf(p);s.taskId=id}
+  }
+  if(r.replaceSkuId){
+   const original=data.skus.find(x=>x.id===r.replaceSkuId);
+   if(original&&!state.slots.some(x=>x.taskId===id&&x.originalSkuId===original.id)){
+    state.slots.push({id:"SLOT-REPLACE-"+Date.now()+"-"+i,taskId:id,store:r.store,cabinetKey:r.cabinetKey,cabinetLabel:r.cabinetLabel,position:r.position,width:r.replaceWidth,originalSkuId:r.replaceSkuId,originalProduct:r.replaceName,originalProductKey:keyOf(original),targetProduct:p.name,targetProductKey:keyOf(p),status:"已预留给新品",availableDate:document.getElementById("launchDate").value});
+   }
+  }
+ });
+ selectedTaskId=id;launchPlans=[];saveState();renderAll();switchView("planogram");
+ document.getElementById("planogramStore").value=rows[0].store;renderPlanogram();
+ toast(`已应用${rows.length}家门店的所选方案，陈列图已按不同入坑逻辑联动`);
+}
+window.selectLaunchCandidate=selectLaunchCandidate;
+
+
+function restorationTypeLabel(method){
+ return{
+  direct:"尚未撤柜，原位直接恢复",
+  original:"原坑位空闲，恢复原位",
+  cancelNew:"取消新品预留后恢复原位",
+  replan:"原位不可用，重新排位",
+  skip:"该门店暂不恢复",
+  done:"已经恢复"
+ }[method]||method;
+}
+function buildRestoreReplanCandidates(p,store){
+ const plan=buildLaunchPlan(p,store);
+ return (plan.candidates||[]).filter(c=>c.feasible).slice(0,3).map(c=>({
+  ...c,
+  method:"replan",
+  restoreMethod:"replan",
+  scheme:`重新排位｜${c.scheme}`,
+  originalScheme:c.scheme
+ }));
+}
+function restoreCandidateForRow(p,row){
+ const slot=state.slots.find(s=>s.originalSkuId===row.skuId&&s.store===row.store);
+ const strategy=document.getElementById("restoreStrategy").value;
+ const conflictPolicy=document.getElementById("restoreConflictPolicy").value;
+ const original={
+  store:row.store,skuId:row.skuId,productKey:keyOf(p),productName:p.name,
+  cabinetKey:row.cabinetKey,cabinetLabel:row.cabinetLabel,position:row.position,
+  width:row.width||skuWidth(data.skus.find(x=>x.id===row.skuId)||row),
+  displayCols:row.displayCols||num(data.skus.find(x=>x.id===row.skuId)?.displayCols)||1,
+  faceWidth:num(data.skus.find(x=>x.id===row.skuId)?.faceWidth),
+  retireTaskId:row.retireTaskId,sourceSlotId:slot?.id
+ };
+ if(!slot||slot.status==="待释放"){
+  const direct={...original,feasible:true,restoreMethod:"direct",method:"direct",scheme:restorationTypeLabel("direct"),status:"原位可直接恢复",reason:"商品尚未实际撤柜，取消停止补货和淘汰标记即可，位置与列数保持不变"};
+  if(strategy==="replanAll"){
+   const replans=buildRestoreReplanCandidates(p,row.store);
+   return replans.length?[...replans,direct]:[direct];
+  }
+  return[direct];
+ }
+ if(slot.status==="已释放未分配"){
+  const originalPlan={...original,feasible:true,restoreMethod:"original",method:"original",scheme:restorationTypeLabel("original"),status:"原坑位可恢复",reason:`原坑位仍空闲，可恢复${fmt(slot.width)}mm及原陈列列数`};
+  if(strategy==="replanAll"){
+   const replans=buildRestoreReplanCandidates(p,row.store);
+   return replans.length?[...replans,originalPlan]:[originalPlan];
+  }
+  return[originalPlan];
+ }
+ if(slot.status==="已预留给新品"){
+  const cancelNew={...original,feasible:true,restoreMethod:"cancelNew",method:"cancelNew",scheme:restorationTypeLabel("cancelNew"),status:"存在新品预留冲突",conflictProduct:slot.targetProduct,reason:`原坑位已经预留给${slot.targetProduct||"新品"}；选择此方案会撤销该门店的新品预留`};
+  const replans=buildRestoreReplanCandidates(p,row.store);
+  const skip={...original,feasible:false,restoreMethod:"skip",method:"skip",scheme:restorationTypeLabel("skip"),status:"暂不恢复",reason:`保留${slot.targetProduct||"新品"}预留，当前门店暂不恢复原商品`};
+  if(strategy==="originalOnly")return[cancelNew,skip];
+  if(conflictPolicy==="restoreOriginal")return[cancelNew,...replans,skip];
+  if(conflictPolicy==="keepNew")return[...replans,cancelNew,skip];
+  return[cancelNew,...replans,skip];
+ }
+ if(slot.status==="恢复待执行"||slot.status==="已恢复占用"){
+  return[{...original,feasible:false,restoreMethod:"done",method:"done",scheme:restorationTypeLabel("done"),status:"已经恢复",reason:"该门店已经进入恢复任务"}];
+ }
+ const replans=buildRestoreReplanCandidates(p,row.store);
+ return replans.length?replans:[{...original,feasible:false,restoreMethod:"skip",method:"skip",scheme:restorationTypeLabel("skip"),status:"暂不能恢复",reason:"原位状态发生变化，且没有满足硬约束的新位置"}];
+}
+function simulateRestore(){
+ const key=document.getElementById("restoreProduct").value,p=productByKey(key);if(!p){toast("当前没有待恢复商品");return}
+ const checked=selectedStores("restoreStorePicker");
+ const scope=document.getElementById("restoreScope").value;
+ let rows=retireRowsForProduct(key).filter(r=>scope!=="selected"||checked.includes(r.store));
+ if(scope==="original")rows=rows.filter(r=>{
+  const s=state.slots.find(x=>x.originalSkuId===r.skuId&&x.store===r.store);
+  return !s||["待释放","已释放未分配"].includes(s.status);
+ });
+ restorePlans=rows.map(r=>({store:r.store,skuId:r.skuId,selectedIndex:0,candidates:restoreCandidateForRow(p,r)}));
+ document.getElementById("applyRestorePreviewBtn").disabled=!restorePlans.some(x=>selectedRestoreCandidate(x)?.feasible);
+ renderRestore();
+ toast(`已扫描${restorePlans.length}个门店陈列位置`);
+}
+function selectedRestoreCandidate(plan){
+ return plan.candidates[Math.max(0,Math.min(plan.selectedIndex,plan.candidates.length-1))];
+}
+function selectRestoreCandidate(storeEncoded,skuEncoded,index){
+ const store=decodeURIComponent(storeEncoded),sku=decodeURIComponent(skuEncoded);
+ const plan=restorePlans.find(x=>x.store===store&&String(x.skuId)===sku);if(!plan)return;
+ plan.selectedIndex=Math.max(0,Math.min(Number(index)||0,plan.candidates.length-1));
+ renderRestore();
+}
+function renderRestore(){
+ const result=document.getElementById("restoreResult");if(!result)return;
+ const key=document.getElementById("restoreProduct")?.value;
+ const hasProduct=!!productByKey(key);
+ if(!hasProduct){
+  result.innerHTML='<div class="empty">暂无待恢复商品。请先在“批量淘汰”中创建淘汰任务。</div>';
+  document.getElementById("applyRestorePreviewBtn").disabled=true;
+  return;
+ }
+ if(!restorePlans.length){
+  result.innerHTML='<div class="empty">点击“扫描原位与冲突”生成逐店恢复方案。</div>';
+  return;
+ }
+ result.innerHTML=table([
+  {name:"门店",cls:"name",render:r=>esc(r.store)},
+  {name:"恢复方案",render:r=>{
+   const c=selectedRestoreCandidate(r);
+   return `<select class="restore-choice" onchange="selectRestoreCandidate('${encodeURIComponent(r.store)}','${encodeURIComponent(String(r.skuId))}',this.value)">${r.candidates.map((x,i)=>`<option value="${i}" ${i===r.selectedIndex?"selected":""}>${i===0?"[推荐] ":"[备选] "}${esc(x.scheme)}</option>`).join("")}</select>`;
+  }},
+  {name:"系统判断",render:r=>esc(selectedRestoreCandidate(r).status||"-")},
+  {name:"原位置",render:r=>{const c=selectedRestoreCandidate(r);return `${esc(c.cabinetLabel||"-")} ${esc(c.position||"")}`}},
+  {name:"恢复后位置",render:r=>{const c=selectedRestoreCandidate(r);return c.restoreMethod==="replan"?`${esc(c.cabinetLabel)} ${esc(c.position)}`:c.restoreMethod==="skip"?"不恢复":"原位置"}},
+  {name:"恢复排面",render:r=>{const c=selectedRestoreCandidate(r);return c.restoreMethod==="replan"?`${fmt(c.displayCols)}列 / ${fmt(c.needWidth)}mm`:`${fmt(c.displayCols)}列 / ${fmt(c.width)}mm`}},
+  {name:"冲突商品",render:r=>esc(selectedRestoreCandidate(r).conflictProduct||"-")},
+  {name:"说明",render:r=>esc(selectedRestoreCandidate(r).reason||"-")}
+ ],restorePlans);
+ document.getElementById("applyRestorePreviewBtn").disabled=!restorePlans.some(x=>selectedRestoreCandidate(x)?.feasible);
+}
+function updateRetireTaskAfterRestore(candidate){
+ const task=state.tasks.find(t=>t.id===candidate.retireTaskId);
+ if(!task)return;
+ const row=task.rows.find(r=>r.skuId===candidate.skuId&&r.store===candidate.store);
+ if(row){row.status="已发起恢复";row.restoreMethod=candidate.restoreMethod}
+ const restored=task.rows.filter(r=>r.status==="已发起恢复").length;
+ if(restored===task.rows.length)task.status="已撤回";
+ else if(restored>0)task.status="部分撤回";
+}
+function cancelReservedLaunch(slot,candidate){
+ if(!slot?.taskId)return;
+ const launch=state.tasks.find(t=>t.id===slot.taskId&&t.type==="上新");
+ if(!launch)return;
+ const row=launch.rows.find(r=>r.store===candidate.store&&r.cabinetKey===candidate.cabinetKey);
+ if(row)row.status="位置冲突已撤销";
+ const valid=launch.rows.filter(r=>r.status!=="位置冲突已撤销");
+ launch.status=valid.length?"部分撤销":"已撤销";
+}
+function applyRestore(){
+ const p=productByKey(document.getElementById("restoreProduct").value);if(!p)return;
+ const selected=restorePlans.map(plan=>({...selectedRestoreCandidate(plan),store:plan.store,skuId:plan.skuId})).filter(c=>c.feasible);
+ if(!selected.length){toast("没有可执行的恢复方案");return}
+ const id="TASK-RESTORE-"+Date.now();
+ const task={
+  id,type:"恢复",productKey:keyOf(p),productName:p.name,
+  date:document.getElementById("restoreDate").value,status:"待门店执行",
+  createdAt:new Date().toLocaleString("zh-CN"),
+  rows:selected.map((c,i)=>({...c,id:id+"-"+i,status:"恢复待执行"}))
+ };
+ state.tasks.unshift(task);
+ selected.forEach(c=>{
+  const slot=state.slots.find(s=>s.id===c.sourceSlotId);
+  if(c.restoreMethod==="cancelNew"){
+   cancelReservedLaunch(slot,c);
+   if(slot){slot.status="恢复待执行";slot.targetProduct="";slot.targetProductKey="";slot.restoreTaskId=id}
+  }else if(["direct","original"].includes(c.restoreMethod)){
+   if(slot){slot.status="恢复待执行";slot.restoreTaskId=id}
+  }else if(c.restoreMethod==="replan"){
+   if(slot)slot.restoreTaskId=id;
+  }
+  updateRetireTaskAfterRestore(c);
+ });
+ selectedTaskId=id;
+ restorePlans=[];
+ saveState();renderAll();switchView("planogram");
+ document.getElementById("planogramStore").value=selected[0].store;
+ renderPlanogram();
+ toast(`已创建${selected.length}个位置的恢复任务，陈列图已联动`);
+}
+function prefillRestore(k){
+ switchView("restore");
+ document.getElementById("restoreProduct").value=k;
+ restorePlans=[];
+ renderRestoreStorePicker();renderProductCards();renderRestore();
+}
+function openProductTask(k,type){
+ const t=state.tasks.find(x=>x.productKey===k&&x.type===type);
+ if(!t){toast("没有找到对应任务");return}
+ selectedTaskId=t.id;switchView("tasks");renderTaskDetail();
+}
+window.selectRestoreCandidate=selectRestoreCandidate;
+window.prefillRestore=prefillRestore;
+window.openProductTask=openProductTask;
+
+function simulateRetire(){
+ const p=productByKey(document.getElementById("retireProduct").value);if(!p)return;
+ const targets=selectedStores("retireStorePicker");retirePlans=[];
+ targets.forEach(store=>currentStoreRows(store).filter(r=>keyOf(r)===keyOf(p)).forEach(r=>{
+  const c=data.cabinets.find(x=>x.key===r.cabinetKey)||{};
+  retirePlans.push({store,skuId:r.id,productKey:keyOf(p),productName:p.name,cabinetKey:r.cabinetKey,cabinetLabel:r.cabinetLabel||c.label,position:r.position||c.position,width:skuWidth(r),displayCols:r.displayCols,faceWidth:r.faceWidth,currentStatus:"正常陈列"});
+ }));
+ document.getElementById("applyRetirePreviewBtn").disabled=!retirePlans.length;renderRetireResult();toast(`已扫描${retirePlans.length}个陈列位置`);
+}
+function renderRetireResult(){
+ const mode=document.getElementById("retireMode").value;const target=mode==="immediate"?"已释放未分配":"待释放";
+ document.getElementById("retireResult").innerHTML=table([
+  {name:"门店",cls:"name",render:r=>esc(r.store)},{name:"原位置",render:r=>`${esc(r.cabinetLabel)} ${esc(r.position)}`},
+  {name:"原陈列",render:r=>`${fmt(r.displayCols)}列 × ${fmt(r.faceWidth)}mm`},{name:"释放宽度",render:r=>`<strong>${fmt(r.width)}mm</strong>`},
+  {name:"执行方式",render:r=>esc(document.getElementById("retireMode").selectedOptions[0].textContent)},{name:"坑位后续状态",render:r=>statusTag(target==="待释放"?"待淘汰":"已淘汰")}
+ ],retirePlans);
+}
+function applyRetire(){
+ const p=productByKey(document.getElementById("retireProduct").value);if(!p||!retirePlans.length)return;
+ const mode=document.getElementById("retireMode").value,id="TASK-R-"+Date.now();const slotStatus=mode==="immediate"?"已释放未分配":"待释放";
+ const task={id,type:"淘汰",productKey:keyOf(p),productName:p.name,date:document.getElementById("retireDate").value,mode,status:mode==="immediate"?"部分完成":"待门店执行",createdAt:new Date().toLocaleString("zh-CN"),rows:retirePlans.map((r,i)=>({...r,id:id+"-"+i,status:slotStatus}))};
+ state.tasks.unshift(task);
+ retirePlans.forEach((r,i)=>state.slots.push({id:"SLOT-"+Date.now()+"-"+i,taskId:id,store:r.store,cabinetKey:r.cabinetKey,cabinetLabel:r.cabinetLabel,position:r.position,width:r.width,originalSkuId:r.skuId,originalProduct:r.productName,originalProductKey:r.productKey,status:slotStatus,availableDate:document.getElementById("retireDate").value}));
+ selectedTaskId=id;retirePlans=[];saveState();renderAll();switchView("planogram");document.getElementById("planogramStore").value=task.rows[0].store;renderPlanogram();toast("淘汰任务已应用，陈列图已联动");
+}
+function renderSlots(){
+ const slots=state.slots;const statuses=x=>slots.filter(s=>s.status===x).length;
+ document.getElementById("slotMetrics").innerHTML=[
+  metric("坑位总数",slots.length,"淘汰与调整释放"),
+  metric("待释放",statuses("待释放"),"商品仍在售罄阶段","warn"),
+  metric("已释放未分配",statuses("已释放未分配"),"可以承接新品","good"),
+  metric("已预留给新品",statuses("已预留给新品"),"等待门店执行"),
+  metric("释放总宽度",fmt(slots.reduce((a,b)=>a+num(b.width),0))+"mm","累计资源"),
+  metric("可用总宽度",fmt(slots.filter(s=>s.status==="已释放未分配").reduce((a,b)=>a+num(b.width),0))+"mm","当前可立即使用")
+ ].join("");
+ const q=document.getElementById("slotSearch").value.trim(),sf=document.getElementById("slotStatusFilter").value;
+ const rows=slots.filter(s=>(!q||[s.store,s.cabinetLabel,s.position,s.originalProduct,s.targetProduct].join(" ").includes(q))&&(!sf||s.status===sf));
+ document.getElementById("slotTable").innerHTML=table([
+  {name:"坑位编号",render:s=>esc(s.id)},{name:"门店",cls:"name",render:s=>esc(s.store)},{name:"位置",render:s=>`${esc(s.cabinetLabel)} ${esc(s.position)}`},
+  {name:"可用宽度",render:s=>`<strong>${fmt(s.width)}mm</strong>`},{name:"释放来源",render:s=>esc(s.originalProduct||"-")},{name:"目标新品",render:s=>esc(s.targetProduct||"-")},
+  {name:"状态",render:s=>statusTag(s.status==="待释放"?"待淘汰":s.status==="已释放未分配"?"已淘汰":"待上新")},
+  {name:"操作",render:s=>s.status==="待释放"?`<button class="mini-btn primary" onclick="completeSlot('${esc(s.id)}')">模拟撤柜完成</button>`:"-"}
+ ],rows);
+}
+function completeSlot(id){
+ const s=state.slots.find(x=>x.id===id);if(!s)return;s.status="已释放未分配";const t=state.tasks.find(x=>x.id===s.taskId);if(t){const r=t.rows.find(x=>x.skuId===s.originalSkuId);if(r)r.status="已释放未分配";if(t.rows.every(x=>x.status==="已释放未分配"))t.status="已完成"}saveState();renderAll();toast("坑位已转为可用状态");
+}
+function taskTypeLabel(type){
+ return type==="上新"?"上新任务":type==="淘汰"?"淘汰任务":type==="恢复"?"恢复任务":`${type||"未知"}任务`;
+}
+function taskTypeTag(type){
+ const cls=type==="上新"?"status-launch":type==="淘汰"?"status-retire":type==="恢复"?"status-restore":"status-archived";
+ return `<span class="tag ${cls}">${esc(taskTypeLabel(type))}</span>`;
+}
+function taskExecutionLabel(task){
+ const s=task.status||"待门店执行";
+ const map={
+  "待门店执行":"待执行",
+  "部分完成":"部分完成",
+  "已完成":"已完成",
+  "部分撤回":"部分撤回",
+  "已撤回":"已撤回",
+  "部分撤销":"部分撤销",
+  "已撤销":"已撤销"
+ };
+ return map[s]||s;
+}
+function taskExecutionTag(task){
+ const label=taskExecutionLabel(task);
+ const cls=label==="已完成"?"status-normal":
+  label.includes("部分")?"status-retire":
+  label.includes("撤销")||label.includes("撤回")?"status-archived":
+  task.type==="恢复"?"status-restore":
+  task.type==="淘汰"?"status-retire":"status-launch";
+ return `<span class="tag ${cls}">${esc(label)}</span>`;
+}
+function taskProgress(task){
+ const total=(task.rows||[]).length;
+ if(!total)return{done:0,total:0,pct:0};
+ if(task.status==="已完成")return{done:total,total,pct:100};
+ let done=0;
+ if(task.type==="恢复"){
+  done=task.rows.filter(r=>r.status==="恢复完成").length;
+ }else if(task.type==="淘汰"){
+  done=task.rows.filter(r=>["已释放未分配","已发起恢复","恢复完成"].includes(r.status)).length;
+ }else if(task.type==="上新"){
+  done=task.rows.filter(r=>["已完成","上新完成"].includes(r.status)).length;
+ }
+ if(["已撤回","已撤销"].includes(task.status))done=total;
+ return{done,total,pct:Math.round(done/total*100)};
+}
+function taskProgressHtml(task){
+ const p=taskProgress(task);
+ return `<div class="coverage"><div class="coverage-bar"><i style="width:${p.pct}%"></i></div><span>${p.done}/${p.total}</span></div>`;
+}
+function taskProductStatus(task){
+ const p=productByKey(task.productKey);
+ return p?productStatus(p):(task.type==="恢复"&&task.status==="已完成"?"正常在售":task.type==="淘汰"&&task.status==="已完成"?"已淘汰":"-");
+}
+
+function renderTasks(){
+ const tasks=state.tasks;
+ document.getElementById("taskMetrics").innerHTML=[
+  metric("任务总数",tasks.length,"生命周期任务"),
+  metric("待执行",tasks.filter(t=>taskExecutionLabel(t)==="待执行").length,"尚未开始或等待门店"),
+  metric("部分完成",tasks.filter(t=>taskExecutionLabel(t)==="部分完成").length,"部分门店已经执行","warn"),
+  metric("已完成",tasks.filter(t=>taskExecutionLabel(t)==="已完成").length,"任务执行完毕","good"),
+  metric("上新任务",tasks.filter(t=>t.type==="上新").length,"产品进入门店"),
+  metric("淘汰/恢复",tasks.filter(t=>["淘汰","恢复"].includes(t.type)).length,"商品退出与恢复")
+ ].join("");
+ document.getElementById("taskTable").innerHTML=table([
+  {name:"任务编号",render:t=>`<button class="mini-btn" onclick="showTask('${esc(t.id)}')">${esc(t.id)}</button>`},
+  {name:"任务类型",render:t=>taskTypeTag(t.type)},
+  {name:"商品",cls:"name",render:t=>esc(t.productName)},
+  {name:"门店/位置数",render:t=>fmt((t.rows||[]).length)},
+  {name:"商品当前状态",render:t=>statusTag(taskProductStatus(t))},
+  {name:"任务执行状态",render:t=>taskExecutionTag(t)},
+  {name:"完成进度",render:t=>taskProgressHtml(t)},
+  {name:"计划日期",render:t=>esc(t.date||"-")},
+  {name:"创建时间",render:t=>esc(t.createdAt)}
+ ],tasks);
+ renderTaskDetail();
+}
+function showTask(id){selectedTaskId=id;renderTaskDetail()}
+function renderTaskDetail(){
+ const el=document.getElementById("taskDetail"),t=state.tasks.find(x=>x.id===selectedTaskId)||state.tasks[0];
+ if(!t){el.innerHTML='<div class="empty">暂无任务。</div>';return}
+ selectedTaskId=t.id;
+ const terminal=["已完成","已撤销","已撤回"].includes(t.status);
+ const progress=taskProgress(t);
+ el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" onclick="completeTask('${esc(t.id)}')" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button></div></div>`+
+ table([
+  {name:"门店",cls:"name",render:r=>esc(r.store)},
+  {name:"位置",render:r=>`${esc(r.cabinetLabel||"-")} ${esc(r.position||"")}`},
+  {name:"方案/释放",render:r=>esc(r.scheme||`${fmt(r.width)}mm`)},
+  {name:"门店执行状态",render:r=>esc(r.status||taskExecutionLabel(t))},
+  {name:"说明",render:r=>esc(r.reason||"-")}
+ ],t.rows||[]);
+}
+function completeTask(id){
+ const t=state.tasks.find(x=>x.id===id);if(!t)return;
+ t.status="已完成";
+ if(t.type==="上新"){
+  (t.rows||[]).forEach(r=>r.status="上新完成");
+ }
+ if(t.type==="淘汰"){
+  state.slots.filter(s=>s.taskId===id).forEach(s=>s.status=s.targetProduct?"已预留给新品":"已释放未分配");
+  (t.rows||[]).forEach(r=>{if(r.status!=="已发起恢复")r.status="已释放未分配"});
+ }
+ if(t.type==="恢复"){
+  (t.rows||[]).forEach(r=>{
+   const slot=state.slots.find(s=>s.id===r.sourceSlotId);
+   if(slot&&["direct","original","cancelNew"].includes(r.restoreMethod))slot.status="已恢复占用";
+   r.status="恢复完成";
+  });
+ }
+ saveState();
+ let committed=false;
+ try{
+  if(window.parent!==window&&window.parent.ProductLifecycle?.commitCompletedTask){
+   committed=window.parent.ProductLifecycle.commitCompletedTask(t,state)!==false;
+  }
+ }catch(e){console.error("生命周期任务提交失败",e)}
+ renderAll();
+ toast(committed?`${taskTypeLabel(t.type)}已完成，正式底表补丁已生成`:`${taskTypeLabel(t.type)}已完成`);
+ if(committed&&confirm("任务已经完成并写入统一底表状态。是否立即刷新小程序，使门店执行、柜段余量和正式陈列图同步更新？")){
+  window.parent.location.reload();
+ }
+}
+function focusTask(id){selectedTaskId=id;const t=state.tasks.find(x=>x.id===id);switchView("planogram");if(t?.rows[0])document.getElementById("planogramStore").value=t.rows[0].store;renderPlanogram()}
+
+function renderPlanogram(){
+ const select=document.getElementById("planogramStore");if(!select.options.length)return;
+ const store=select.value||currentStores()[0];if(!select.value)select.value=store;
+ const cabs=cabinetRows(store);
+ const pendingRetire=state.slots.filter(s=>s.store===store&&s.status==="待释放");
+ const released=state.slots.filter(s=>s.store===store&&s.status==="已释放未分配");
+ const launches=launchTaskRows(store);
+ const restores=restoreTaskRows(store);
+ const shrinkById=new Map(launches.filter(r=>r.shrinkSkuId).map(r=>[r.shrinkSkuId,r]));
+ const replaceById=new Map(launches.filter(r=>r.replaceSkuId).map(r=>[r.replaceSkuId,r]));
+ const moveById=new Map(launches.filter(r=>r.moveSkuId).map(r=>[r.moveSkuId,r]));
+ const adjustmentCount=new Set([...shrinkById.keys(),...replaceById.keys(),...moveById.keys()]).size;
+ document.getElementById("planogramMetrics").innerHTML=[
+  metric("正常陈列",currentStoreRows(store).length,"SKU陈列行"),
+  metric("待淘汰/替换",pendingRetire.length+replaceById.size,"保留原商品状态","warn"),
+  metric("待上新",launches.filter(x=>x.taskStatus!=="已完成").length,"虚拟新品块"),
+  metric("联动调整",adjustmentCount+released.length+restores.length,"压缩、替换、移位、恢复","good")
+ ].join("");
+
+ const allBase=currentStoreRows(store);
+ const movedIntoByCab=new Map();
+ moveById.forEach((plan,skuId)=>{
+  const original=data.skus.find(x=>x.id===skuId);if(!original)return;
+  if(!movedIntoByCab.has(plan.moveToKey))movedIntoByCab.set(plan.moveToKey,[]);
+  movedIntoByCab.get(plan.moveToKey).push({...original,cabinetKey:plan.moveToKey,cabinetLabel:plan.moveToLabel,position:plan.moveToPosition,_moved:true,_movePlan:plan});
+ });
+
+ const groups=new Map();cabs.forEach(c=>{if(!groups.has(c.label))groups.set(c.label,[]);groups.get(c.label).push(c)});
+ let html="";
+ for(const [label,rows] of groups){
+  html+=`<section class="cabinet-group"><div class="cabinet-head"><strong>${esc(label)}</strong><span>${esc(rows[0].kind||"冰柜")} · ${rows.length}个位置</span></div>`;
+  for(const c of rows){
+   let base=allBase.filter(r=>r.cabinetKey===c.key);
+   base=base.filter(r=>!(moveById.has(r.id)&&moveById.get(r.id).moveFromKey===c.key));
+   base=[...base,...(movedIntoByCab.get(c.key)||[])];
+   const retireIds=new Set(pendingRetire.filter(s=>s.cabinetKey===c.key).map(s=>s.originalSkuId));
+   const frees=released.filter(s=>s.cabinetKey===c.key);
+   const launch=launches.filter(r=>r.cabinetKey===c.key);
+   const blocks=[
+    ...base.map(r=>{
+      const shrink=shrinkById.get(r.id);
+      const replace=replaceById.get(r.id);
+      const isRetire=retireIds.has(r.id);
+      const moved=r._moved;
+      const restore=restores.find(x=>x.skuId===r.id&&["direct","original","cancelNew"].includes(x.restoreMethod));
+      const cols=shrink?num(shrink.shrinkToCols):num(r.displayCols);
+      const width=Math.max(num(r.faceWidth),num(r.faceWidth)*Math.max(1,cols));
+      let type="base",sub=`${fmt(cols)}列 · ${fmt(width)}mm`,status="正常陈列",kind="商品",task="";
+      if(isRetire){type="retire";status="待淘汰";sub=`待淘汰 · 释放${fmt(skuWidth(r))}mm`}
+      if(replace){type="replace";status="待替换";sub=`待替换 → ${replace.productName}`;task=replace.taskId}
+      if(shrink){type="adjusted";status="排面调整";sub=`${fmt(shrink.shrinkFromCols)}列→${fmt(shrink.shrinkToCols)}列 · 释放${fmt(r.faceWidth)}mm`;task=shrink.taskId}
+      if(moved){type="move";status="跨柜调位";sub=`由${r._movePlan.moveFromLabel} ${r._movePlan.moveFromPosition}移入`;task=r._movePlan.taskId}
+      if(restore){type="restore";status=restore.taskStatus==="已完成"?"恢复完成":"恢复待执行";sub=`恢复原位 · ${fmt(restore.displayCols||r.displayCols)}列`;task=restore.taskId}
+      return{type,title:moved?`调位：${r.name}`:r.name,sub,width,data:{kind,store,cabinet:c.label,position:c.position,status,product:r.name,width,category:`${r.category3||""}/${r.category4||""}`,task,change:sub}};
+    }),
+    ...frees.map(s=>({type:"free",title:"已释放空位",sub:`${fmt(s.width)}mm · 原${s.originalProduct}`,width:s.width,data:{kind:"坑位",store,cabinet:c.label,position:c.position,status:s.status,product:s.originalProduct,width:s.width,category:"待分配",task:s.taskId,change:"可承接新品"}})),
+    ...launch.map(r=>({type:"launch "+(r.taskStatus==="已完成"?"completed":""),title:r.productName,sub:`${r.scheme} · ${fmt(r.displayCols)}列 · ${fmt(r.needWidth)}mm`,width:r.needWidth,data:{kind:"新品",store,cabinet:c.label,position:c.position,status:r.taskStatus==="已完成"?"已完成上新":"待门店执行",product:r.productName,width:r.needWidth,category:`${r.category3||""}/${r.category4||""}`,task:r.taskId,change:`入坑方式：${r.scheme}；${r.reason||""}`}})),
+    ...restores.filter(r=>r.restoreMethod==="replan"&&r.cabinetKey===c.key).map(r=>({type:"restore "+(r.taskStatus==="已完成"?"completed":""),title:`恢复：${r.productName}`,sub:`重新排位 · ${fmt(r.displayCols)}列 · ${fmt(r.needWidth)}mm`,width:r.needWidth,data:{kind:"恢复商品",store,cabinet:c.label,position:c.position,status:r.taskStatus==="已完成"?"恢复完成":"恢复待执行",product:r.productName,width:r.needWidth,category:`${r.category3||""}/${r.category4||""}`,task:r.taskId,change:`原位不可用，采用新位置恢复；${r.reason||""}`}}))
+   ];
+   html+=`<div class="cabinet-row"><div class="cabinet-pos">${esc(c.position)}<small>${fmt(c.length)}×${fmt(c.depth)}×${fmt(c.height)}mm</small></div><div class="shelf">`;
+   if(!blocks.length)html+=`<div class="empty" style="padding:22px;width:100%">当前无陈列商品</div>`;
+   blocks.forEach(b=>{const basis=Math.max(86,Math.min(240,num(b.width)/Math.max(1,num(c.length))*700));html+=`<button class="sku-block ${b.type}" style="--basis:${basis}px" data-detail='${esc(JSON.stringify(b.data))}'><strong>${esc(b.title)}</strong><small>${esc(b.sub)}</small></button>`});
+   html+=`</div></div>`;
+  }
+  html+=`</section>`;
+ }
+ document.getElementById("planogramCanvas").innerHTML=html||'<div class="empty">该门店暂无柜段数据。</div>';
+ document.querySelectorAll(".sku-block").forEach(b=>b.onclick=()=>showMonitor(JSON.parse(b.dataset.detail)));
+}
+
+function showMonitor(d){
+ const mapped=d.status==="正常陈列"||d.status==="已完成上新"?"正常在售":d.status==="待淘汰"||d.status==="待替换"?"待淘汰":d.status==="恢复待执行"?"恢复中":d.status==="待门店执行"||d.status==="排面调整"||d.status==="跨柜调位"?"待上新":"已淘汰";
+ document.getElementById("planogramMonitor").innerHTML=`<h3 class="monitor-title">${esc(d.product||d.kind)}</h3><div class="monitor-status">${statusTag(mapped)}</div><dl class="monitor-grid"><dt>对象类型</dt><dd>${esc(d.kind)}</dd><dt>门店</dt><dd>${esc(d.store)}</dd><dt>陈列柜</dt><dd>${esc(d.cabinet)}</dd><dt>具体位置</dt><dd>${esc(d.position)}</dd><dt>当前联动状态</dt><dd>${esc(d.status)}</dd><dt>占用/释放宽度</dt><dd>${fmt(d.width)}mm</dd><dt>类目/用途</dt><dd>${esc(d.category||"-")}</dd><dt>关联任务</dt><dd>${esc(d.task||"无")}</dd></dl><div class="monitor-note">${esc(d.change||"该区域与产品池状态、任务中心和坑位资源池使用同一套预览状态。")}</div>`;
+}
+window.prefillLaunch=k=>{switchView("launch");document.getElementById("launchProduct").value=k;renderStorePickers();renderProductCards()};
+window.prefillRetire=k=>{switchView("retire");document.getElementById("retireProduct").value=k;renderStorePickers();renderProductCards()};
+window.completeSlot=completeSlot;window.showTask=showTask;window.completeTask=completeTask;window.focusTask=focusTask;
+
+function bind(){
+ document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+ ["poolSearch","poolStatusFilter"].forEach(id=>document.getElementById(id).oninput=renderPool);
+ ["slotSearch","slotStatusFilter"].forEach(id=>document.getElementById(id).oninput=renderSlots);
+ document.getElementById("launchProduct").onchange=()=>{renderStorePickers();renderProductCards();launchPlans=[];renderLaunchResult()};
+ ["launchScope","launchStrategy","launchMinCols","launchMaxCols","allowReleased","allowShrink","allowReplace","allowMove","allowPartial"].forEach(id=>{
+  const el=document.getElementById(id);el.onchange=()=>{launchPlans=[];renderLaunchResult();document.getElementById("applyLaunchPreviewBtn").disabled=true};
+ });
+ document.getElementById("retireProduct").onchange=()=>{renderStorePickers();renderProductCards();retirePlans=[];renderRetireResult()};
+ document.getElementById("restoreProduct").onchange=()=>{restorePlans=[];renderRestoreStorePicker();renderProductCards();renderRestore()};
+ ["restoreScope","restoreStrategy","restoreConflictPolicy"].forEach(id=>document.getElementById(id).onchange=()=>{restorePlans=[];renderRestore();document.getElementById("applyRestorePreviewBtn").disabled=true});
+ document.getElementById("retireMode").onchange=renderRetireResult;
+ document.getElementById("simulateLaunchBtn").onclick=simulateLaunch;document.getElementById("applyLaunchPreviewBtn").onclick=applyLaunch;
+ document.getElementById("simulateRetireBtn").onclick=simulateRetire;document.getElementById("applyRetirePreviewBtn").onclick=applyRetire;
+ document.getElementById("simulateRestoreBtn").onclick=simulateRestore;document.getElementById("applyRestorePreviewBtn").onclick=applyRestore;
+ document.getElementById("planogramStore").onchange=renderPlanogram;
+ document.getElementById("openCurrentTaskBtn").onclick=()=>{if(selectedTaskId)focusTask(selectedTaskId);else toast("请先在任务中心选择任务")};
+ document.getElementById("createDraftProductBtn").onclick=()=>document.getElementById("draftProductDialog").showModal();
+ document.getElementById("closeDraftDialog").onclick=document.getElementById("cancelDraftProduct").onclick=()=>document.getElementById("draftProductDialog").close();
+ document.getElementById("draftProductForm").onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);const p=Object.fromEntries(f.entries());["length","width","height","carton","volume"].forEach(k=>p[k]=num(p[k]));if(!p.volume)p.volume=p.length*p.width*p.height/1e6;p.id="draft_"+Date.now();p.active=true;p.rank=9999;state.draftProducts.push(p);saveState();document.getElementById("draftProductDialog").close();e.currentTarget.reset();renderAll();prefillLaunch(keyOf(p));toast("新品草稿已加入产品总池")};
+ document.getElementById("resetPreviewBtn").onclick=()=>{if(confirm("确认清空全部生命周期任务、坑位和新品草稿？正式小程序不会受到影响。")){if(window.parent!==window&&window.parent.ProductLifecycle?.resetState){
+ window.parent.ProductLifecycle.resetState();
+}else{
+ localStorage.removeItem(PREVIEW_KEY);
+}
+state={draftProducts:[],tasks:[],slots:[],committedPatches:[]};launchPlans=[];retirePlans=[];restorePlans=[];selectedTaskId=null;renderAll();toast("生命周期任务已清空")}};
+}
+
+function notifyParentSize(){
+ try{
+  if(window.parent!==window){
+   window.parent.postMessage({type:"plm:resize",height:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)},"*");
+  }
+ }catch(e){}
+}
+window.addEventListener("message",e=>{
+ const msg=e.data||{};
+ if(msg.type==="plm:set-store"&&msg.store){
+  const select=document.getElementById("planogramStore");
+  if(select&&[...select.options].some(o=>o.value===msg.store)){
+   select.value=msg.store;renderPlanogram();
+  }
+ }
+});
+if("ResizeObserver" in window){
+ new ResizeObserver(()=>notifyParentSize()).observe(document.documentElement);
+}else{
+ setInterval(notifyParentSize,1200);
+}
+
+(async function init(){
+ document.getElementById("launchDate").value=dateISO(7);document.getElementById("retireDate").value=dateISO(7);document.getElementById("restoreDate").value=dateISO(7);
+ bind();await loadData();renderAll();notifyParentSize();
+})();
+</script>
+</body>
+</html>
