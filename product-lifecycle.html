@@ -476,7 +476,8 @@ function table(cols,rows){
 function switchView(id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
- window.scrollTo({top:0,behavior:"auto"});
+ // 延迟滚动到顶部，确保新 view 已渲染，避免切换后落在空白区域
+ requestAnimationFrame(()=>window.scrollTo({top:0,behavior:"auto"}));
  if(id==="planogram")renderPlanogram();
 }
 function renderAll(){
@@ -1264,7 +1265,10 @@ function completeTask(id){
   if(window.parent!==window&&window.parent.ProductLifecycle?.commitCompletedTask){
    committed=window.parent.ProductLifecycle.commitCompletedTask(t,state)!==false;
   }
- }catch(e){console.error("生命周期任务提交失败",e)}
+ }catch(e){
+  console.error("生命周期任务提交失败",e);
+  toast("任务状态已保存，但写入主页面运营草稿失败："+(e?.message||"未知错误"));
+ }
  renderAll();
  toast(committed?`${taskTypeLabel(t.type)}已完成并写入运营草稿；请按需点击主页面“同步并退出到店员端”`:`${taskTypeLabel(t.type)}已完成`);
 }

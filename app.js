@@ -910,6 +910,29 @@ if(!incoming.skus||!incoming.cabinets)throw new Error("缺少必要数据");
 q("#restoreBtn").onclick=()=>{if(confirm("确认恢复初始数据？当前本地修改会被清空。")){localStorage.removeItem(草稿保存键);localStorage.removeItem(发布保存键);草稿状态=初始状态();发布状态=初始状态();
 建立基准(草稿状态);建立基准(发布状态);const ops=q("#opsMode");if(ops)ops.checked=false;document.body.classList.remove("ops");状态=发布状态;当前.页面="store";清空新品试算();window.全店上新缓存={};window.新增门店测算缓存=null;渲染全部();完成提示("恢复完成：已清除本地修改、产品池临时导入、新门店草稿、新品全店方案、标色和同步草稿，并退出到绿色店员端。")}};
 
+// === 产品生命周期任务完成后同步回主页面状态 ===
+// 生命周期管理在 iframe 内独立完成；任务提交后会把 patch 应用到 window.UNIFIED_CARTON_DATA，
+// 并派发 product-lifecycle:data-committed 事件。主页面需要把这些 patch 同步到草稿/发布状态，
+// 否则云端保存、门店执行页、柜段余量等仍会使用旧数据。
+const 已应用生命周期补丁ID=new Set();
+window.addEventListener("product-lifecycle:data-committed",()=>{
+  if(!window.ProductLifecycle?.getState||!window.ProductLifecycle?.applyCommittedPatches)return;
+  try{
+    const lifecycleState=window.ProductLifecycle.getState();
+    const patches=(lifecycleState.committedPatches||[]).filter(p=>p&&p.id&&!已应用生命周期补丁ID.has(p.id));
+    if(!patches.length)return;
+    patches.forEach(patch=>{
+      window.ProductLifecycle.applyCommittedPatches(草稿状态,{committedPatches:[patch]});
+      window.ProductLifecycle.applyCommittedPatches(发布状态,{committedPatches:[patch]});
+      已应用生命周期补丁ID.add(patch.id);
+    });
+    状态=当前是否运营()?草稿状态:发布状态;
+    保存();
+    建立基准(草稿状态);建立基准(发布状态);
+    渲染全部();
+  }catch(error){console.error("同步生命周期状态到主页面失败",error)}
+});
+
 // === 2026-07-09 严格新增门店 + 陈列图可移动补强 ===
 function 新店重算用量(pre){
   const use=pre.cabinets.map(c=>({...c,used:0,left:数(c.length),items:[]}));
@@ -1043,6 +1066,9 @@ function translateCloudError(msg) {
   };
   for (const key in map) {
     if (msg.includes(key) || msg.toLowerCase().includes(key.toLowerCase())) return map[key];
+  }
+  if (/could not choose the best candidate function/i.test(msg)) {
+    return '云端数据库函数 save_carton_document 存在重载冲突（bigint/integer）。请登录 Supabase 控制台，删除 public.save_carton_document 的重复定义，只保留一个签名，或联系管理员处理。';
   }
   return msg;
 }
