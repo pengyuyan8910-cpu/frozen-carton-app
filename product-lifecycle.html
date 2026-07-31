@@ -476,6 +476,7 @@ function table(cols,rows){
 function switchView(id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
+ window.scrollTo({top:0,behavior:"auto"});
  if(id==="planogram")renderPlanogram();
 }
 function renderAll(){
@@ -906,9 +907,8 @@ function applyLaunch(){
    }
   }
  });
- selectedTaskId=id;launchPlans=[];saveState();renderAll();switchView("planogram");
- document.getElementById("planogramStore").value=rows[0].store;renderPlanogram();
- toast(`已应用${rows.length}家门店的所选方案，陈列图已按不同入坑逻辑联动`);
+ selectedTaskId=id;launchPlans=[];saveState();renderAll();
+ toast(`已生成${rows.length}家门店的上新任务并保留在当前运营页面；陈列图已联动，是否同步至店员端由主页面同步按钮决定`);
 }
 window.selectLaunchCandidate=selectLaunchCandidate;
 
@@ -1071,10 +1071,8 @@ function applyRestore(){
  });
  selectedTaskId=id;
  restorePlans=[];
- saveState();renderAll();switchView("planogram");
- document.getElementById("planogramStore").value=selected[0].store;
- renderPlanogram();
- toast(`已创建${selected.length}个位置的恢复任务，陈列图已联动`);
+ saveState();renderAll();
+ toast(`已创建${selected.length}个位置的恢复任务并保留在当前运营页面；陈列图已联动，是否同步至店员端由主页面同步按钮决定`);
 }
 function prefillRestore(k){
  switchView("restore");
@@ -1127,6 +1125,7 @@ function applyRetire(){
  const applyBtn=document.getElementById("applyRetirePreviewBtn");
  if(applyBtn)applyBtn.disabled=true;
  toast("淘汰任务已创建，当前仍停留在批量淘汰页面；可继续选择下一商品");
+
 }
 function renderSlots(){
  const slots=state.slots;const statuses=x=>slots.filter(s=>s.status===x).length;
@@ -1267,10 +1266,7 @@ function completeTask(id){
   }
  }catch(e){console.error("生命周期任务提交失败",e)}
  renderAll();
- toast(committed?`${taskTypeLabel(t.type)}已完成，正式底表补丁已生成`:`${taskTypeLabel(t.type)}已完成`);
- if(committed&&confirm("任务已经完成并写入统一底表状态。是否立即刷新小程序，使门店执行、柜段余量和正式陈列图同步更新？")){
-  window.parent.location.reload();
- }
+ toast(committed?`${taskTypeLabel(t.type)}已完成并写入运营草稿；请按需点击主页面“同步并退出到店员端”`:`${taskTypeLabel(t.type)}已完成`);
 }
 function focusTask(id){selectedTaskId=id;const t=state.tasks.find(x=>x.id===id);switchView("planogram");if(t?.rows[0])document.getElementById("planogramStore").value=t.rows[0].store;renderPlanogram()}
 

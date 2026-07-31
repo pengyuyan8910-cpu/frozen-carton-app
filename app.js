@@ -1119,11 +1119,46 @@ const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? nu
 
 function cloudCopyState(st) { return JSON.parse(JSON.stringify(清理交互痕迹(st))); }
 
+function cloudRevisionConflict() {
+  return { code: 'P0001', message: 'CONFLICT: cloud data changed; merge the latest revision first.' };
+}
+
+async function saveCloudDocument(payload, expectedRevision) {
+  const expected = Math.max(0, Math.trunc(Number(expectedRevision) || 0));
+  const nextRevision = expected + 1;
+  const updatedAt = new Date().toISOString();
+  const { data, error } = await cloudClient
+    .from('carton_documents')
+    .update({ payload, doc_revision: nextRevision, updated_at: updatedAt })
+    .eq('id', 'main')
+    .eq('doc_revision', expected)
+    .select('doc_revision,updated_at')
+    .maybeSingle();
+  if (error) return { data: null, error };
+  if (data) return { data, error: null };
+  if (expected !== 0) return { data: null, error: cloudRevisionConflict() };
+
+  const { data: existing, error: readError } = await cloudClient
+    .from('carton_documents')
+    .select('doc_revision')
+    .eq('id', 'main')
+    .maybeSingle();
+  if (readError) return { data: null, error: readError };
+  if (existing) return { data: null, error: cloudRevisionConflict() };
+
+  const { data: inserted, error: insertError } = await cloudClient
+    .from('carton_documents')
+    .insert({ id: 'main', payload, doc_revision: 1, updated_at: updatedAt })
+    .select('doc_revision,updated_at')
+    .single();
+  return { data: inserted || null, error: insertError || null };
+}
+
 async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
   const payload = cloudCopyState(发布状态);
-  const { data, error } = await cloudClient.rpc('save_carton_document', { p_payload: payload, p_expected_revision: docRevision });
+  const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : docRevision + 1;
@@ -1181,7 +1216,7 @@ async function autoMergeCloudConflict() {
     return cloudNote('发现 ' + conflicts.length + ' 处数据冲突：' + list + '。冲突处已采用云端版本，请核对后重新保存。', true);
   }
 
-  const { data, error: saveErr } = await cloudClient.rpc('save_carton_document', { p_payload: merged, p_expected_revision: remote.doc_revision });
+  const { data, error: saveErr } = await saveCloudDocument(merged, remote.doc_revision);
   if (saveErr) return cloudNote(saveErr.message, true);
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : remote.doc_revision + 1;
