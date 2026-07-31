@@ -1114,7 +1114,19 @@ function applyRetire(){
  const task={id,type:"淘汰",productKey:keyOf(p),productName:p.name,date:document.getElementById("retireDate").value,mode,status:mode==="immediate"?"部分完成":"待门店执行",createdAt:new Date().toLocaleString("zh-CN"),rows:retirePlans.map((r,i)=>({...r,id:id+"-"+i,status:slotStatus}))};
  state.tasks.unshift(task);
  retirePlans.forEach((r,i)=>state.slots.push({id:"SLOT-"+Date.now()+"-"+i,taskId:id,store:r.store,cabinetKey:r.cabinetKey,cabinetLabel:r.cabinetLabel,position:r.position,width:r.width,originalSkuId:r.skuId,originalProduct:r.productName,originalProductKey:r.productKey,status:slotStatus,availableDate:document.getElementById("retireDate").value}));
- selectedTaskId=id;retirePlans=[];saveState();renderAll();switchView("planogram");document.getElementById("planogramStore").value=task.rows[0].store;renderPlanogram();toast("淘汰任务已应用，陈列图已联动");
+ selectedTaskId=id;
+ retirePlans=[];
+ saveState();
+ renderAll();
+ switchView("retire");
+ const retireSelect=document.getElementById("retireProduct");
+ if(retireSelect)retireSelect.value=keyOf(p);
+ renderStorePickers();
+ renderProductCards();
+ renderRetireResult();
+ const applyBtn=document.getElementById("applyRetirePreviewBtn");
+ if(applyBtn)applyBtn.disabled=true;
+ toast("淘汰任务已创建，当前仍停留在批量淘汰页面；可继续选择下一商品");
 }
 function renderSlots(){
  const slots=state.slots;const statuses=x=>slots.filter(s=>s.status===x).length;
