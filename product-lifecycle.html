@@ -428,6 +428,7 @@ function allProducts(){
 function 有效SKU池(){
  const map=new Map();
  for(const r of (data?.skus||[])){
+  if(String(r.lifecycleStatus||"")==="已淘汰")continue;
   const k=keyOf(r);
   if(k&&!map.has(k))map.set(k,r);
  }
