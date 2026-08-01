@@ -100,7 +100,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.workspace-grid,.planogram-layout{grid-template-columns:1fr}.planogram-monitor{position:static}.side-note{order:-1}}
 @media(max-width:700px){.topbar{padding:20px;display:block}.top-actions{margin-top:14px}.safe-banner{padding:10px 20px}.tabs{padding:10px}.panel-title{display:block}.panel-title .toolbar{margin-top:12px}.metric-grid,.metric-grid.compact{grid-template-columns:repeat(2,1fr)}main{padding:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cabinet-row{grid-template-columns:82px minmax(0,1fr)}}
 </style>
-<link rel="stylesheet" href="lifecycle-product-detail.css?v=20260801_pool1">
+<link rel="stylesheet" href="lifecycle-product-detail.css?v=20260801_pool2">
 </head>
 <body>
 
@@ -533,11 +533,14 @@ function renderProductCards(){
  render("restoreProductCard",document.getElementById("restoreProduct").value);
 }
 function renderPool(){
- const products=allProducts();const totalStores=currentStores().length;
- const statuses=products.map(productStatus);
+ const products=allProducts();
+ // 统计口径：有效 SKU 只取运营产品总池中仍启用、且未完成淘汰的正式商品；待上新草稿不计入。
+ const effectiveProducts=products.filter(p=>p.active!==false&&!state.draftProducts.some(d=>keyOf(d)===keyOf(p))&&productStatus(p)!=="已淘汰");
+ const totalStores=currentStores().length;
+ const statuses=effectiveProducts.map(productStatus);
  document.getElementById("poolMetrics").innerHTML=[
-  metric("有效商品",products.filter(p=>p.active!==false).length,"产品池当前可用"),
-  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"未进入变更任务","good"),
+  metric("有效SKU",effectiveProducts.length,"运营产品总池中已启用、未淘汰的正式SKU"),
+  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"有效SKU中未进入变更任务","good"),
   metric("待上新",statuses.filter(x=>x==="待上新").length,"含新品草稿与任务",""),
   metric("待淘汰",statuses.filter(x=>x==="待淘汰").length,"等待门店执行","warn"),
   metric("恢复中",statuses.filter(x=>x==="恢复中").length,"恢复原位或重新排位"),
@@ -1405,6 +1408,6 @@ if("ResizeObserver" in window){
  bind();try{await loadData();renderAll();notifyParentSize();}catch(error){showFormalDataError(error);}
 })();
 </script>
-<script src="lifecycle-product-detail.js?v=20260801_pool1"></script>
+<script src="lifecycle-product-detail.js?v=20260801_pool2"></script>
 </body>
 </html>
