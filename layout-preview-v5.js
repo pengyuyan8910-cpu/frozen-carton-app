@@ -130,12 +130,18 @@
   }
 
   function selectedSku(card) {
+    const store = currentStore();
+    const rows = appState().skus || [];
+    const selectedId = appCurrent().陈列图选中SKU;
+    if (selectedId) {
+      const byId = rows.find(function (row) { return row.id === selectedId && row.store === store; });
+      if (byId) return byId;
+    }
     const meta = text(card.querySelector('.selection-meta'));
     const barcode = (meta.split(/[｜|]/)[0] || '').trim();
     const name = text(card.querySelector('.selection-head strong'));
-    const rows = appState().skus || [];
-    return rows.find(function (row) { return String(row.barcode || '') === barcode; }) ||
-      rows.find(function (row) { return row.name === name; }) || null;
+    return rows.find(function (row) { return row.store === store && String(row.barcode || '') === barcode; }) ||
+      rows.find(function (row) { return row.store === store && row.name === name; }) || null;
   }
 
   function enhanceSelectedCard() {
