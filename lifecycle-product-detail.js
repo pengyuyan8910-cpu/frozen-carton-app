@@ -20,10 +20,12 @@
     slot.querySelector('button').onclick = () => picker.click();
   }
   function field(label, name, value, type='text') { return `<label class="plm-edit-field"><span>${label}</span><input data-field="${name}" type="${type}" value="${esc(value ?? '')}"></label>`; }
-  async function show(p) {
+  async function show(p, rowEl) {
     selected = p;
     let aside = document.getElementById('plmProductInspector');
-    if (!aside) { aside = document.createElement('aside'); aside.id = 'plmProductInspector'; section.querySelector('.panel')?.appendChild(aside); section.classList.add('plm-detail-open'); }
+    if (!aside) { aside = document.createElement('aside'); aside.id = 'plmProductInspector'; section.appendChild(aside); section.classList.add('plm-detail-open'); }
+    const detailTop = rowEl ? Math.max(0, rowEl.getBoundingClientRect().top - section.getBoundingClientRect().top) : 300;
+    aside.style.top = Math.round(detailTop) + 'px';
     const coverage = typeof coverageCount === 'function' ? coverageCount(productKey(p)) : '—';
     const row = typeof rowsForProduct === 'function' ? rowsForProduct(productKey(p))[0] : null;
     const faceWidth = p.faceWidth ?? row?.faceWidth ?? 0;
@@ -45,6 +47,6 @@
   }
   picker.onchange = async () => { const file = picker.files?.[0]; if (!file || !selected) return; if (!file.type.startsWith('image/')) return alert('请选择图片文件。'); await putImage(`product::${selected.name}`, file); picker.value = ''; await renderImage(selected); window.parent?.postMessage({ type:'plm:product-image-updated', product:selected.name }, '*'); };
   function openBatch() { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.multiple=true; input.onchange=async()=>{ const files=[...input.files].filter(f=>f.type.startsWith('image/')); for (const file of files) { const p=products().find(x=>file.name.includes(x.name)); if (p) await putImage(`product::${p.name}`,file); } if(selected) renderImage(selected); window.parent?.postMessage({type:'plm:product-image-updated'},'*'); }; input.click(); }
-  function bind() { [...pool.querySelectorAll('tbody tr')].forEach(tr => { const name=tr.querySelector('td:first-child strong')?.textContent.trim() || ''; const p=findProduct(name); if(!p) return; tr.classList.add('plm-product-row'); tr.onclick=e=>{ if(!e.target.closest('button')) show(p); }; }); const toolbar=document.querySelector('#pool .toolbar'); if(toolbar&&!document.getElementById('plmBatchImages')) { const b=document.createElement('button'); b.id='plmBatchImages'; b.className='btn'; b.type='button'; b.textContent='批量上传图片'; b.onclick=openBatch; toolbar.appendChild(b); } }
+  function bind() { [...pool.querySelectorAll('tbody tr')].forEach(tr => { const name=tr.querySelector('td:first-child strong')?.textContent.trim() || ''; const p=findProduct(name); if(!p) return; tr.classList.add('plm-product-row'); tr.onclick=e=>{ if(!e.target.closest('button')) show(p, tr); }; }); const toolbar=document.querySelector('#pool .toolbar'); if(toolbar&&!document.getElementById('plmBatchImages')) { const b=document.createElement('button'); b.id='plmBatchImages'; b.className='btn'; b.type='button'; b.textContent='批量上传图片'; b.onclick=openBatch; toolbar.appendChild(b); } }
   new MutationObserver(() => requestAnimationFrame(bind)).observe(pool,{childList:true,subtree:true}); bind();
 })();

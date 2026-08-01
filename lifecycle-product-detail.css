@@ -8,3 +8,6 @@
 
 /* 产品详情与产品总池同层布局：不覆盖总览指标，滚动时始终随表格可见。 */
 #pool.plm-detail-open>.panel{margin-right:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}#pool.plm-detail-open>.panel>.panel-title{grid-column:1/-1}#pool.plm-detail-open>.panel>.table-wrap{grid-column:1;grid-row:2}#pool.plm-detail-open>.panel>#plmProductInspector{position:sticky;right:auto;top:78px;width:auto;max-height:calc(100vh - 96px);grid-column:2;grid-row:2;margin:0;align-self:start;z-index:3}@media(max-width:1100px){#pool.plm-detail-open>.panel{display:block}#pool.plm-detail-open>.panel>#plmProductInspector{position:static;width:auto;margin:16px 0 0}}
+
+/* 每次点击 SKU 后，将详情栏定位到该表格行右侧，而非固定在视窗顶部。 */
+#pool{position:relative}#pool.plm-detail-open>.panel{display:block!important;margin-right:370px!important}#pool #plmProductInspector{position:absolute!important;right:0!important;top:auto;width:340px!important;max-height:none!important;margin:0!important;z-index:5}@media(max-width:1100px){#pool.plm-detail-open>.panel{margin-right:0!important}#pool #plmProductInspector{position:static!important;width:auto!important;margin:16px 0!important}}

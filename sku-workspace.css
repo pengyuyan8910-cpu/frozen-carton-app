@@ -15,3 +15,6 @@ body .staging-zone{left:auto!important;right:24px!important;bottom:22px!importan
 
 /* 待选区固定于内容区右下，避开左侧导航。 */
 body .staging-zone{left:auto!important;right:24px!important;bottom:22px!important;z-index:80!important}@media(max-width:1150px){body .staging-zone{right:14px!important;bottom:14px!important}}
+
+/* 固定顶栏与运营提示共约 100px，内容从其下方开始，避免指标被遮挡。 */
+body.ops main,body .mode-banner+main{padding-top:138px!important}
