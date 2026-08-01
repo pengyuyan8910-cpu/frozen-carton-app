@@ -324,7 +324,7 @@
       if (message.type === "plm:resize") {
         const frame = document.getElementById("productLifecycleFrame");
         if (frame) {
-          const height = Math.max(760, Math.min(30000, number(message.height) + 8));
+          const height = Math.max(120, Math.min(30000, number(message.height) + 8));
           frame.style.height = `${height}px`;
         }
       }

@@ -425,6 +425,14 @@ function allProducts(){
  const map=new Map();[...(data?.productPool||[]),...(state.draftProducts||[])].forEach(p=>{const k=keyOf(p);if(k&&!map.has(k))map.set(k,p)});
  return [...map.values()];
 }
+function 有效SKU池(){
+ const map=new Map();
+ for(const r of (data?.skus||[])){
+  const k=keyOf(r);
+  if(k&&!map.has(k))map.set(k,r);
+ }
+ return [...map.values()];
+}
 function productByKey(k){return allProducts().find(p=>keyOf(p)===k)}
 function rowsForProduct(k){return data.skus.filter(r=>keyOf(r)===k)}
 function currentStoreRows(store){
@@ -564,7 +572,7 @@ function renderPool(){
  const statuses=products.map(productStatus);
  document.getElementById("poolMetrics").innerHTML=[
   metric("有效商品",products.filter(p=>p.active!==false).length,"产品池当前可用"),
-  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"未进入变更任务","good"),
+  metric("正常在售",有效SKU池().length,"与总览看板/门店执行有效SKU池口径一致","good"),
   metric("待上新",statuses.filter(x=>x==="待上新").length,"含新品草稿与任务",""),
   metric("待淘汰",statuses.filter(x=>x==="待淘汰").length,"等待门店执行","warn"),
   metric("恢复中",statuses.filter(x=>x==="恢复中").length,"恢复原位或重新排位"),
