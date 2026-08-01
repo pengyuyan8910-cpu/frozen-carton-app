@@ -38,7 +38,12 @@
       ${field('产品名称','name',p.name)}${field('等级','grade',p.grade)}${field('条码','barcode',p.barcode)}${field('三级类目','category3',p.category3)}${field('箱规','carton',p.carton,'number')}${field('日均销量','dailyQty',p.dailyQty,'number')}${field('单列占宽 mm','faceWidth',faceWidth,'number')}</div>
       <button id="plmSaveProduct" class="plm-save-product" type="button">保存并同步全部门店 / 陈列图</button></section>
       <section><h4>覆盖信息</h4><dl><div><dt>尺寸</dt><dd>${esc(p.length)}×${esc(p.width)}×${esc(p.height)}mm</dd></div><div><dt>门店覆盖</dt><dd>${esc(coverage)}</dd></div></dl><p>风险和排柜调整请在“商品明细”中按具体门店执行。</p></section>`;
-    aside.querySelector('#plmCloseDetail').onclick = () => { aside.remove(); section.classList.remove('plm-detail-open'); };
+// 内容渲染完成后，用实际卡片高度让“信息栏中部”与被点击 SKU 行对齐。
+    requestAnimationFrame(() => {
+      const rowCenter = rowTop + (rowEl?.getBoundingClientRect().height || 44) / 2;
+      const minTop = panelTop + 58;
+      aside.style.top = Math.round(Math.max(minTop, rowCenter - aside.offsetHeight / 2)) + 'px';
+    });    aside.querySelector('#plmCloseDetail').onclick = () => { aside.remove(); section.classList.remove('plm-detail-open'); };
     aside.querySelector('#plmSaveProduct').onclick = () => {
       const changes = {}; aside.querySelectorAll('[data-field]').forEach(input => { const name = input.dataset.field; changes[name] = numeric.has(name) ? Number(input.value || 0) : input.value.trim(); });
       const originalKey = productKey(p);
