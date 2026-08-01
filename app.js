@@ -1,10 +1,4 @@
 const 初始数据=window.UNIFIED_CARTON_DATA;
-// iframe 中的产品生命周期管理会直接 mutate window.UNIFIED_CARTON_DATA.skus 中的对象，
-// 例如淘汰 SKU 时设置 included=false。父页面在 建立基准 时若继续读取 初始数据.skus，
-// 会读到被污染后的 included，导致 _baseIncluded 错误地被设为 false，
-// 柜段使用() 的 changed 检测失效，被淘汰 SKU 的占宽无法从 sourceUsed 中扣除。
-// 这里保存一份不可变的深度克隆快照，建立基准始终从快照读取。
-const 原始SKUs快照=structuredClone(初始数据?.skus||[]);
 const 复核报告=window.UNIFIED_CARTON_REPORT||{};
 const 草稿保存键="frozen_carton_unified_scene_draft_v1";
 const 发布保存键="frozen_carton_unified_scene_published_v1";
@@ -23,7 +17,7 @@ function 初始状态(){const st=清理交互痕迹(初始数据);确保产品�
 let 草稿状态=清理计算缓存(读取本地(草稿保存键)||初始状态());
 let 发布状态=清理计算缓存(读取本地(发布保存键)||初始状态());
 let 状态=发布状态;
-let 当前={门店:"",页面:"overview",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
+let 当前={门店:"",页面:"goods",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
 let 同步请求中=false;
 const 文=v=>String(v??"").trim();
 const 数=v=>{if(typeof v==="number")return Number.isFinite(v)?v:0;
@@ -84,9 +78,9 @@ function 刷新陈列联动(){
 }
 function 门店名(){return 当前.门店||q("#storeSelect").value||状态.stores[0]?.store||""}
 function 门店SKU(store=门店名()){return 状态.skus.filter(r=>r.store===store)}
-function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included&&r.lifecycleStatus!=="已淘汰")}
+function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included)}
 function SKU键(r){return 文(r.barcode)||文(r.name)}
-function 有效SKU池(){const map=new Map();for(const r of 状态.skus){if(文(r.lifecycleStatus)==="已淘汰")continue;const key=SKU键(r);if(key&&!map.has(key))map.set(key,r)}return[...map.values()]}
+function 有效SKU池(){const map=new Map();for(const r of 状态.skus){const key=SKU键(r);if(key&&!map.has(key))map.set(key,r)}return[...map.values()]}
 function 门店已纳入键集合(store=门店名()){const set=new Set();for(const r of 纳入SKU(store)){const key=SKU键(r);if(key)set.add(key)}return set}
 function 门店未纳入SKU(store=门店名()){const set=门店已纳入键集合(store);return 有效SKU池().filter(r=>!set.has(SKU键(r)))}
 function 唯一SKU数(rows){const set=new Set();for(const r of rows){const key=SKU键(r);if(key)set.add(key)}return set.size}
@@ -124,7 +118,7 @@ function 原始列数(r){const ps=Array.isArray(r.placements)?r.placements:[];re
 function 本柜列数(r,cabKey=r.cabinetKey){return r.cabinetKey===cabKey?数(r.displayCols):0}
 function 本柜占宽(r,cabKey=r.cabinetKey){return r.cabinetKey===cabKey?SKU占用宽度(r):0}
 function 基准宽度(r){return r._baseWidth!==undefined?数(r._baseWidth):SKU占用宽度(r)}
-function 初始SKU行(id){return (原始SKUs快照||[]).find(x=>x.id===id)}
+function 初始SKU行(id){return (初始数据.skus||[]).find(x=>x.id===id)}
 function 初始SKU宽度(r){return Math.max(0,数(r.displayCols)*数(r.faceWidth))}
 function 建立基准(state){if(!state)return;for(const r of state.skus||[]){const b=初始SKU行(r.id);r._baseIncluded=b?!!b.included:false;r._baseCabinetKey=b?b.cabinetKey:r.cabinetKey;r._baseDisplayCols=b?数(b.displayCols):0;r._baseFaceWidth=b?数(b.faceWidth):数(r.faceWidth);r._baseWidth=b?初始SKU宽度(b):0}state._baselineReady=true}
 function 柜段占用明细(r){const out=new Map();const baseKey=r._baseCabinetKey||r.cabinetKey;const baseWidth=基准宽度(r);const newWidth=r.included?SKU占用宽度(r):0;if(r._baseIncluded!==false&&baseKey)out.set(baseKey,(out.get(baseKey)||0)-baseWidth);if(r.included&&r.cabinetKey)out.set(r.cabinetKey,(out.get(r.cabinetKey)||0)+newWidth);return out}
@@ -772,9 +766,8 @@ function 陈列图柜段监控(seg,use,isStorage=false,disabled=false){
 function 渲染陈列余量监控(){渲染陈列图();}
 function 渲染陈列图(){
   if(!q('#displayMapCanvas'))return;
-  同步生命周期补丁到状态(状态);
   const store=门店名(),type4=当前.陈列图四级||"";
-  const rows=纳入SKU(store).filter(r=>!r.inStaging&&r.lifecycleStatus!=="已淘汰"&&(!type4||文(r.category4)===type4));
+  const rows=纳入SKU(store).filter(r=>!r.inStaging&&(!type4||文(r.category4)===type4));
   const cabs=状态.cabinets.filter(c=>c.store===store);
   const usage=new Map(柜段使用().filter(c=>c.store===store).map(c=>[c.key,c]));
   const byLabel=new Map();for(const c of cabs){if(!byLabel.has(c.label))byLabel.set(c.label,[]);byLabel.get(c.label).push(c)}
@@ -917,39 +910,6 @@ if(!incoming.skus||!incoming.cabinets)throw new Error("缺少必要数据");
 q("#restoreBtn").onclick=()=>{if(confirm("确认恢复初始数据？当前本地修改会被清空。")){localStorage.removeItem(草稿保存键);localStorage.removeItem(发布保存键);草稿状态=初始状态();发布状态=初始状态();
 建立基准(草稿状态);建立基准(发布状态);const ops=q("#opsMode");if(ops)ops.checked=false;document.body.classList.remove("ops");状态=发布状态;当前.页面="store";清空新品试算();window.全店上新缓存={};window.新增门店测算缓存=null;渲染全部();完成提示("恢复完成：已清除本地修改、产品池临时导入、新门店草稿、新品全店方案、标色和同步草稿，并退出到绿色店员端。")}};
 
-// === 产品生命周期任务完成后同步回主页面状态 ===
-// 生命周期管理在 iframe 内独立完成；任务提交后会把 patch 应用到 window.UNIFIED_CARTON_DATA，
-// 并派发 product-lifecycle:data-committed 事件。主页面需要把这些 patch 同步到草稿/发布状态，
-// 否则云端保存、门店执行页、柜段余量等仍会使用旧数据。
-const 已应用生命周期补丁ID=new Set();
-function 同步生命周期补丁到状态(targetState){
-  if(!window.ProductLifecycle?.getState||!window.ProductLifecycle?.applyCommittedPatches)return 0;
-  const lifecycleState=window.ProductLifecycle.getState();
-  const patches=(lifecycleState.committedPatches||[]).filter(p=>p&&p.id&&!已应用生命周期补丁ID.has(p.id));
-  if(!patches.length)return 0;
-  patches.forEach(patch=>{
-    if(targetState)window.ProductLifecycle.applyCommittedPatches(targetState,{committedPatches:[patch]});
-    else{
-      window.ProductLifecycle.applyCommittedPatches(草稿状态,{committedPatches:[patch]});
-      window.ProductLifecycle.applyCommittedPatches(发布状态,{committedPatches:[patch]});
-      if(window.UNIFIED_CARTON_DATA)window.ProductLifecycle.applyCommittedPatches(window.UNIFIED_CARTON_DATA,{committedPatches:[patch]});
-    }
-    已应用生命周期补丁ID.add(patch.id);
-  });
-  return patches.length;
-}
-window.addEventListener("product-lifecycle:data-committed",()=>{
-  try{
-    const count=同步生命周期补丁到状态();
-    if(!count)return;
-    状态=当前是否运营()?草稿状态:发布状态;
-    保存();
-    建立基准(草稿状态);建立基准(发布状态);
-    渲染全部();
-    console.log(`[生命周期] 已同步 ${count} 条 patch 到主页面状态`);
-  }catch(error){console.error("同步生命周期状态到主页面失败",error)}
-});
-
 // === 2026-07-09 严格新增门店 + 陈列图可移动补强 ===
 function 新店重算用量(pre){
   const use=pre.cabinets.map(c=>({...c,used:0,left:数(c.length),items:[]}));
@@ -1084,9 +1044,6 @@ function translateCloudError(msg) {
   for (const key in map) {
     if (msg.includes(key) || msg.toLowerCase().includes(key.toLowerCase())) return map[key];
   }
-  if (/could not choose the best candidate function/i.test(msg)) {
-    return '云端数据库函数 save_carton_document 存在重载冲突（bigint/integer）。请登录 Supabase 控制台，删除 public.save_carton_document 的重复定义，只保留一个签名，或联系管理员处理。';
-  }
   return msg;
 }
 
@@ -1149,23 +1106,10 @@ async function pullCloudData() {
   安全保存本地(发布保存键, cloudState);
   草稿状态 = 清理计算缓存(读取本地(草稿保存键) || cloudState);
   发布状态 = 清理计算缓存(读取本地(发布保存键) || cloudState);
-  // 把云端生命周期补丁同步应用到主应用状态，确保淘汰/上新标记一致
-  const cloudLifecycle = cloudState.lifecycle;
-  if (cloudLifecycle?.committedPatches?.length && window.ProductLifecycle?.applyCommittedPatches) {
-    window.ProductLifecycle.applyCommittedPatches(草稿状态, cloudLifecycle);
-    window.ProductLifecycle.applyCommittedPatches(发布状态, cloudLifecycle);
-  }
   切换数据源();
   docRevision = data.doc_revision;
   cloudBaseData = structuredClone(p);
   建立基准(草稿状态); 建立基准(发布状态);
-  // 同步到生命周期桥接器，确保 iframe 使用云端一致的状态
-  if (window.UNIFIED_CARTON_DATA) {
-    Object.assign(window.UNIFIED_CARTON_DATA, cloudState);
-  }
-  if (window.ProductLifecycle?.prepareData && window.UNIFIED_CARTON_DATA) {
-    window.ProductLifecycle.prepareData(window.UNIFIED_CARTON_DATA);
-  }
   渲染全部();
   cloudNote('已拉取云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
 }
@@ -1173,7 +1117,7 @@ async function pullCloudData() {
 /* --- 保存至云端 --- */
 const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-function cloudCopyState(st) { return 清理交互痕迹(st); }
+function cloudCopyState(st) { return JSON.parse(JSON.stringify(清理交互痕迹(st))); }
 
 function cloudRevisionConflict() {
   return { code: 'P0001', message: 'CONFLICT: cloud data changed; merge the latest revision first.' };
@@ -1183,19 +1127,20 @@ async function saveCloudDocument(payload, expectedRevision) {
   const expected = Math.max(0, Math.trunc(Number(expectedRevision) || 0));
   const nextRevision = expected + 1;
   const updatedAt = new Date().toISOString();
-  // 不 select 以减少一次往返；通过 count 判断更新是否命中
-  const { error, count } = await cloudClient
+  const { data, error } = await cloudClient
     .from('carton_documents')
     .update({ payload, doc_revision: nextRevision, updated_at: updatedAt })
     .eq('id', 'main')
-    .eq('doc_revision', expected);
+    .eq('doc_revision', expected)
+    .select('doc_revision,updated_at')
+    .maybeSingle();
   if (error) return { data: null, error };
-  if (count > 0) return { data: { doc_revision: nextRevision, updated_at: updatedAt }, error: null };
+  if (data) return { data, error: null };
   if (expected !== 0) return { data: null, error: cloudRevisionConflict() };
 
   const { data: existing, error: readError } = await cloudClient
     .from('carton_documents')
-    .select('doc_revision', { head: true })
+    .select('doc_revision')
     .eq('id', 'main')
     .maybeSingle();
   if (readError) return { data: null, error: readError };
@@ -1212,28 +1157,16 @@ async function saveCloudDocument(payload, expectedRevision) {
 async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
-  const t0 = performance.now();
   const payload = cloudCopyState(发布状态);
-  // 把生命周期任务/坑位状态一并写入云端，确保多端拉取一致
-  if (window.ProductLifecycle?.getState) {
-    payload.lifecycle = window.ProductLifecycle.getState();
-  }
   const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
-  const newRevision = row ? row.doc_revision : docRevision + 1;
-  docRevision = newRevision;
+  docRevision = row ? row.doc_revision : docRevision + 1;
   cloudBaseData = structuredClone(payload);
-  const elapsed = Math.round(performance.now() - t0);
-  cloudNote('已保存至云端第 ' + docRevision + ' 版。耗时 ' + elapsed + 'ms');
-  // 本地持久化和缓存清理异步执行，避免阻塞 UI
-  requestAnimationFrame(() => {
-    setTimeout(() => {
-      安全保存本地(草稿保存键, payload);
-      草稿状态 = 清理计算缓存(payload);
-      if (!当前是否运营()) 发布状态 = 草稿状态;
-    }, 0);
-  });
+  安全保存本地(草稿保存键, payload);
+  草稿状态 = 清理计算缓存(payload);
+  if (!当前是否运营()) 发布状态 = 草稿状态;
+  cloudNote('已保存至云端第 ' + docRevision + ' 版。');
 }
 
 /* --- 冲突自动合并 --- */
