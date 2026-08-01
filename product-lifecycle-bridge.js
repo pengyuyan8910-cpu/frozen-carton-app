@@ -41,6 +41,17 @@
     if (source) frame.setAttribute("src", source);
   }
 
+  function notifyFrameReloadData() {
+    const frame = document.getElementById("productLifecycleFrame");
+    if (frame && frame.contentWindow) {
+      try {
+        frame.contentWindow.postMessage({ type: "plm:reload-data" }, "*");
+      } catch (error) {
+        console.warn("生命周期桥接器：通知 iframe 刷新失败", error);
+      }
+    }
+  }
+
   function blankState() {
     return {
       version: VERSION,
@@ -160,6 +171,7 @@
     applyCommittedPatches(dataRef, stateRef);
     writeState(stateRef);
     loadLifecycleFrame();
+    notifyFrameReloadData();
     return true;
   }
 

@@ -1143,6 +1143,12 @@ async function pullCloudData() {
   安全保存本地(发布保存键, cloudState);
   草稿状态 = 清理计算缓存(读取本地(草稿保存键) || cloudState);
   发布状态 = 清理计算缓存(读取本地(发布保存键) || cloudState);
+  // 把云端生命周期补丁同步应用到主应用状态，确保淘汰/上新标记一致
+  const cloudLifecycle = cloudState.lifecycle;
+  if (cloudLifecycle?.committedPatches?.length && window.ProductLifecycle?.applyCommittedPatches) {
+    window.ProductLifecycle.applyCommittedPatches(草稿状态, cloudLifecycle);
+    window.ProductLifecycle.applyCommittedPatches(发布状态, cloudLifecycle);
+  }
   切换数据源();
   docRevision = data.doc_revision;
   cloudBaseData = structuredClone(p);

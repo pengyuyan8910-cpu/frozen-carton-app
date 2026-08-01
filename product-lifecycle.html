@@ -1452,6 +1452,10 @@ window.addEventListener("message",e=>{
    select.value=msg.store;renderPlanogram();
   }
  }
+ if(msg.type==="plm:reload-data"){
+  // 父页面数据已更新（如拉取云端），iframe 重新初始化以读取最新状态和补丁
+  window.location.reload();
+ }
 });
 if("ResizeObserver" in window){
  new ResizeObserver(()=>notifyParentSize()).observe(document.documentElement);
