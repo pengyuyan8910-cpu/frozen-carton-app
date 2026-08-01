@@ -1,4 +1,10 @@
 const 初始数据=window.UNIFIED_CARTON_DATA;
+// iframe 中的产品生命周期管理会直接 mutate window.UNIFIED_CARTON_DATA.skus 中的对象，
+// 例如淘汰 SKU 时设置 included=false。父页面在 建立基准 时若继续读取 初始数据.skus，
+// 会读到被污染后的 included，导致 _baseIncluded 错误地被设为 false，
+// 柜段使用() 的 changed 检测失效，被淘汰 SKU 的占宽无法从 sourceUsed 中扣除。
+// 这里保存一份不可变的深度克隆快照，建立基准始终从快照读取。
+const 原始SKUs快照=structuredClone(初始数据?.skus||[]);
 const 复核报告=window.UNIFIED_CARTON_REPORT||{};
 const 草稿保存键="frozen_carton_unified_scene_draft_v1";
 const 发布保存键="frozen_carton_unified_scene_published_v1";
@@ -118,7 +124,7 @@ function 原始列数(r){const ps=Array.isArray(r.placements)?r.placements:[];re
 function 本柜列数(r,cabKey=r.cabinetKey){return r.cabinetKey===cabKey?数(r.displayCols):0}
 function 本柜占宽(r,cabKey=r.cabinetKey){return r.cabinetKey===cabKey?SKU占用宽度(r):0}
 function 基准宽度(r){return r._baseWidth!==undefined?数(r._baseWidth):SKU占用宽度(r)}
-function 初始SKU行(id){return (初始数据.skus||[]).find(x=>x.id===id)}
+function 初始SKU行(id){return (原始SKUs快照||[]).find(x=>x.id===id)}
 function 初始SKU宽度(r){return Math.max(0,数(r.displayCols)*数(r.faceWidth))}
 function 建立基准(state){if(!state)return;for(const r of state.skus||[]){const b=初始SKU行(r.id);r._baseIncluded=b?!!b.included:false;r._baseCabinetKey=b?b.cabinetKey:r.cabinetKey;r._baseDisplayCols=b?数(b.displayCols):0;r._baseFaceWidth=b?数(b.faceWidth):数(r.faceWidth);r._baseWidth=b?初始SKU宽度(b):0}state._baselineReady=true}
 function 柜段占用明细(r){const out=new Map();const baseKey=r._baseCabinetKey||r.cabinetKey;const baseWidth=基准宽度(r);const newWidth=r.included?SKU占用宽度(r):0;if(r._baseIncluded!==false&&baseKey)out.set(baseKey,(out.get(baseKey)||0)-baseWidth);if(r.included&&r.cabinetKey)out.set(r.cabinetKey,(out.get(r.cabinetKey)||0)+newWidth);return out}
