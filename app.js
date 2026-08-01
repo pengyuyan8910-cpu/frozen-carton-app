@@ -16,8 +16,8 @@ function 产品转SKU(p,store){return{id:"poolsku_"+Date.now()+"_"+Math.random()
 function 初始状态(){const st=清理交互痕迹(初始数据);确保产品池(st);return st}
 let 草稿状态=清理计算缓存(读取本地(草稿保存键)||初始状态());
 let 发布状态=清理计算缓存(读取本地(发布保存键)||初始状态());
-let 状态=发布状态;
-let 当前={门店:"",页面:"goods",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
+let 状态=发布状态;window.ProductLifecycle?.syncData?.(状态);
+let 当前={门店:"",页面:"goods",定位SKU:"",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
 let 同步请求中=false;
 const 文=v=>String(v??"").trim();
 const 数=v=>{if(typeof v==="number")return Number.isFinite(v)?v:0;
@@ -66,7 +66,7 @@ function 安全保存本地(key,state){try{localStorage.setItem(key,JSON.stringi
 function 保存草稿(){安全保存本地(草稿保存键,草稿状态)}
 function 保存发布(){安全保存本地(发布保存键,发布状态)}function 当前是否运营(){return !!q("#opsMode")?.checked}
 function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态}
-function 保存(){if(当前是否运营()){草稿状态=状态;保存草稿()}else{发布状态=状态;保存发布()}}
+function 保存(){if(当前是否运营()){草稿状态=状态;保存草稿()}else{发布状态=状态;保存发布()}window.ProductLifecycle?.syncData?.(状态)}
 // Keep the planogram and the allocation table on the same live state.
 function 刷新陈列联动(){
   if(!q("#displayMapCanvas"))return;
@@ -483,7 +483,7 @@ function 渲染商品(){const kw=文(q("#goodsSearch").value),level=文(q("#leve
 let rows=状态.skus.filter(r=>!level||r.grade===level).filter(r=>包含(r,kw));
 表格("#goodsTable",[{name:"门店",value:r=>r.store}].concat(商品列()),rows)}
 function 渲染风险(){const kw=文(q("#riskSearch").value),risk=文(q("#riskFilter").value),store=门店名();
-const rows=门店SKU(store).map(r=>({r,c:计算SKU(r)})).filter(x=>x.c.external>0).filter(x=>!risk||x.c.risk===risk).filter(x=>包含(x.r,kw)).sort((a,b)=>b.c.externalDays-a.c.externalDays);
+const target=当前.定位SKU;const rows=门店SKU(store).map(r=>({r,c:计算SKU(r),__rowClass:target&&(r.name===target||r.barcode===target)?"selected-row":""})).filter(x=>x.c.external>0||(target&&(x.r.name===target||x.r.barcode===target))).filter(x=>!risk||x.c.risk===risk||(target&&(x.r.name===target||x.r.barcode===target))).filter(x=>包含(x.r,kw)).sort((a,b)=>b.c.externalDays-a.c.externalDays);
 表格("#riskTable",[{name:"商品",value:x=>x.r.name,cls:()=>"name"},{name:"等级",value:x=>标签(x.r.grade),html:true},{name:"三级类目",value:x=>x.r.category3},{name:"日销",value:x=>格(x.r.dailyQty,3)},{name:"箱规",value:x=>格(x.r.carton,0)},{name:"需外储",value:x=>x.c.external},{name:"静态体积L",value:x=>格(x.c.staticVol)},{name:"外储天",value:x=>格(x.c.externalDays)},{name:"风险",value:x=>风险标签(x.c.risk),html:true}],rows)}
 function 渲染补货(){const store=门店名();
 const extUsed=数(q("#currentExternalL").value);
@@ -517,8 +517,8 @@ const typeKw=文(q("#allocationTypeFilter")?.value);
 const noKw=文(q("#allocationCabNoFilter")?.value);
 const posKw=文(q("#allocationPosFilter")?.value);
 const sceneKw=文(q("#allocationSceneFilter")?.value);
-const rows=门店SKU(store).filter(r=>包含(r,kw)).filter(r=>!sceneKw||场景分区(r)===sceneKw).filter(r=>陈列筛选命中(r,typeKw,noKw,posKw,cabKw)).map(r=>({...r,__rowClass:r.selected?"selected-row":""}));
-表格("#allocationTable",[{name:"标色",value:r=>'<input type="checkbox" '+(r.selected?"checked":"")+' onchange="改SKU(\''+r.id+'\',\'selected\',this.checked)">',html:true},{name:"变更",value:r=>变更标签(r),html:true,cls:()=>"name"},{name:"纳入",value:r=>'<input type="checkbox" '+(r.included?"checked":"")+' onchange="改SKU(\''+r.id+'\',\'included\',this.checked)">',html:true},{name:"商品",value:r=>可编辑文本(r.name,r.id,"name","w-name"),html:true,cls:()=>"name"},{name:"等级",value:r=>可编辑文本(r.grade,r.id,"grade"),html:true},{name:"三级类目",value:r=>可编辑文本(r.category3,r.id,"category3"),html:true},{name:"场景分区",value:r=>场景分区(r)},{name:"条码",value:r=>可编辑文本(r.barcode,r.id,"barcode"),html:true},{name:"箱规",value:r=>输入(r.carton,"改SKU('"+r.id+"','carton',this.value)"),html:true},{name:"日销",value:r=>输入(r.dailyQty,"改SKU('"+r.id+"','dailyQty',this.value)"),html:true},{name:"体积L",value:r=>输入(r.volume,"改SKU('"+r.id+"','volume',this.value)"),html:true},{name:"陈列柜",value:r=>选择柜(r),html:true},{name:"具体位置",value:r=>柜位(r)},{name:"陈列列数（可修改）",value:r=>输入(r.displayCols,"改SKU('"+r.id+"','displayCols',this.value)"),html:true},{name:"单列容量",value:r=>输入(r.perCol,"改SKU('"+r.id+"','perCol',this.value)"),html:true},{name:"单列占宽mm",value:r=>输入(r.faceWidth,"改SKU('"+r.id+"','faceWidth',this.value)"),html:true},{name:"本柜占宽",value:r=>格(本柜占宽(r),0)+"mm"},{name:"总占宽",value:r=>格(SKU占用宽度(r),0)+"mm"},{name:"满陈",value:r=>计算SKU(r).full},{name:"触发库存",value:r=>计算SKU(r).trigger},{name:"需外储",value:r=>计算SKU(r).external},{name:"外储L",value:r=>格(计算SKU(r).staticVol)},{name:"柜段剩余",value:r=>{const c=柜段使用().find(x=>x.key===r.cabinetKey);return c?格(c.left,0)+"mm":""},cls:r=>{const c=柜段使用().find(x=>x.key===r.cabinetKey);return c&&c.left<0?"bad":""}}],rows)}
+const target=当前.定位SKU;const rows=门店SKU(store).filter(r=>包含(r,kw)).filter(r=>!sceneKw||场景分区(r)===sceneKw).filter(r=>陈列筛选命中(r,typeKw,noKw,posKw,cabKw)).map(r=>({...r,__rowClass:(r.selected||(target&&(r.name===target||r.barcode===target)))?"selected-row":""}));
+表格("#allocationTable",[{name:"变更",value:r=>变更标签(r),html:true,cls:()=>"name"},{name:"商品",value:r=>r.name,cls:()=>"name"},{name:"等级",value:r=>标签(r.grade),html:true},{name:"三级类目",value:r=>r.category3},{name:"场景分区",value:r=>场景分区(r)},{name:"条码",value:r=>r.barcode},{name:"箱规",value:r=>格(r.carton,0)},{name:"日销",value:r=>格(r.dailyQty,3)},{name:"单列占宽mm",value:r=>格(r.faceWidth,0)},{name:"陈列柜（可修改）",value:r=>选择柜(r),html:true},{name:"具体位置",value:r=>柜位(r)},{name:"陈列列数（可修改）",value:r=>输入(r.displayCols,"改SKU('"+r.id+"','displayCols',this.value)"),html:true},{name:"单列容量（可修改）",value:r=>输入(r.perCol,"改SKU('"+r.id+"','perCol',this.value)"),html:true},{name:"本柜占宽",value:r=>格(本柜占宽(r),0)+"mm"},{name:"总占宽",value:r=>格(SKU占用宽度(r),0)+"mm"},{name:"满陈",value:r=>计算SKU(r).full},{name:"触发库存",value:r=>计算SKU(r).trigger},{name:"需外储",value:r=>计算SKU(r).external},{name:"外储L",value:r=>格(计算SKU(r).staticVol)},{name:"柜段剩余",value:r=>{const c=柜段使用().find(x=>x.key===r.cabinetKey);return c?格(c.left,0)+"mm":""},cls:r=>{const c=柜段使用().find(x=>x.key===r.cabinetKey);return c&&c.left<0?"bad":""}}],rows)}
 function 渲染柜段(){const kw=文(q("#cabinetSearch").value);
 const store=门店名();
 const rows=柜段使用().filter(c=>c.store===store).filter(c=>包含(c,kw));
@@ -873,6 +873,7 @@ q("#storeSelect").onchange=e=>{提交当前编辑();当前.门店=e.target.value
 渲染全部()};
 q("#opsMode").onchange=async e=>{if(e.target.checked){e.target.checked=false;document.body.classList.remove("ops");渲染全部();const ok=await 校验运营密码();if(!ok){document.body.classList.remove("ops");渲染全部();return}e.target.checked=true}else{e.target.checked=false}渲染全部()};
 qa(".tabs button").forEach(b=>b.onclick=()=>切换(b.dataset.view));
+window.addEventListener("store-sku:action",e=>{const d=e.detail||{};if(!d.store||!d.name)return;const select=q("#storeSelect");if(select&&[...select.options].some(o=>o.value===d.store))select.value=d.store;当前.门店=d.store;当前.定位SKU=d.name;if(d.view==="allocation"&&!q("#opsMode")?.checked){alert("排柜调整需要先进入运营模式。");return}切换(d.view);setTimeout(()=>q(d.view==="risk"?"#riskTable tr.selected-row":"#allocationTable tr.selected-row")?.scrollIntoView({block:"center",behavior:"smooth"}),60)});
 ["overviewSearch","storeSearch","goodsSearch","riskSearch","cabinetSearch","levelFilter","riskFilter","suggestCabinet","allocationSearch","allocationCabinetSearch","allocationTypeFilter","allocationCabNoFilter","allocationPosFilter","allocationSceneFilter"].forEach(id=>{const el=q("#"+id);
 if(el)el.addEventListener("input",渲染全部),el.addEventListener("change",渲染全部)});
 q("#displayMapCategoryFilter")?.addEventListener("change",e=>{当前.陈列图四级=e.target.value;渲染陈列图()});

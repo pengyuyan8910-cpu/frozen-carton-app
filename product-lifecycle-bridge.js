@@ -41,17 +41,6 @@
     if (source) frame.setAttribute("src", source);
   }
 
-  function notifyFrameReloadData() {
-    const frame = document.getElementById("productLifecycleFrame");
-    if (frame && frame.contentWindow) {
-      try {
-        frame.contentWindow.postMessage({ type: "plm:reload-data" }, "*");
-      } catch (error) {
-        console.warn("生命周期桥接器：通知 iframe 刷新失败", error);
-      }
-    }
-  }
-
   function blankState() {
     return {
       version: VERSION,
@@ -59,6 +48,7 @@
       tasks: [],
       slots: [],
       committedPatches: [],
+      productPatches: [],
       updatedAt: ""
     };
   }
@@ -70,6 +60,7 @@
     state.tasks = Array.isArray(state.tasks) ? state.tasks : [];
     state.slots = Array.isArray(state.slots) ? state.slots : [];
     state.committedPatches = Array.isArray(state.committedPatches) ? state.committedPatches : [];
+    state.productPatches = Array.isArray(state.productPatches) ? state.productPatches : [];
     return state;
   }
 
@@ -149,10 +140,31 @@
     }
   }
 
+  function applyProductPatch(data, patch) {
+    if (!data || !patch?.matchKey) return;
+    const match = item => String(item?.barcode || item?.name || "") === String(patch.matchKey);
+    const changes = clone(patch.changes || {});
+    (data.productPool || []).filter(match).forEach(item => Object.assign(item, changes));
+    (data.skus || []).filter(match).forEach(item => Object.assign(item, changes));
+  }
+
   function applyCommittedPatches(data, state) {
+    (state.productPatches || []).forEach(patch => applyProductPatch(data, patch));
     (state.committedPatches || []).forEach(patch => applyPatch(data, patch));
     data.lifecycle = clone(state);
     return data;
+  }
+
+  function updateProduct(matchKey, changes) {
+    if (!dataRef || !matchKey || !changes || typeof changes !== "object") return false;
+    const state = normalizeState(stateRef || blankState());
+    const existing = state.productPatches.find(item => item.matchKey === matchKey);
+    if (existing) Object.assign(existing.changes, clone(changes));
+    else state.productPatches.push({ matchKey, changes: clone(changes), updatedAt: new Date().toISOString() });
+    applyProductPatch(dataRef, { matchKey, changes });
+    writeState(state);
+    window.dispatchEvent(new CustomEvent("product-lifecycle:product-updated", { detail: { matchKey, changes: clone(changes) } }));
+    return true;
   }
 
   function prepareData(data) {
@@ -171,10 +183,15 @@
     applyCommittedPatches(dataRef, stateRef);
     writeState(stateRef);
     loadLifecycleFrame();
-    notifyFrameReloadData();
     return true;
   }
 
+function syncData(data) {
+    if (!isFormalData(data)) return false;
+    dataRef = data;
+    dataRef.lifecycle = clone(stateRef || blankState());
+    return true;
+  }
   function getProduct(task) {
     if (!dataRef) return {};
     const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
@@ -336,7 +353,7 @@
       if (message.type === "plm:resize") {
         const frame = document.getElementById("productLifecycleFrame");
         if (frame) {
-          const height = Math.max(120, Math.min(30000, number(message.height) + 8));
+          const height = Math.max(760, Math.min(30000, number(message.height) + 8));
           frame.style.height = `${height}px`;
         }
       }
@@ -381,6 +398,8 @@
     saveState: writeState,
     resetState,
     commitCompletedTask,
+    updateProduct,
+    syncData,
     applyCommittedPatches
   };
 })();
