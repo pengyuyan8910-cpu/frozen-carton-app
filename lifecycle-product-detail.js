@@ -24,7 +24,11 @@
     selected = p;
     let aside = document.getElementById('plmProductInspector');
     if (!aside) { aside = document.createElement('aside'); aside.id = 'plmProductInspector'; section.appendChild(aside); section.classList.add('plm-detail-open'); }
-    const detailTop = rowEl ? Math.max(0, rowEl.getBoundingClientRect().top - section.getBoundingClientRect().top) : 300;
+    const panel = section.querySelector('.panel');
+    const rowTop = rowEl ? rowEl.getBoundingClientRect().top - section.getBoundingClientRect().top : 300;
+    const panelTop = panel ? panel.getBoundingClientRect().top - section.getBoundingClientRect().top : 300;
+    // 详情卡片以选中行作为锚点，但让标题略高于行，避免卡片像从该行向下坠落。
+    const detailTop = Math.max(panelTop + 58, rowTop - 88);
     aside.style.top = Math.round(detailTop) + 'px';
     const coverage = typeof coverageCount === 'function' ? coverageCount(productKey(p)) : '—';
     const row = typeof rowsForProduct === 'function' ? rowsForProduct(productKey(p))[0] : null;

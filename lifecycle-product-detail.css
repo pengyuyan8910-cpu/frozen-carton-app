@@ -11,3 +11,6 @@
 
 /* 每次点击 SKU 后，将详情栏定位到该表格行右侧，而非固定在视窗顶部。 */
 #pool{position:relative}#pool.plm-detail-open>.panel{display:block!important;margin-right:370px!important}#pool #plmProductInspector{position:absolute!important;right:0!important;top:auto;width:340px!important;max-height:none!important;margin:0!important;z-index:5}@media(max-width:1100px){#pool.plm-detail-open>.panel{margin-right:0!important}#pool #plmProductInspector{position:static!important;width:auto!important;margin:16px 0!important}}
+
+/* 选中行的右侧锚点：卡片标题位于行上方，避免行首生硬贴边。 */
+#pool #plmProductInspector{transition:top .16s ease,box-shadow .16s ease}#pool #plmProductInspector:before{content:'';position:absolute;left:-9px;top:104px;width:16px;height:16px;background:#fff;border-left:1px solid #d9e4de;border-bottom:1px solid #d9e4de;transform:rotate(45deg);z-index:-1}

@@ -18,3 +18,6 @@ body .staging-zone{left:auto!important;right:24px!important;bottom:22px!importan
 
 /* 固定顶栏与运营提示共约 100px，内容从其下方开始，避免指标被遮挡。 */
 body.ops main,body .mode-banner+main{padding-top:138px!important}
+
+/* 待选区收纳进陈列图右侧信息栏，不再作为浮层遮挡左侧导航。 */
+#displayMapMonitor .staging-zone{position:static!important;right:auto!important;bottom:auto!important;left:auto!important;width:auto!important;max-height:none!important;margin:0 0 18px!important;z-index:auto!important;box-shadow:none!important}#displayMapMonitor .staging-zone:before{display:none}#displayMapMonitor .staging-items{max-height:220px;overflow:auto}
