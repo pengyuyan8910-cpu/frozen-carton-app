@@ -1147,6 +1147,13 @@ async function pullCloudData() {
   docRevision = data.doc_revision;
   cloudBaseData = structuredClone(p);
   建立基准(草稿状态); 建立基准(发布状态);
+  // 同步到生命周期桥接器，确保 iframe 使用云端一致的状态
+  if (window.UNIFIED_CARTON_DATA) {
+    Object.assign(window.UNIFIED_CARTON_DATA, cloudState);
+  }
+  if (window.ProductLifecycle?.prepareData && window.UNIFIED_CARTON_DATA) {
+    window.ProductLifecycle.prepareData(window.UNIFIED_CARTON_DATA);
+  }
   渲染全部();
   cloudNote('已拉取云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
 }
@@ -1195,6 +1202,10 @@ async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
   const payload = cloudCopyState(发布状态);
+  // 把生命周期任务/坑位状态一并写入云端，确保多端拉取一致
+  if (window.ProductLifecycle?.getState) {
+    payload.lifecycle = window.ProductLifecycle.getState();
+  }
   const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
