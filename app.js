@@ -80,7 +80,7 @@ function 门店名(){return 当前.门店||q("#storeSelect").value||状态.store
 function 门店SKU(store=门店名()){return 状态.skus.filter(r=>r.store===store)}
 function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included)}
 function SKU键(r){return 文(r.barcode)||文(r.name)}
-function 有效SKU池(){const map=new Map();for(const r of 状态.skus){const key=SKU键(r);if(key&&!map.has(key))map.set(key,r)}return[...map.values()]}
+function 有效SKU池(){const lifecycle=window.ProductLifecycle?.getState?.()||{};const retired=new Set((lifecycle.tasks||[]).filter(t=>t.type==="淘汰"&&t.status==="已完成").map(t=>文(t.productKey)));const pool=确保产品池(状态).filter(p=>p.active!==false&&!retired.has(SKU键(p)));if(pool.length)return pool;const map=new Map();for(const r of 状态.skus){const key=SKU键(r);if(key&&!map.has(key))map.set(key,r)}return[...map.values()]}
 function 门店已纳入键集合(store=门店名()){const set=new Set();for(const r of 纳入SKU(store)){const key=SKU键(r);if(key)set.add(key)}return set}
 function 门店未纳入SKU(store=门店名()){const set=门店已纳入键集合(store);return 有效SKU池().filter(r=>!set.has(SKU键(r)))}
 function 唯一SKU数(rows){const set=new Set();for(const r of rows){const key=SKU键(r);if(key)set.add(key)}return set.size}

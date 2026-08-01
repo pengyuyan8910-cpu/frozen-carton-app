@@ -23,11 +23,13 @@
   async function show(p) {
     selected = p;
     let aside = document.getElementById('plmProductInspector');
-    if (!aside) { aside = document.createElement('aside'); aside.id = 'plmProductInspector'; section.appendChild(aside); section.classList.add('plm-detail-open'); }
+    if (!aside) { aside = document.createElement('aside'); aside.id = 'plmProductInspector'; section.querySelector('.panel')?.appendChild(aside); section.classList.add('plm-detail-open'); }
     const coverage = typeof coverageCount === 'function' ? coverageCount(productKey(p)) : '—';
+    const row = typeof rowsForProduct === 'function' ? rowsForProduct(productKey(p))[0] : null;
+    const faceWidth = p.faceWidth ?? row?.faceWidth ?? 0;
     aside.innerHTML = `<div class="plm-detail-head"><div class="plm-image"></div><div><h3>${esc(p.name)}</h3><p>${esc(p.barcode || '暂无条码')}</p><span>产品总池 · 统一维护</span></div><button id="plmCloseDetail" type="button">关闭</button></div>
       <section><h4>商品资料（修改后同步所有模块）</h4><div class="plm-edit-grid">
-      ${field('产品名称','name',p.name)}${field('等级','grade',p.grade)}${field('条码','barcode',p.barcode)}${field('三级类目','category3',p.category3)}${field('箱规','carton',p.carton,'number')}${field('日均销量','dailyQty',p.dailyQty,'number')}${field('单列占宽 mm','faceWidth',p.faceWidth,'number')}</div>
+      ${field('产品名称','name',p.name)}${field('等级','grade',p.grade)}${field('条码','barcode',p.barcode)}${field('三级类目','category3',p.category3)}${field('箱规','carton',p.carton,'number')}${field('日均销量','dailyQty',p.dailyQty,'number')}${field('单列占宽 mm','faceWidth',faceWidth,'number')}</div>
       <button id="plmSaveProduct" class="plm-save-product" type="button">保存并同步全部门店 / 陈列图</button></section>
       <section><h4>覆盖信息</h4><dl><div><dt>尺寸</dt><dd>${esc(p.length)}×${esc(p.width)}×${esc(p.height)}mm</dd></div><div><dt>门店覆盖</dt><dd>${esc(coverage)}</dd></div></dl><p>风险和排柜调整请在“商品明细”中按具体门店执行。</p></section>`;
     aside.querySelector('#plmCloseDetail').onclick = () => { aside.remove(); section.classList.remove('plm-detail-open'); };
