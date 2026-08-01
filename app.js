@@ -78,7 +78,7 @@ function 刷新陈列联动(){
 }
 function 门店名(){return 当前.门店||q("#storeSelect").value||状态.stores[0]?.store||""}
 function 门店SKU(store=门店名()){return 状态.skus.filter(r=>r.store===store)}
-function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included)}
+function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included&&r.lifecycleStatus!=="已淘汰")}
 function SKU键(r){return 文(r.barcode)||文(r.name)}
 function 有效SKU池(){const map=new Map();for(const r of 状态.skus){const key=SKU键(r);if(key&&!map.has(key))map.set(key,r)}return[...map.values()]}
 function 门店已纳入键集合(store=门店名()){const set=new Set();for(const r of 纳入SKU(store)){const key=SKU键(r);if(key)set.add(key)}return set}
@@ -766,8 +766,9 @@ function 陈列图柜段监控(seg,use,isStorage=false,disabled=false){
 function 渲染陈列余量监控(){渲染陈列图();}
 function 渲染陈列图(){
   if(!q('#displayMapCanvas'))return;
+  同步生命周期补丁到状态(状态);
   const store=门店名(),type4=当前.陈列图四级||"";
-  const rows=纳入SKU(store).filter(r=>!r.inStaging&&(!type4||文(r.category4)===type4));
+  const rows=纳入SKU(store).filter(r=>!r.inStaging&&r.lifecycleStatus!=="已淘汰"&&(!type4||文(r.category4)===type4));
   const cabs=状态.cabinets.filter(c=>c.store===store);
   const usage=new Map(柜段使用().filter(c=>c.store===store).map(c=>[c.key,c]));
   const byLabel=new Map();for(const c of cabs){if(!byLabel.has(c.label))byLabel.set(c.label,[]);byLabel.get(c.label).push(c)}
@@ -915,21 +916,31 @@ q("#restoreBtn").onclick=()=>{if(confirm("确认恢复初始数据？当前本�
 // 并派发 product-lifecycle:data-committed 事件。主页面需要把这些 patch 同步到草稿/发布状态，
 // 否则云端保存、门店执行页、柜段余量等仍会使用旧数据。
 const 已应用生命周期补丁ID=new Set();
-window.addEventListener("product-lifecycle:data-committed",()=>{
-  if(!window.ProductLifecycle?.getState||!window.ProductLifecycle?.applyCommittedPatches)return;
-  try{
-    const lifecycleState=window.ProductLifecycle.getState();
-    const patches=(lifecycleState.committedPatches||[]).filter(p=>p&&p.id&&!已应用生命周期补丁ID.has(p.id));
-    if(!patches.length)return;
-    patches.forEach(patch=>{
+function 同步生命周期补丁到状态(targetState){
+  if(!window.ProductLifecycle?.getState||!window.ProductLifecycle?.applyCommittedPatches)return 0;
+  const lifecycleState=window.ProductLifecycle.getState();
+  const patches=(lifecycleState.committedPatches||[]).filter(p=>p&&p.id&&!已应用生命周期补丁ID.has(p.id));
+  if(!patches.length)return 0;
+  patches.forEach(patch=>{
+    if(targetState)window.ProductLifecycle.applyCommittedPatches(targetState,{committedPatches:[patch]});
+    else{
       window.ProductLifecycle.applyCommittedPatches(草稿状态,{committedPatches:[patch]});
       window.ProductLifecycle.applyCommittedPatches(发布状态,{committedPatches:[patch]});
-      已应用生命周期补丁ID.add(patch.id);
-    });
+      if(window.UNIFIED_CARTON_DATA)window.ProductLifecycle.applyCommittedPatches(window.UNIFIED_CARTON_DATA,{committedPatches:[patch]});
+    }
+    已应用生命周期补丁ID.add(patch.id);
+  });
+  return patches.length;
+}
+window.addEventListener("product-lifecycle:data-committed",()=>{
+  try{
+    const count=同步生命周期补丁到状态();
+    if(!count)return;
     状态=当前是否运营()?草稿状态:发布状态;
     保存();
     建立基准(草稿状态);建立基准(发布状态);
     渲染全部();
+    console.log(`[生命周期] 已同步 ${count} 条 patch 到主页面状态`);
   }catch(error){console.error("同步生命周期状态到主页面失败",error)}
 });
 

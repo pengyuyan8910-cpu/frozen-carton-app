@@ -96,6 +96,8 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
 .sku-block.restore{background:#efeaff;border-color:#a48cdf;color:#5c3f9a}
 .tag.status-restore{background:#eee8ff;color:#6444a0}
 .restore-choice{min-width:285px;max-width:390px}
+.pool-edit-input{height:34px;min-width:60px;max-width:110px;padding:0 8px;border:1px solid #c5d3cc;border-radius:8px;background:#fff;font-size:13px}
+.pool-edit-input:focus{outline:none;border-color:#0f6a49;box-shadow:0 0 0 3px rgba(15,106,73,.12)}
 
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.workspace-grid,.planogram-layout{grid-template-columns:1fr}.planogram-monitor{position:static}.side-note{order:-1}}
 @media(max-width:700px){.topbar{padding:20px;display:block}.top-actions{margin-top:14px}.safe-banner{padding:10px 20px}.tabs{padding:10px}.panel-title{display:block}.panel-title .toolbar{margin-top:12px}.metric-grid,.metric-grid.compact{grid-template-columns:repeat(2,1fr)}main{padding:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cabinet-row{grid-template-columns:82px minmax(0,1fr)}}
@@ -133,12 +135,13 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
   <div id="poolMetrics" class="metric-grid"></div>
   <section class="panel">
     <div class="panel-title controls">
-      <div><h2>产品总池</h2><p>统一查看商品生命周期、门店覆盖率和批量操作入口。</p></div>
+      <div><h2>产品总池</h2><p>统一查看商品生命周期、门店覆盖率和批量操作入口。编辑模式下可根据周期销售数据修改产品字段。</p></div>
       <div class="toolbar">
         <input id="poolSearch" type="search" placeholder="搜索商品、条码、类目">
         <select id="poolStatusFilter"><option value="">全部状态</option><option>正常在售</option><option>待上新</option><option>待淘汰</option><option>恢复中</option><option>已淘汰</option></select>
         <button id="exportProductPoolBtn" class="btn" type="button">导出当前产品池</button>
         <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button>
+        <button id="poolEditToggleBtn" class="btn" type="button" onclick="togglePoolEdit()">编辑产品池</button>
       </div>
     </div>
     <div id="poolTable" class="table-wrap"></div>
@@ -532,6 +535,30 @@ function renderProductCards(){
  render("retireProductCard",document.getElementById("retireProduct").value);
  render("restoreProductCard",document.getElementById("restoreProduct").value);
 }
+let poolEditMode=false;
+function togglePoolEdit(){
+ poolEditMode=!poolEditMode;renderPool();
+ const btn=document.getElementById("poolEditToggleBtn");
+ if(btn){btn.textContent=poolEditMode?"退出编辑":"编辑产品池";btn.classList.toggle("primary",!poolEditMode);btn.classList.toggle("danger",poolEditMode);}
+}
+function savePoolField(productKey,k,value){
+ const p=allProducts().find(x=>keyOf(x)===productKey);if(!p)return;
+ const numFields=["length","width","height","volume","carton","dailyQty","dailySales","moq","rank"];
+ const v=numFields.includes(k)?num(value):value;
+ p[k]=v;
+ if(k==="length"||k==="width"||k==="height")p.volume=num(p.length)*num(p.width)*num(p.height)/1e6;
+ const pool=Array.isArray(data.productPool)?data.productPool:[];
+ const target=pool.find(x=>x.id===p.id)||pool.find(x=>x.name===p.name&&x.barcode===p.barcode);
+ if(target){target[k]=v;if(k==="length"||k==="width"||k==="height")target.volume=num(target.length)*num(target.width)*num(target.height)/1e6;}
+ saveState();
+ toast(`已更新 ${esc(p.name)} 的 ${k}`);
+}
+function poolInput(p,k,type="text"){
+ const v=p[k]??"";
+ const pk=esc(keyOf(p));
+ return `<input class="pool-edit-input" type="${type}" value="${esc(v)}" onchange="savePoolField('${pk}','${k}',this.value)" ${type==="number"?'step="any"':''}>`;
+}
+window.togglePoolEdit=togglePoolEdit;window.savePoolField=savePoolField;
 function renderPool(){
  const products=allProducts();const totalStores=currentStores().length;
  const statuses=products.map(productStatus);
@@ -548,10 +575,11 @@ function renderPool(){
  const rows=products.filter(p=>{const s=[p.name,p.barcode,p.category3,p.category4].join(" ");return(!q||s.includes(q))&&(!sf||productStatus(p)===sf)}).sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
  document.getElementById("poolTable").innerHTML=table([
   {name:"商品",cls:"name",render:p=>`<strong>${esc(p.name)}</strong><br><small>${esc(p.barcode||"暂无条码")}</small>`},
-  {name:"等级",render:p=>gradeTag(p.grade)},
-  {name:"三级/四级类目",render:p=>`${esc(p.category3||"-")} / ${esc(p.category4||"-")}`},
-  {name:"尺寸",render:p=>`${fmt(p.length)}×${fmt(p.width)}×${fmt(p.height)}mm`},
-  {name:"箱规",render:p=>fmt(p.carton)},
+  {name:"等级",render:p=>poolEditMode?poolInput(p,"grade"):gradeTag(p.grade)},
+  {name:"三级/四级类目",render:p=>poolEditMode?`${poolInput(p,"category3")}<br>${poolInput(p,"category4")}`:`${esc(p.category3||"-")} / ${esc(p.category4||"-")}`},
+  {name:"尺寸",render:p=>poolEditMode?`${poolInput(p,"length","number")}×${poolInput(p,"width","number")}×${poolInput(p,"height","number")}mm`:`${fmt(p.length)}×${fmt(p.width)}×${fmt(p.height)}mm`},
+  {name:"箱规",render:p=>poolEditMode?poolInput(p,"carton","number"):fmt(p.carton)},
+  {name:"日均销量",render:p=>poolEditMode?poolInput(p,"dailySales","number"):fmt(p.dailySales||0)},
   {name:"门店覆盖",render:p=>{const c=coverageCount(keyOf(p)),pct=totalStores?Math.round(c/totalStores*100):0;return `<div class="coverage"><div class="coverage-bar"><i style="width:${pct}%"></i></div><span>${c}/${totalStores}</span></div>`}},
   {name:"生命周期",render:p=>statusTag(productStatus(p))},
   {name:"操作",render:p=>{
@@ -891,6 +919,7 @@ function applyLaunch(){
  const p=productByKey(document.getElementById("launchProduct").value);
  const rows=launchPlans.map(plan=>({...selectedLaunchCandidate(plan),store:plan.store})).filter(x=>x.feasible);
  if(!p||!rows.length)return;
+ if(hasActiveTask(keyOf(p),"上新")){return;}
  const blocked=launchPlans.filter(plan=>!selectedLaunchCandidate(plan).feasible);
  if(blocked.length&&!document.getElementById("allowPartial").checked){toast(`仍有${blocked.length}家门店无法执行，当前未允许部分门店暂不上新`);return}
  const id="TASK-L-"+Date.now();
@@ -1048,6 +1077,7 @@ function cancelReservedLaunch(slot,candidate){
 }
 function applyRestore(){
  const p=productByKey(document.getElementById("restoreProduct").value);if(!p)return;
+ if(hasActiveTask(keyOf(p),"恢复")){return;}
  const selected=restorePlans.map(plan=>({...selectedRestoreCandidate(plan),store:plan.store,skuId:plan.skuId})).filter(c=>c.feasible);
  if(!selected.length){toast("没有可执行的恢复方案");return}
  const id="TASK-RESTORE-"+Date.now();
@@ -1086,9 +1116,24 @@ function openProductTask(k,type){
  if(!t){toast("没有找到对应任务");return}
  selectedTaskId=t.id;switchView("tasks");renderTaskDetail();
 }
+function hasActiveTask(productKey,type,excludeId){
+ const t=state.tasks.find(t=>t.productKey===productKey&&t.type===type&&t.id!==excludeId&&!["已完成","已撤销","已撤回"].includes(t.status));
+ if(t)toast(`已存在同商品同类型任务 ${t.id}，请先完成或删除后再创建`);
+ return t;
+}
+function deleteTask(id){
+ const t=state.tasks.find(x=>x.id===id);if(!t)return;
+ if(t.status==="已完成"){toast("已完成的任务不可删除");return}
+ if(!confirm(`确认删除任务 ${id}？关联的待释放坑位将一并清理。`))return;
+ state.tasks=state.tasks.filter(x=>x.id!==id);
+ state.slots=state.slots.filter(s=>s.taskId!==id||!["待释放","已释放未分配","已预留给新品","恢复待执行"].includes(s.status));
+ if(selectedTaskId===id)selectedTaskId=null;
+ saveState();renderAll();toast(`任务 ${id} 已删除`);
+}
 window.selectRestoreCandidate=selectRestoreCandidate;
 window.prefillRestore=prefillRestore;
 window.openProductTask=openProductTask;
+window.deleteTask=deleteTask;
 
 function simulateRetire(){
  const p=productByKey(document.getElementById("retireProduct").value);if(!p)return;
@@ -1109,6 +1154,7 @@ function renderRetireResult(){
 }
 function applyRetire(){
  const p=productByKey(document.getElementById("retireProduct").value);if(!p||!retirePlans.length)return;
+ if(hasActiveTask(keyOf(p),"淘汰")){return;}
  const mode=document.getElementById("retireMode").value,id="TASK-R-"+Date.now();const slotStatus=mode==="immediate"?"已释放未分配":"待释放";
  const task={id,type:"淘汰",productKey:keyOf(p),productName:p.name,date:document.getElementById("retireDate").value,mode,status:mode==="immediate"?"部分完成":"待门店执行",createdAt:new Date().toLocaleString("zh-CN"),rows:retirePlans.map((r,i)=>({...r,id:id+"-"+i,status:slotStatus}))};
  state.tasks.unshift(task);
@@ -1222,7 +1268,8 @@ function renderTasks(){
   {name:"任务执行状态",render:t=>taskExecutionTag(t)},
   {name:"完成进度",render:t=>taskProgressHtml(t)},
   {name:"计划日期",render:t=>esc(t.date||"-")},
-  {name:"创建时间",render:t=>esc(t.createdAt)}
+  {name:"创建时间",render:t=>esc(t.createdAt)},
+  {name:"操作",render:t=>["已完成","已撤销","已撤回"].includes(t.status)?"-":`<button class="mini-btn danger" onclick="deleteTask('${esc(t.id)}')">删除</button>`}
  ],tasks);
  renderTaskDetail();
 }
@@ -1233,7 +1280,7 @@ function renderTaskDetail(){
  selectedTaskId=t.id;
  const terminal=["已完成","已撤销","已撤回"].includes(t.status);
  const progress=taskProgress(t);
- el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" onclick="completeTask('${esc(t.id)}')" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button></div></div>`+
+ el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" onclick="completeTask('${esc(t.id)}')" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button>${terminal?"":`<button class="btn danger" onclick="deleteTask('${esc(t.id)}')">删除任务</button>`}</div></div>`+
  table([
   {name:"门店",cls:"name",render:r=>esc(r.store)},
   {name:"位置",render:r=>`${esc(r.cabinetLabel||"-")} ${esc(r.position||"")}`},

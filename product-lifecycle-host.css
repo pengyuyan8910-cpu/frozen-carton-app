@@ -5,7 +5,7 @@
 #productLifecycleFrame {
   display: block;
   width: 100%;
-  min-height: 900px;
+  min-height: 120px;
   border: 0;
   border-radius: 16px;
   background: #f4f7f5;
@@ -31,5 +31,5 @@
   color: #fff;
 }
 @media (max-width: 900px) {
-  #productLifecycleFrame { min-height: 1100px; }
+  #productLifecycleFrame { min-height: 120px; }
 }
