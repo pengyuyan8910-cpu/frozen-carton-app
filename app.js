@@ -1167,7 +1167,7 @@ async function pullCloudData() {
 /* --- 保存至云端 --- */
 const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-function cloudCopyState(st) { return JSON.parse(JSON.stringify(清理交互痕迹(st))); }
+function cloudCopyState(st) { return 清理交互痕迹(st); }
 
 function cloudRevisionConflict() {
   return { code: 'P0001', message: 'CONFLICT: cloud data changed; merge the latest revision first.' };
@@ -1177,20 +1177,19 @@ async function saveCloudDocument(payload, expectedRevision) {
   const expected = Math.max(0, Math.trunc(Number(expectedRevision) || 0));
   const nextRevision = expected + 1;
   const updatedAt = new Date().toISOString();
-  const { data, error } = await cloudClient
+  // 不 select 以减少一次往返；通过 count 判断更新是否命中
+  const { error, count } = await cloudClient
     .from('carton_documents')
     .update({ payload, doc_revision: nextRevision, updated_at: updatedAt })
     .eq('id', 'main')
-    .eq('doc_revision', expected)
-    .select('doc_revision,updated_at')
-    .maybeSingle();
+    .eq('doc_revision', expected);
   if (error) return { data: null, error };
-  if (data) return { data, error: null };
+  if (count > 0) return { data: { doc_revision: nextRevision, updated_at: updatedAt }, error: null };
   if (expected !== 0) return { data: null, error: cloudRevisionConflict() };
 
   const { data: existing, error: readError } = await cloudClient
     .from('carton_documents')
-    .select('doc_revision')
+    .select('doc_revision', { head: true })
     .eq('id', 'main')
     .maybeSingle();
   if (readError) return { data: null, error: readError };
@@ -1207,6 +1206,7 @@ async function saveCloudDocument(payload, expectedRevision) {
 async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
+  const t0 = performance.now();
   const payload = cloudCopyState(发布状态);
   // 把生命周期任务/坑位状态一并写入云端，确保多端拉取一致
   if (window.ProductLifecycle?.getState) {
@@ -1215,12 +1215,19 @@ async function pushCloudData() {
   const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
-  docRevision = row ? row.doc_revision : docRevision + 1;
+  const newRevision = row ? row.doc_revision : docRevision + 1;
+  docRevision = newRevision;
   cloudBaseData = structuredClone(payload);
-  安全保存本地(草稿保存键, payload);
-  草稿状态 = 清理计算缓存(payload);
-  if (!当前是否运营()) 发布状态 = 草稿状态;
-  cloudNote('已保存至云端第 ' + docRevision + ' 版。');
+  const elapsed = Math.round(performance.now() - t0);
+  cloudNote('已保存至云端第 ' + docRevision + ' 版。耗时 ' + elapsed + 'ms');
+  // 本地持久化和缓存清理异步执行，避免阻塞 UI
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      安全保存本地(草稿保存键, payload);
+      草稿状态 = 清理计算缓存(payload);
+      if (!当前是否运营()) 发布状态 = 草稿状态;
+    }, 0);
+  });
 }
 
 /* --- 冲突自动合并 --- */
