@@ -7,7 +7,7 @@
   <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>冻品整箱到店统一小程序</title>
-  <link rel="stylesheet" href="styles.css?v=20260729_v5">
+  <link rel="stylesheet" href="styles.css?v=20260801_map1">
   <link rel="stylesheet" href="layout-preview.css?v=20260729_v5">
   <link rel="stylesheet" href="layout-preview-v2.css?v=20260729_v5">
   <link rel="stylesheet" href="layout-preview-v3.css?v=20260729_v5">
@@ -45,7 +45,7 @@
   </nav>
   <div id="modeBanner" class="mode-banner"></div>
   <main>
-    <section id="overview" class="view active">
+    <section id="overview" class="view active"><div id="operationsMap" class="operations-map" aria-live="polite"></div>
       <div id="metricGrid" class="metric-grid"></div>
       <section class="panel"><div class="panel-title"><h2>门店外储需求排行</h2><input id="overviewSearch" type="search" placeholder="搜索门店"></div><div id="storeRank" class="table-wrap"></div></section>
     </section>
@@ -80,6 +80,7 @@
   <script src="product-lifecycle-bridge.js?v=20260731_v3"></script>
   <script src="bootstrap.js?v=20260729_v5"></script>
 <script src="layout-preview-v5.js?v=20260729_v5"></script>
+<script src="overview-map.js?v=20260801_map1"></script>
 
 <dialog id="cloudDialog" class="cloud-dialog">
   <div class="dialog-header">
