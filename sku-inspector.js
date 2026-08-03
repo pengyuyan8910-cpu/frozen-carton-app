@@ -49,7 +49,7 @@
 
   /* ---- one-time bulk migration: re-key all old store::name entries to product::barcode ---- */
   const migrateOldImages=async()=>{
-    if(localStorage.getItem('fc-image-migrated-v2'))return;
+    if(localStorage.getItem('fc-image-migrated-v3'))return;
     const allRows=rows(); if(!allRows.length)return;
     const nameToItem=new Map(); allRows.forEach(r=>nameToItem.set(String(r.name).trim(),r));
     let migrated=0;
@@ -66,7 +66,7 @@
         try{const imageData=await toCloudImage(file);const pk=productKey(item);if(pk&&window.ProductLifecycle?.updateProduct)window.ProductLifecycle.updateProduct(pk,{imageData})}catch{}
         migrated++;
       }
-      localStorage.setItem('fc-image-migrated-v2','1');
+      localStorage.setItem('fc-image-migrated-v3','1');
       if(migrated>0){window.dispatchEvent(new CustomEvent('product-image:updated'));console.log('[image-migration] migrated '+migrated+' old images')}
     }catch(e){console.error('[image-migration]',e)}
   };

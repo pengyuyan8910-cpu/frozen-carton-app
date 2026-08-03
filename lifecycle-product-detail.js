@@ -25,7 +25,7 @@ const putImage = async (key, file) => { const d = await db(); return new Promise
 
   /* ---- one-time bulk migration: re-key all old store::name entries to product::barcode ---- */
   const migrateOldImages = async () => {
-    if (localStorage.getItem('fc-image-migrated-v2')) return;
+    if (localStorage.getItem('fc-image-migrated-v3')) return;
     const allProds = products(); if (!allProds.length) return;
     const nameToProduct = new Map(); allProds.forEach(p => nameToProduct.set(String(p.name || '').trim(), p));
     let migrated = 0;
@@ -42,7 +42,7 @@ const putImage = async (key, file) => { const d = await db(); return new Promise
         try { const imageData = await toCloudImage(file); const pk = productKey(product); if (pk && window.parent?.ProductLifecycle?.updateProduct) window.parent.ProductLifecycle.updateProduct(pk, { imageData }); } catch {}
         migrated++;
       }
-      localStorage.setItem('fc-image-migrated-v2', '1');
+      localStorage.setItem('fc-image-migrated-v3', '1');
       if (migrated > 0) { console.log('[lifecycle-image-migration] migrated ' + migrated + ' old images'); if (selected) renderImage(selected); }
     } catch (e) { console.error('[lifecycle-image-migration]', e); }
   };

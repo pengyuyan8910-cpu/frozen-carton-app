@@ -67,7 +67,7 @@ function 读取本地(key){try{const raw=localStorage.getItem(key);if(!raw)retur
 function 安全保存本地(key,state){try{localStorage.setItem(key,JSON.stringify(状态补丁(state)));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
 function 保存草稿(){安全保存本地(草稿保存键,草稿状态)}
 function 保存发布(){安全保存本地(发布保存键,发布状态)}function 当前是否运营(){return !!q("#opsMode")?.checked}
-function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态}
+function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态;window.ProductLifecycle?.syncData?.(状态)}
 function 保存(){if(当前是否运营()){草稿状态=状态;保存草稿()}else{发布状态=状态;保存发布()}window.ProductLifecycle?.syncData?.(状态)}
 // Lifecycle edits are part of the same shared document, not a separate browser-only cache.
 window.addEventListener("product-lifecycle:state-changed", event=>{
@@ -1010,6 +1010,104 @@ window.改新增门店SKU=(id,k,v)=>{
 if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密码通过前不显示运营端
 渲染全部();
 
+/* ==================== 全局图片迁移（不依赖 UI 渲染） ====================
+ * 页面加载后自动扫描 IndexedDB，将旧 store::name 键的图片迁移到
+ * product::barcode 键，并写入 productPool.imageData 用于云端同步。
+ * 独立于 sku-inspector / lifecycle-product-detail 的局部迁移。
+ * ================================================================= */
+(async function globalImageMigration() {
+  if (localStorage.getItem('fc-image-migrated-v3')) return;
+  try {
+    const pool = 确保产品池(状态); if (!pool || !pool.length) return;
+    const nameToProduct = new Map();
+    pool.forEach(p => nameToProduct.set(String(p.name || '').trim(), p));
+
+    const db = await new Promise((resolve, reject) => {
+      const r = indexedDB.open('frozen-carton-product-images', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('images', { keyPath: 'key' });
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+
+    const keys = await new Promise((res, rej) => {
+      const r = db.transaction('images').objectStore('images').getAllKeys();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror = () => rej(r.error);
+    });
+
+    let migrated = 0;
+    const toCloudImage = file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => resolve(reader.result);
+        img.onload = () => {
+          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * ratio));
+          canvas.height = Math.max(1, Math.round(img.height * ratio));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.70));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    const putImage = (key, file) => new Promise((resolve, reject) => {
+      const r = db.transaction('images', 'readwrite').objectStore('images').put({ key, file, updatedAt: Date.now() });
+      r.onsuccess = resolve;
+      r.onerror = () => reject(r.error);
+    });
+
+    const getImage = key => new Promise((resolve, reject) => {
+      const r = db.transaction('images').objectStore('images').get(key);
+      r.onsuccess = () => resolve(r.result?.file || null);
+      r.onerror = () => reject(r.error);
+    });
+
+    for (const ok of keys) {
+      const s = String(ok);
+      if (s.startsWith('product::')) continue; // already new format
+      const idx = s.indexOf('::');
+      if (idx < 0) continue;
+      const name = s.slice(idx + 2).trim();
+      const product = nameToProduct.get(name);
+      if (!product) continue;
+
+      const file = await getImage(s);
+      if (!file) continue;
+
+      // Write to new key
+      const bc = String(product.barcode || '').trim();
+      const newKey = bc && bc !== '—' ? `product::${bc}` : `product::${String(product.name || '').trim()}`;
+      await putImage(newKey, file);
+
+      // Write imageData to productPool via ProductLifecycle
+      try {
+        const imageData = await toCloudImage(file);
+        const pk = bc && bc !== '—' ? bc : String(product.name || '').trim();
+        if (pk && window.ProductLifecycle?.updateProduct) {
+          window.ProductLifecycle.updateProduct(pk, { imageData });
+        }
+      } catch (e) { console.error('[global-image-migration] toCloudImage failed for', name, e); }
+      migrated++;
+    }
+
+    localStorage.setItem('fc-image-migrated-v3', '1');
+    if (migrated > 0) {
+      console.log('[global-image-migration] migrated', migrated, 'old images to productPool + new keys');
+      保存();
+      window.dispatchEvent(new CustomEvent('product-image:updated'));
+    } else {
+      console.log('[global-image-migration] no old images found to migrate');
+    }
+  } catch (e) {
+    console.error('[global-image-migration] error:', e);
+  }
+})();
+
 /* ==================== Supabase 云端多人协作 ====================
  * 配置说明：创建 Supabase 项目后，将以下两个占位符替换为实际值
  *   SUPABASE_URL: 项目 URL (Settings → API → Project URL)
@@ -1110,14 +1208,22 @@ async function pullCloudData() {
   cloudNote('正在拉取云端数据...');
   const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
   if (error) return cloudNote(translateCloudError(error.message), true);
-  if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击“保存至云端”创建首版底表。'); }
+  if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
   const p = data.payload;
   if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
 
   // Pull is intentionally authoritative: never merge this browser's old lifecycle cache back in.
   const cloudState = structuredClone(p);
   确保产品池(cloudState);
+  // Debug: check cloud data for images before applying
+  const cloudImgInPool = (cloudState.productPool || []).filter(x => x.imageData).length;
+  const cloudPatches = (cloudState.lifecycle?.productPatches || []).filter(x => x.changes?.imageData).length;
+  console.log('[cloud-pull] productPool items with imageData:', cloudImgInPool, '| patches with imageData:', cloudPatches);
+  // hydrateState applies productPatches to dataRef.productPool, embedding imageData
   window.ProductLifecycle?.hydrateState?.(cloudState.lifecycle || null, cloudState);
+  // Debug: verify images were applied
+  const afterHydrate = (cloudState.productPool || []).filter(x => x.imageData).length;
+  console.log('[cloud-pull] productPool items with imageData AFTER hydrate:', afterHydrate);
   安全保存本地(草稿保存键, cloudState);
   安全保存本地(发布保存键, cloudState);
   草稿状态 = 清理计算缓存(structuredClone(cloudState));
@@ -1128,7 +1234,9 @@ async function pullCloudData() {
   cloudBaseData = structuredClone(cloudState);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
-  cloudNote('已拉取并完全应用云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
+  const finalImgCount = (window.ProductLifecycle?.getData?.()?.productPool || []).filter(x => x.imageData).length;
+  console.log('[cloud-pull] final dataRef productPool items with imageData:', finalImgCount);
+  cloudNote('已拉取并完全应用云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '，含 ' + finalImgCount + ' 张商品图片）。');
   window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
 
@@ -1179,8 +1287,23 @@ async function pushCloudData() {
   // Save the exact dataset currently being operated on, not an older published snapshot.
   const payload = cloudCopyState(状态 || 发布状态);
   const lifecycle = window.ProductLifecycle?.getState?.();
-  if (lifecycle) payload.lifecycle = structuredClone(lifecycle);
+  if (lifecycle) {
+    payload.lifecycle = structuredClone(lifecycle);
+    // CRITICAL: apply product patches (including imageData) directly to payload's productPool
+    // This ensures imageData is embedded in productPool items, not just in lifecycle patches
+    (lifecycle.productPatches || []).forEach(patch => {
+      if (!patch?.matchKey || !patch.changes) return;
+      const itemKey = item => { const bc = String(item?.barcode || '').trim(); return bc && bc !== '—' ? bc : String(item?.name || '').trim(); };
+      const match = item => itemKey(item) === String(patch.matchKey);
+      const changes = JSON.parse(JSON.stringify(patch.changes));
+      (payload.productPool || []).filter(match).forEach(item => Object.assign(item, changes));
+    });
+  }
   确保产品池(payload);
+  // Debug: count images in payload before saving
+  const imgCount = (payload.productPool || []).filter(p => p.imageData).length;
+  const payloadSize = JSON.stringify(payload).length;
+  console.log('[cloud-push] productPool items with imageData:', imgCount, '| payload size:', (payloadSize / 1024).toFixed(0) + 'KB');
   const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
@@ -1191,8 +1314,10 @@ async function pushCloudData() {
   草稿状态 = 清理计算缓存(structuredClone(payload));
   发布状态 = 清理计算缓存(structuredClone(payload));
   切换数据源();
+  // Re-apply patches so dataRef.productPool has imageData
+  if (lifecycle) window.ProductLifecycle?.applyCommittedPatches?.(状态, lifecycle);
   window.ProductLifecycle?.syncData?.(状态);
-  cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版。');
+  cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版（含 ' + imgCount + ' 张商品图片）。');
   window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
 
@@ -1255,11 +1380,126 @@ async function autoMergeCloudConflict() {
   安全保存本地(草稿保存键, merged);
   安全保存本地(发布保存键, merged);
   草稿状态 = 清理计算缓存(merged); 发布状态 = 草稿状态; 切换数据源();
+  // Apply lifecycle patches to ensure productPool has imageData after merge
+  if (merged.lifecycle) window.ProductLifecycle?.applyCommittedPatches?.(状态, merged.lifecycle);
+  window.ProductLifecycle?.syncData?.(状态);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
   cloudNote('已自动合并无冲突修改并保存为第 ' + docRevision + ' 版。');
   window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
+
+/* --- 调试与修复工具 --- */
+window.debugImageSync = {
+  // 检查本地 productPool 中的图片数量
+  localPool: () => {
+    const data = window.ProductLifecycle?.getData?.();
+    const pool = data?.productPool || [];
+    const withImg = pool.filter(p => p.imageData);
+    console.log('=== 本地 productPool 图片状态 ===');
+    console.log('总数:', pool.length, '| 有图片:', withImg.length);
+    withImg.forEach(p => console.log('  ', p.barcode || p.name, '->', (p.imageData?.length || 0) + ' chars'));
+    return { total: pool.length, withImage: withImg.length };
+  },
+  // 检查 lifecycle patches 中的图片
+  localPatches: () => {
+    const state = window.ProductLifecycle?.getState?.();
+    const patches = state?.productPatches || [];
+    const imgPatches = patches.filter(p => p.changes?.imageData);
+    console.log('=== 本地 lifecycle patches 图片状态 ===');
+    console.log('patches 总数:', patches.length, '| 含图片:', imgPatches.length);
+    imgPatches.forEach(p => console.log('  ', p.matchKey, '->', (p.changes.imageData?.length || 0) + ' chars'));
+    return { total: patches.length, withImage: imgPatches.length };
+  },
+  // 检查云端数据中的图片
+  cloud: async () => {
+    if (!ensureCloudClient()) return console.log('云端未配置');
+    const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
+    if (error || !data) return console.log('云端数据读取失败:', error?.message || '无数据');
+    const pool = data.payload?.productPool || [];
+    const patches = data.payload?.lifecycle?.productPatches || [];
+    const poolImg = pool.filter(p => p.imageData).length;
+    const patchImg = patches.filter(p => p.changes?.imageData).length;
+    console.log('=== 云端图片状态 (revision ' + data.doc_revision + ') ===');
+    console.log('productPool:', pool.length, '项, 有图片:', poolImg);
+    console.log('lifecycle patches:', patches.length, '个, 含图片:', patchImg);
+    console.log('更新时间:', new Date(data.updated_at).toLocaleString('zh-CN'));
+    return { revision: data.doc_revision, poolImg, patchImg };
+  },
+  // 强制重新迁移图片（清除迁移标记）
+  reMigrate: () => {
+    localStorage.removeItem('fc-image-migrated-v2');
+    localStorage.removeItem('fc-image-migrated-v3');
+    console.log('迁移标记已清除，刷新页面后将重新执行图片迁移。');
+  },
+  // 手动将所有 IndexedDB 图片写入 productPool
+  syncAllImages: async () => {
+    const pool = 确保产品池(状态);
+    if (!pool || !pool.length) return console.log('productPool 为空');
+    let count = 0;
+    const db = await new Promise((resolve, reject) => {
+      const r = indexedDB.open('frozen-carton-product-images', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('images', { keyPath: 'key' });
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    });
+    const getImage = key => new Promise((resolve, reject) => {
+      const r = db.transaction('images').objectStore('images').get(key);
+      r.onsuccess = () => resolve(r.result?.file || null);
+      r.onerror = () => reject(r.error);
+    });
+    const keys = await new Promise((res, rej) => {
+      const r = db.transaction('images').objectStore('images').getAllKeys();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror = () => rej(r.error);
+    });
+    const toCloudImage = file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => resolve(reader.result);
+        img.onload = () => {
+          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * ratio));
+          canvas.height = Math.max(1, Math.round(img.height * ratio));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.70));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    for (const p of pool) {
+      const bc = String(p.barcode || '').trim();
+      const key = bc && bc !== '—' ? bc : String(p.name || '').trim();
+      if (!key) continue;
+      // Try new key first, then old store::name keys
+      let file = await getImage(`product::${key}`);
+      if (!file) {
+        // Try matching by name in old keys
+        for (const ok of keys) {
+          const s = String(ok);
+          if (s.startsWith('product::')) continue;
+          if (s.endsWith(`::${p.name}`)) { file = await getImage(s); break; }
+        }
+      }
+      if (!file) continue;
+      try {
+        const imageData = await toCloudImage(file);
+        if (window.ProductLifecycle?.updateProduct) {
+          window.ProductLifecycle.updateProduct(key, { imageData });
+          count++;
+        }
+      } catch (e) { console.error('sync failed for', p.name, e); }
+    }
+    保存();
+    console.log('已将', count, '张图片写入 productPool。请点击"保存至云端"。');
+    window.dispatchEvent(new CustomEvent('product-image:updated'));
+    return count;
+  }
+};
 
 /* --- 事件绑定（延迟等待 DOM 就绪） --- */
 (function bindCloudEvents() {
