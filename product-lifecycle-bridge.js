@@ -176,7 +176,7 @@
     dataRef = data;
     const embedded = data.lifecycle && typeof data.lifecycle === "object" ? data.lifecycle : null;
     const local = readLocalState();
-    const state = embedded && (embedded.updatedAt || embedded.tasks?.length || embedded.committedPatches?.length)
+    const state = embedded
       ? normalizeState(embedded)
       : local;
     stateRef = state;
@@ -191,6 +191,21 @@ function syncData(data) {
     dataRef = data;
     dataRef.lifecycle = clone(stateRef || blankState());
     return true;
+  }
+
+  // A cloud pull is authoritative: replace this browser's cached lifecycle state.
+  function hydrateState(next, data) {
+    stateRef = normalizeState(clone(next || blankState()));
+    if (isFormalData(data)) dataRef = data;
+    if (dataRef) {
+      dataRef.lifecycle = clone(stateRef);
+      applyCommittedPatches(dataRef, stateRef);
+    }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef)); } catch (error) {
+      console.error("产品生命周期管理：云端状态写入失败", error);
+    }
+    window.dispatchEvent(new CustomEvent("product-lifecycle:state-hydrated", { detail: clone(stateRef) }));
+    return clone(stateRef);
   }
   function getProduct(task) {
     if (!dataRef) return {};

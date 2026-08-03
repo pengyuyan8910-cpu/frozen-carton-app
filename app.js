@@ -16,7 +16,7 @@ function 产品转SKU(p,store){return{id:"poolsku_"+Date.now()+"_"+Math.random()
 function 初始状态(){const st=清理交互痕迹(初始数据);确保产品池(st);return st}
 let 草稿状态=清理计算缓存(读取本地(草稿保存键)||初始状态());
 let 发布状态=清理计算缓存(读取本地(发布保存键)||初始状态());
-let 状态=发布状态;window.ProductLifecycle?.syncData?.(状态);
+let 状态=发布状态;window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);window.ProductLifecycle?.syncData?.(状态);
 let 当前={门店:"",页面:"goods",定位SKU:"",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
 let 同步请求中=false;
 const 文=v=>String(v??"").trim();
@@ -43,7 +43,8 @@ const newStores=(state.stores||[]).filter(x=>!initStores.has(x.store));
 const initCabs=new Set((init.cabinets||[]).map(x=>x.key));
 const newCabinets=(state.cabinets||[]).filter(x=>!initCabs.has(x.key));
 const productPool=确保产品池(state);
-return {_patchVersion:2,_dataSignature:数据签名,skus,newSkus,deletedIds,newStores,newCabinets,productPool};
+const lifecycle=state.lifecycle&&typeof state.lifecycle==="object"?JSON.parse(JSON.stringify(state.lifecycle)):null;
+return {_patchVersion:2,_dataSignature:数据签名,skus,newSkus,deletedIds,newStores,newCabinets,productPool,lifecycle};
 }
 function 应用状态补丁(patch){
 if(!patch||patch._dataSignature!==数据签名)return null;
@@ -57,6 +58,7 @@ const map=new Map(state.skus.map(r=>[r.id,r]));
 for(const p of patch.skus||[]){const r=map.get(p.id);if(r)Object.assign(r,p.values||{})}
 for(const r of patch.newSkus||[])state.skus.push(r);
 if(Array.isArray(patch.productPool))state.productPool=patch.productPool;
+if(patch.lifecycle&&typeof patch.lifecycle==="object")state.lifecycle=JSON.parse(JSON.stringify(patch.lifecycle));
 确保产品池(state);
 return state;
 }
@@ -67,6 +69,13 @@ function 保存草稿(){安全保存本地(草稿保存键,草稿状态)}
 function 保存发布(){安全保存本地(发布保存键,发布状态)}function 当前是否运营(){return !!q("#opsMode")?.checked}
 function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态}
 function 保存(){if(当前是否运营()){草稿状态=状态;保存草稿()}else{发布状态=状态;保存发布()}window.ProductLifecycle?.syncData?.(状态)}
+// Lifecycle edits are part of the same shared document, not a separate browser-only cache.
+window.addEventListener("product-lifecycle:state-changed", event=>{
+  if(!状态||!event.detail)return;
+  状态.lifecycle=structuredClone(event.detail);
+  if(当前是否运营()){草稿状态=状态;保存草稿();}
+  else{发布状态=状态;保存发布();}
+});
 // Keep the planogram and the allocation table on the same live state.
 function 刷新陈列联动(){
   if(!q("#displayMapCanvas"))return;
@@ -1097,22 +1106,25 @@ async function pullCloudData() {
   cloudNote('正在拉取云端数据...');
   const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
   if (error) return cloudNote(translateCloudError(error.message), true);
-  if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
+  if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击“保存至云端”创建首版底表。'); }
   const p = data.payload;
   if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
 
+  // Pull is intentionally authoritative: never merge this browser's old lifecycle cache back in.
   const cloudState = structuredClone(p);
   确保产品池(cloudState);
+  window.ProductLifecycle?.hydrateState?.(cloudState.lifecycle || null, cloudState);
   安全保存本地(草稿保存键, cloudState);
   安全保存本地(发布保存键, cloudState);
-  草稿状态 = 清理计算缓存(读取本地(草稿保存键) || cloudState);
-  发布状态 = 清理计算缓存(读取本地(发布保存键) || cloudState);
+  草稿状态 = 清理计算缓存(structuredClone(cloudState));
+  发布状态 = 清理计算缓存(structuredClone(cloudState));
   切换数据源();
+  window.ProductLifecycle?.syncData?.(状态);
   docRevision = data.doc_revision;
-  cloudBaseData = structuredClone(p);
+  cloudBaseData = structuredClone(cloudState);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
-  cloudNote('已拉取云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
+  cloudNote('已拉取并完全应用云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
 }
 
 /* --- 保存至云端 --- */
@@ -1158,16 +1170,24 @@ async function saveCloudDocument(payload, expectedRevision) {
 async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
-  const payload = cloudCopyState(发布状态);
+  保存();
+  // Save the exact dataset currently being operated on, not an older published snapshot.
+  const payload = cloudCopyState(状态 || 发布状态);
+  const lifecycle = window.ProductLifecycle?.getState?.();
+  if (lifecycle) payload.lifecycle = structuredClone(lifecycle);
+  确保产品池(payload);
   const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : docRevision + 1;
   cloudBaseData = structuredClone(payload);
   安全保存本地(草稿保存键, payload);
-  草稿状态 = 清理计算缓存(payload);
-  if (!当前是否运营()) 发布状态 = 草稿状态;
-  cloudNote('已保存至云端第 ' + docRevision + ' 版。');
+  安全保存本地(发布保存键, payload);
+  草稿状态 = 清理计算缓存(structuredClone(payload));
+  发布状态 = 清理计算缓存(structuredClone(payload));
+  切换数据源();
+  window.ProductLifecycle?.syncData?.(状态);
+  cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版。');
 }
 
 /* --- 冲突自动合并 --- */
@@ -1207,11 +1227,15 @@ async function autoMergeCloudConflict() {
 
   const conflicts = [];
   const base = cloudBaseData || remote.payload;
-  const local = cloudCopyState(发布状态);
+  const local = cloudCopyState(状态 || 发布状态);
   const merged = structuredClone(remote.payload);
   merged.stores = mergeListByKey(base.stores, local.stores, remote.payload.stores, 'store', '门店', conflicts);
   merged.skus = mergeListByKey(base.skus, local.skus, remote.payload.skus, 'id', 'SKU', conflicts);
   merged.cabinets = mergeListByKey(base.cabinets, local.cabinets, remote.payload.cabinets, 'key', '柜段', conflicts);
+  merged.productPool = mergeListByKey(base.productPool, local.productPool, remote.payload.productPool, 'id', '产品总池', conflicts);
+  if (cloudSame(local.lifecycle, base.lifecycle)) merged.lifecycle = remote.payload.lifecycle;
+  else if (cloudSame(remote.payload.lifecycle, base.lifecycle) || cloudSame(local.lifecycle, remote.payload.lifecycle)) merged.lifecycle = local.lifecycle;
+  else { conflicts.push('生命周期状态'); merged.lifecycle = remote.payload.lifecycle; }
   if (conflicts.length) {
     const list = conflicts.slice(0, 5).join('、');
     return cloudNote('发现 ' + conflicts.length + ' 处数据冲突：' + list + '。冲突处已采用云端版本，请核对后重新保存。', true);
