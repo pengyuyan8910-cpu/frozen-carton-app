@@ -166,6 +166,9 @@
     applyProductPatch(dataRef, { matchKey, changes });
     writeState(state);
     window.dispatchEvent(new CustomEvent("product-lifecycle:product-updated", { detail: { matchKey, changes: clone(changes) } }));
+    if (changes.imageData !== undefined) {
+      window.dispatchEvent(new CustomEvent("product-image:updated", { detail: { key: matchKey } }));
+    }
     return true;
   }
 

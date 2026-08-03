@@ -475,7 +475,7 @@ const items=[["门店数",rows.length],["有效SKU池",poolCount],["直接整箱
 q("#metricGrid").innerHTML=items.map(([l,v,c=""])=>'<div class="metric '+c+'"><div class="label">'+l+'</div><div class="value">'+v+"</div></div>").join("");
 const kw=文(q("#overviewSearch").value);
 表格("#storeRank",[{name:"门店",value:r=>r.store,cls:()=>"name"},{name:"类型",value:r=>r.type},{name:"有效SKU池",value:r=>r.poolCount},{name:"纳入SKU",value:r=>r.skuCount},{name:"未纳入SKU",value:r=>r.missingSkuCount,cls:r=>r.missingSkuCount?"warning":"ok"},{name:"直接整箱到店SKU数",value:r=>r.direct},{name:"需外储SKU数",value:r=>r.extSku},{name:"静态满载L",value:r=>格(r.staticVol)},{name:"动态P95L",value:r=>格(r.p95)},{name:"建议外储L",value:r=>格(r.suggested,0),cls:r=>r.ok?"ok":"bad"},{name:"高风险",value:r=>r.high},{name:"极高风险",value:r=>r.extreme},{name:"冰柜资源",value:r=>"立柜："+(r.vertical||"-")+"；卧柜："+(r.chest||"-")+"；冰淇淋："+(r.ice||"-"),cls:()=>"name"}],rows.filter(r=>包含(r,kw)).sort((a,b)=>b.suggested-a.suggested))}
-function 商品列(){return[{name:"商品",value:r=>r.name,cls:()=>"name"},{name:"等级",value:r=>标签(r.grade),html:true},{name:"三级类目",value:r=>r.category3},{name:"场景分区",value:r=>场景分区(r)},{name:"陈列柜",value:r=>柜名(r),cls:()=>"name"},{name:"具体位置",value:r=>柜位(r)},{name:"推荐摆法",value:r=>陈列面方向(r)},{name:"占宽mm",value:r=>格(r.faceWidth,0)},{name:"列数",value:r=>格(r.displayCols,0)},{name:"单列容量",value:r=>格(r.perCol,1)},{name:"满陈",value:r=>计算SKU(r).full},{name:"箱规",value:r=>格(r.carton,0)},{name:"触发库存",value:r=>计算SKU(r).trigger},{name:"可入柜",value:r=>计算SKU(r).receivable},{name:"需外储",value:r=>计算SKU(r).external},{name:"静态外储L",value:r=>格(计算SKU(r).staticVol)},{name:"风险",value:r=>风险标签(计算SKU(r).risk),html:true},{name:"起订量周转",value:r=>r.moqDays?格(r.moqDays):""}]}
+function 商品列(){return[{name:"商品",value:r=>r.name,cls:()=>"name"},{name:"条码",value:r=>文(r.barcode)},{name:"等级",value:r=>标签(r.grade),html:true},{name:"三级类目",value:r=>r.category3},{name:"场景分区",value:r=>场景分区(r)},{name:"陈列柜",value:r=>柜名(r),cls:()=>"name"},{name:"具体位置",value:r=>柜位(r)},{name:"推荐摆法",value:r=>陈列面方向(r)},{name:"占宽mm",value:r=>格(r.faceWidth,0)},{name:"列数",value:r=>格(r.displayCols,0)},{name:"单列容量",value:r=>格(r.perCol,1)},{name:"满陈",value:r=>计算SKU(r).full},{name:"箱规",value:r=>格(r.carton,0)},{name:"触发库存",value:r=>计算SKU(r).trigger},{name:"可入柜",value:r=>计算SKU(r).receivable},{name:"需外储",value:r=>计算SKU(r).external},{name:"静态外储L",value:r=>格(计算SKU(r).staticVol)},{name:"风险",value:r=>风险标签(计算SKU(r).risk),html:true},{name:"起订量周转",value:r=>r.moqDays?格(r.moqDays):""}]}
 function 柜名(r){return 状态.cabinets.find(c=>c.key===r.cabinetKey)?.label||r.cabinetLabel||""}
 function 柜位(r){return 状态.cabinets.find(c=>c.key===r.cabinetKey)?.position||r.position||""}
 function 渲染门店(){const store=门店名();
@@ -1129,6 +1129,7 @@ async function pullCloudData() {
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
   cloudNote('已拉取并完全应用云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
+  window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
 
 /* --- 保存至云端 --- */
@@ -1192,6 +1193,7 @@ async function pushCloudData() {
   切换数据源();
   window.ProductLifecycle?.syncData?.(状态);
   cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版。');
+  window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
 
 /* --- 冲突自动合并 --- */
@@ -1256,6 +1258,7 @@ async function autoMergeCloudConflict() {
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
   cloudNote('已自动合并无冲突修改并保存为第 ' + docRevision + ' 版。');
+  window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
 
 /* --- 事件绑定（延迟等待 DOM 就绪） --- */
