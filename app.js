@@ -1137,7 +1137,7 @@ const SUPABASE_URL = 'https://pdlxrolyftdolkwmdwrg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ehwIMLAALRzB4VRZwQ4quA_yS7Yh7Gg';
 
 let cloudClient = null;
-let docRevision = 0;
+let docRevision = Number(localStorage.getItem('fc_cloud_doc_revision') || 0);
 let cloudBaseData = null;
 
 function ensureCloudClient() {
@@ -1228,7 +1228,7 @@ async function pullCloudData() {
   cloudNote('正在拉取云端数据...');
   const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
   if (error) return cloudNote(translateCloudError(error.message), true);
-  if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
+  if (!data) { docRevision = 0; localStorage.setItem('fc_cloud_doc_revision', 0); cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
   const p = data.payload;
   if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
 
@@ -1249,8 +1249,8 @@ async function pullCloudData() {
   草稿状态 = 清理计算缓存(structuredClone(cloudState));
   发布状态 = 清理计算缓存(structuredClone(cloudState));
   切换数据源();
-  window.ProductLifecycle?.syncData?.(状态);
   docRevision = data.doc_revision;
+  localStorage.setItem('fc_cloud_doc_revision', docRevision);
   cloudBaseData = structuredClone(cloudState);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
@@ -1341,16 +1341,42 @@ async function pushCloudData() {
 
   const imgCount = pool.filter(p => p.imageData).length;
 
-  const { data, error } = await saveCloudDocument(payload, docRevision);
-  if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
-  const row = Array.isArray(data) ? data[0] : data;
-  docRevision = row ? row.doc_revision : docRevision + 1;
+  /* 用户要求数据以本地为主：强制覆盖云端，不合并。
+     读取当前云端版本号 → 写入 nextRev，无论是否冲突都覆盖。 */
+  const { data: existingRow, error: readErr } = await cloudClient.from('carton_documents').select('doc_revision').eq('id', 'main').maybeSingle();
+  if (readErr) return cloudNote(translateCloudError(readErr.message), true);
+  const currentRev = existingRow?.doc_revision || 0;
+  const nextRev = currentRev + 1;
+  const pushAt = new Date().toISOString();
+  const { data: updateData, error: updateErr } = await cloudClient
+    .from('carton_documents')
+    .update({ payload, doc_revision: nextRev, updated_at: pushAt })
+    .eq('id', 'main')
+    .select('doc_revision,updated_at')
+    .maybeSingle();
+  if (updateErr) return cloudNote(translateCloudError(updateErr.message), true);
+  if (updateData) {
+    const r = Array.isArray(updateData) ? updateData[0] : updateData;
+    docRevision = r ? r.doc_revision : nextRev;
+  } else {
+    /* 行不存在 → 首次插入 */
+    const { data: insData, error: insErr } = await cloudClient
+      .from('carton_documents')
+      .insert({ id: 'main', payload, doc_revision: 1, updated_at: pushAt })
+      .select('doc_revision,updated_at')
+      .single();
+    if (insErr) return cloudNote(translateCloudError(insErr.message), true);
+    const r = Array.isArray(insData) ? insData[0] : insData;
+    docRevision = r ? r.doc_revision : 1;
+  }
+  localStorage.setItem('fc_cloud_doc_revision', docRevision);
 
   cloudBaseData = payload;
   草稿状态 = 清理计算缓存(payload);
   发布状态 = 草稿状态;
   切换数据源();
-  if (lifecycle) window.ProductLifecycle?.applyCommittedPatches?.(状态, lifecycle);
+  /* hydrateState 确保 stateRef 与 lifecycle 同步并写入 localStorage */
+  if (lifecycle) window.ProductLifecycle?.hydrateState?.(lifecycle, 状态);
   window.ProductLifecycle?.syncData?.(状态);
   cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版（含 ' + imgCount + ' 张商品图片）。');
   window.dispatchEvent(new CustomEvent('product-image:updated'));
@@ -1416,12 +1442,13 @@ async function autoMergeCloudConflict() {
   if (saveErr) return cloudNote(saveErr.message, true);
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : remote.doc_revision + 1;
+  localStorage.setItem('fc_cloud_doc_revision', docRevision);
   cloudBaseData = structuredClone(merged);
   安全保存本地(草稿保存键, merged);
   安全保存本地(发布保存键, merged);
   草稿状态 = 清理计算缓存(merged); 发布状态 = 草稿状态; 切换数据源();
-  // Apply lifecycle patches to ensure productPool has imageData after merge
-  if (merged.lifecycle) window.ProductLifecycle?.applyCommittedPatches?.(状态, merged.lifecycle);
+  /* hydrateState 确保 stateRef 与合并后的 lifecycle 同步 */
+  if (merged.lifecycle) window.ProductLifecycle?.hydrateState?.(merged.lifecycle, 状态);
   window.ProductLifecycle?.syncData?.(状态);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();

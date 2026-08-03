@@ -195,7 +195,14 @@
 function syncData(data) {
     if (!isFormalData(data)) return false;
     dataRef = data;
-    dataRef.lifecycle = clone(stateRef || blankState());
+    /* data is the source of truth — update stateRef FROM data.lifecycle,
+       never overwrite data.lifecycle with a potentially stale stateRef. */
+    if (data.lifecycle && typeof data.lifecycle === "object") {
+      stateRef = normalizeState(clone(data.lifecycle));
+    } else if (!stateRef) {
+      stateRef = blankState();
+      data.lifecycle = clone(stateRef);
+    }
     return true;
   }
 
