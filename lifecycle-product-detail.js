@@ -9,14 +9,21 @@
   const findProduct = name => products().find(p => p.name === name);
   const db = () => new Promise((resolve, reject) => { const r = indexedDB.open('frozen-carton-product-images', 1); r.onupgradeneeded = () => r.result.createObjectStore('images', { keyPath:'key' }); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
   const getImage = async key => { try { const d = await db(); return await new Promise((resolve, reject) => { const r = d.transaction('images').objectStore('images').get(key); r.onsuccess = () => resolve(r.result?.file || null); r.onerror = () => reject(r.error); }); } catch { return null; } };
-  const putImage = async (key, file) => { const d = await db(); return new Promise((resolve, reject) => { const r = d.transaction('images','readwrite').objectStore('images').put({ key, file, updatedAt:Date.now() }); r.onsuccess = resolve; r.onerror = () => reject(r.error); }); };
+const putImage = async (key, file) => { const d = await db(); return new Promise((resolve, reject) => { const r = d.transaction('images','readwrite').objectStore('images').put({ key, file, updatedAt:Date.now() }); r.onsuccess = resolve; r.onerror = () => reject(r.error); }); };
+  const toCloudImage = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(reader.error); reader.onload = () => { const img = new Image(); img.onerror = () => resolve(reader.result); img.onload = () => { const max = 720, ratio = Math.min(1, max / Math.max(img.width, img.height)); const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(img.width * ratio)); canvas.height = Math.max(1, Math.round(img.height * ratio)); canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', .82)); }; img.src = reader.result; }; reader.readAsDataURL(file); });
+  const syncImage = async (product, file, notify = true) => { const imageData = await toCloudImage(file); await putImage(`product::${product.name}`, file); const saved = window.parent?.ProductLifecycle?.updateProduct?.(productKey(product), { imageData }); if (!saved) throw new Error('图片未写入产品总池'); if (notify) window.parent?.postMessage({ type:'plm:product-image-updated', product:product.name }, '*'); };
   let selected = null;
   const picker = document.createElement('input'); picker.type = 'file'; picker.accept = 'image/*'; picker.hidden = true; document.body.appendChild(picker);
 
-  async function renderImage(p) {
+async function renderImage(p) {
     const slot = document.querySelector('#plmProductInspector .plm-image'); if (!slot) return;
-    const file = await getImage(`product::${p.name}`);
-    slot.innerHTML = file ? `<button id="plmReplaceImage" type="button"><img src="${URL.createObjectURL(file)}" alt="${esc(p.name)}"><span>更换图片</span></button>` : `<button id="plmUploadImage" type="button">上传商品图片</button>`;
+    const file = p.imageData ? null : await getImage(`product::${p.name}`);
+if (file && !p.imageData) {
+      // Migrate an existing browser-only image the first time it is opened.
+      syncImage(p, file).then(() => renderImage(p)).catch(error => console.error('旧图片迁移失败', error));
+    }
+    const src = p.imageData || (file ? URL.createObjectURL(file) : '');
+    slot.innerHTML = src ? `<button id="plmReplaceImage" type="button"><img src="${esc(src)}" alt="${esc(p.name)}"><span>更换图片</span></button>` : `<button id="plmUploadImage" type="button">上传商品图片</button>`;
     slot.querySelector('button').onclick = () => picker.click();
   }
   function field(label, name, value, type='text') { return `<label class="plm-edit-field"><span>${label}</span><input data-field="${name}" type="${type}" value="${esc(value ?? '')}"></label>`; }
@@ -54,8 +61,8 @@
     };
     await renderImage(p);
   }
-  picker.onchange = async () => { const file = picker.files?.[0]; if (!file || !selected) return; if (!file.type.startsWith('image/')) return alert('请选择图片文件。'); await putImage(`product::${selected.name}`, file); picker.value = ''; await renderImage(selected); window.parent?.postMessage({ type:'plm:product-image-updated', product:selected.name }, '*'); };
-  function openBatch() { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.multiple=true; input.onchange=async()=>{ const files=[...input.files].filter(f=>f.type.startsWith('image/')); for (const file of files) { const p=products().find(x=>file.name.includes(x.name)); if (p) await putImage(`product::${p.name}`,file); } if(selected) renderImage(selected); window.parent?.postMessage({type:'plm:product-image-updated'},'*'); }; input.click(); }
+picker.onchange = async () => { const file = picker.files?.[0]; if (!file || !selected) return; if (!file.type.startsWith('image/')) return alert('请选择图片文件。'); try { await syncImage(selected, file); picker.value = ''; await renderImage(selected); } catch (error) { alert('图片同步失败，请重试。'); console.error(error); } };
+  function openBatch() { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.multiple=true; input.onchange=async()=>{ const files=[...input.files].filter(file=>file.type.startsWith('image/')); let count=0; for (const file of files) { const p=products().find(item=>file.name.includes(item.name)); if (p) { await syncImage(p,file,false); count++; } } if(count) window.parent?.postMessage({type:'plm:product-image-updated'},'*'); if(selected) renderImage(selected); if(files.length&&!count) alert('未按文件名匹配到商品，请以商品名称命名图片后重试。'); }; input.click(); }
   function bind() { [...pool.querySelectorAll('tbody tr')].forEach(tr => { const name=tr.querySelector('td:first-child strong')?.textContent.trim() || ''; const p=findProduct(name); if(!p) return; tr.classList.add('plm-product-row'); tr.onclick=e=>{ if(!e.target.closest('button')) show(p, tr); }; }); const toolbar=document.querySelector('#pool .toolbar'); if(toolbar&&!document.getElementById('plmBatchImages')) { const b=document.createElement('button'); b.id='plmBatchImages'; b.className='btn'; b.type='button'; b.textContent='批量上传图片'; b.onclick=openBatch; toolbar.appendChild(b); } }
   new MutationObserver(() => requestAnimationFrame(bind)).observe(pool,{childList:true,subtree:true}); bind();
 })();

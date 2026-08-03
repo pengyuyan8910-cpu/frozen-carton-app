@@ -70,6 +70,8 @@ function 保存发布(){安全保存本地(发布保存键,发布状态)}functio
 function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态}
 function 保存(){if(当前是否运营()){草稿状态=状态;保存草稿()}else{发布状态=状态;保存发布()}window.ProductLifecycle?.syncData?.(状态)}
 // Lifecycle edits are part of the same shared document, not a separate browser-only cache.
+// Product images are stored in the shared product pool; save them immediately when a collaborator is signed in.
+window.addEventListener("product-image:updated", ()=>{ if(cloudClient) pushCloudData(); });
 window.addEventListener("product-lifecycle:state-changed", event=>{
   if(!状态||!event.detail)return;
   状态.lifecycle=structuredClone(event.detail);
@@ -1102,7 +1104,6 @@ async function requireCloudSession() {
 
 /* --- 拉取云端数据 --- */
 async function pullCloudData() {
-  if (!await requireCloudSession()) return;
   cloudNote('正在拉取云端数据...');
   const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
   if (error) return cloudNote(translateCloudError(error.message), true);
@@ -1274,3 +1275,12 @@ async function autoMergeCloudConflict() {
   }
   tryBind();
 })();
+
+// A signed-in collaborator always starts from the latest shared document.
+let cloudAutoPullStarted = false;
+async function autoPullCloudData() {
+  if (cloudAutoPullStarted || !cloudClient) return;
+  cloudAutoPullStarted = true;
+  await pullCloudData();
+}
+setTimeout(autoPullCloudData, 350);

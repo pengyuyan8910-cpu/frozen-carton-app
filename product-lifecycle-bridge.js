@@ -144,8 +144,10 @@
     if (!data || !patch?.matchKey) return;
     const match = item => String(item?.barcode || item?.name || "") === String(patch.matchKey);
     const changes = clone(patch.changes || {});
+    const skuChanges = clone(changes);
+    delete skuChanges.imageData;
     (data.productPool || []).filter(match).forEach(item => Object.assign(item, changes));
-    (data.skus || []).filter(match).forEach(item => Object.assign(item, changes));
+    (data.skus || []).filter(match).forEach(item => Object.assign(item, skuChanges));
   }
 
   function applyCommittedPatches(data, state) {
