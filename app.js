@@ -67,7 +67,10 @@ function 读取本地(key){try{const raw=localStorage.getItem(key);if(!raw)retur
 function 安全保存本地(key,state){try{localStorage.setItem(key,JSON.stringify(状态补丁(state)));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
 function 保存草稿(){安全保存本地(草稿保存键,草稿状态)}
 function 保存发布(){安全保存本地(发布保存键,发布状态)}function 当前是否运营(){return !!q("#opsMode")?.checked}
-function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态;window.ProductLifecycle?.syncData?.(状态)}
+function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态;window.ProductLifecycle?.syncData?.(状态);_debouncedRefreshLifecycle()}
+/* 防抖刷新 iframe：渲染全部()频繁调用切换数据源()，防抖避免短时间内多次 postMessage */
+let _lifecycleRefreshTimer=null;
+function _debouncedRefreshLifecycle(){clearTimeout(_lifecycleRefreshTimer);_lifecycleRefreshTimer=setTimeout(()=>refreshLifecycleData(),150)}
 function 保存(){if(当前是否运营()){草稿状态=状态;保存草稿()}else{发布状态=状态;保存发布()}window.ProductLifecycle?.syncData?.(状态)}
 // Lifecycle edits are part of the same shared document, not a separate browser-only cache.
 window.addEventListener("product-lifecycle:state-changed", event=>{
@@ -1262,22 +1265,31 @@ async function pullCloudData() {
   window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
 
-/* --- 刷新产品生命周期管理 iframe（全局同步关键步骤） --- */
-function reloadLifecycleFrame() {
+/* --- 刷新产品生命周期管理 iframe（全局同步关键步骤） ---
+   用 postMessage 通知 iframe 重新读取数据，比整页刷新更快、不闪烁、不丢失滚动位置。
+   iframe 收到 plm:refresh-data 后会调 loadState()+loadData() 重新从父页面读取最新数据。
+   所有数据变更走 切换数据源()→_debouncedRefreshLifecycle() 自动触发，无需手动调用。 */
+function refreshLifecycleData() {
   const frame = document.getElementById('productLifecycleFrame');
   if (!frame) return;
   if (!frame.getAttribute('src')) {
-    /* iframe 尚未加载，调用 loadLifecycleFrame 触发首次加载 */
+    /* iframe 尚未加载，调用 init 触发首次加载 */
     window.ProductLifecycle?.init?.();
     return;
   }
-  try { frame.contentWindow?.location?.reload?.(); } catch(e) {
-    /* 跨域限制时回退：重新设置 src */
-    const src = frame.getAttribute('src');
-    frame.removeAttribute('src');
-    requestAnimationFrame(() => frame.setAttribute('src', src));
+  try {
+    frame.contentWindow?.postMessage({ type: 'plm:refresh-data' }, '*');
+  } catch(e) {
+    /* 降级：整页刷新 */
+    try { frame.contentWindow?.location?.reload?.(); } catch(e2) {
+      const src = frame.getAttribute('src');
+      frame.removeAttribute('src');
+      requestAnimationFrame(() => frame.setAttribute('src', src));
+    }
   }
 }
+/* 保留旧函数名作为别名 */
+function reloadLifecycleFrame() { refreshLifecycleData(); }
 
 /* --- 保存至云端 --- */
 const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);

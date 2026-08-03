@@ -1396,6 +1396,9 @@ window.addEventListener("message",e=>{
    select.value=msg.store;renderPlanogram();
   }
  }
+ if(msg.type==="plm:refresh-data"){
+  state=loadState();loadData().then(()=>{renderAll();notifyParentSize();});
+ }
 });
 if("ResizeObserver" in window){
  new ResizeObserver(()=>notifyParentSize()).observe(document.documentElement);
