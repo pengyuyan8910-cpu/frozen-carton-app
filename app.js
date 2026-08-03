@@ -1016,7 +1016,7 @@ if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密�
  * 独立于 sku-inspector / lifecycle-product-detail 的局部迁移。
  * ================================================================= */
 (async function globalImageMigration() {
-  if (localStorage.getItem('fc-image-migrated-v3')) return;
+  // 不再用 localStorage 标记，每次加载都扫描，但只处理尚未同步的图片（避免重复工作）
   try {
     const pool = 确保产品池(状态); if (!pool || !pool.length) return;
     const nameToProduct = new Map();
@@ -1037,6 +1037,20 @@ if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密�
 
     let migrated = 0;
     const toCloudImage = file => new Promise((resolve, reject) => {
+      if (typeof file === 'string' && file.startsWith('data:image')) {
+        const img = new Image();
+        img.onload = () => {
+          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * ratio));
+          canvas.height = Math.max(1, Math.round(img.height * ratio));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.70));
+        };
+        img.onerror = () => resolve(file);
+        img.src = file;
+        return;
+      }
       const reader = new FileReader();
       reader.onerror = () => reject(reader.error);
       reader.onload = () => {
@@ -1067,24 +1081,33 @@ if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密�
       r.onerror = () => reject(r.error);
     });
 
+    const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, '');
+
     for (const ok of keys) {
       const s = String(ok);
-      if (s.startsWith('product::')) continue; // already new format
+      if (s.startsWith('product::')) continue;
       const idx = s.indexOf('::');
       if (idx < 0) continue;
       const name = s.slice(idx + 2).trim();
-      const product = nameToProduct.get(name);
+      const normName = norm(name);
+      // 多重策略匹配产品
+      const product = nameToProduct.get(name)
+        || pool.find(p => norm(p.name) === normName)
+        || pool.find(p => norm(p.name).includes(normName) || (normName.length > 2 && normName.includes(norm(p.name))));
       if (!product) continue;
 
       const file = await getImage(s);
       if (!file) continue;
 
-      // Write to new key
+      // 已是 productPool 中的图片则跳过（避免重复工作）
+      if (product.imageData) continue;
+
+      // 写入新键
       const bc = String(product.barcode || '').trim();
       const newKey = bc && bc !== '—' ? `product::${bc}` : `product::${String(product.name || '').trim()}`;
       await putImage(newKey, file);
 
-      // Write imageData to productPool via ProductLifecycle
+      // 写入 productPool
       try {
         const imageData = await toCloudImage(file);
         const pk = bc && bc !== '—' ? bc : String(product.name || '').trim();
@@ -1095,13 +1118,10 @@ if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密�
       migrated++;
     }
 
-    localStorage.setItem('fc-image-migrated-v3', '1');
     if (migrated > 0) {
-      console.log('[global-image-migration] migrated', migrated, 'old images to productPool + new keys');
+      console.log('[global-image-migration] synced', migrated, 'new images to productPool');
       保存();
       window.dispatchEvent(new CustomEvent('product-image:updated'));
-    } else {
-      console.log('[global-image-migration] no old images found to migrate');
     }
   } catch (e) {
     console.error('[global-image-migration] error:', e);
@@ -1309,6 +1329,7 @@ async function pushCloudData() {
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : docRevision + 1;
   cloudBaseData = structuredClone(payload);
+  // localStorage 写失败不再阻断流程（云端已成功保存）
   安全保存本地(草稿保存键, payload);
   安全保存本地(发布保存键, payload);
   草稿状态 = 清理计算缓存(structuredClone(payload));
@@ -1516,8 +1537,27 @@ window.debugImageSync = {
     on('cloudSignOutBtn', cloudSignOut);
     on('cloudPullBtn', pullCloudData);
     on('cloudPushBtn', pushCloudData);
+    on('cloudFixImagesBtn', fixImagesOneClick);
     var dialog = document.getElementById('cloudDialog');
     if (dialog) dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });
   }
   tryBind();
 })();
+
+/* --- 一键修复图片（页面按钮调用，无需控制台） --- */
+async function fixImagesOneClick() {
+  cloudNote('正在扫描 IndexedDB 中的图片，请稍候...');
+  try {
+    const result = await (window.debugImageSync && debugImageSync.syncAllImages ? debugImageSync.syncAllImages() : (async () => 0)());
+    const data = window.ProductLifecycle?.getData?.();
+    const withImg = (data?.productPool || []).filter(p => p.imageData).length;
+    if (withImg > 0) {
+      cloudNote('✅ 已同步 ' + withImg + ' 张图片到本地产品池。请点击「保存至云端」推送到云端。');
+    } else {
+      cloudNote('⚠️ 本地未发现可同步的图片。请到「产品总池管理」页面手动上传图片。', true);
+    }
+    window.dispatchEvent(new CustomEvent('product-image:updated'));
+  } catch (e) {
+    cloudNote('修复失败：' + (e.message || e), true);
+  }
+}
