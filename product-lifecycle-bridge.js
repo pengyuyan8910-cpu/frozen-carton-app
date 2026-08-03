@@ -142,7 +142,8 @@
 
   function applyProductPatch(data, patch) {
     if (!data || !patch?.matchKey) return;
-    const match = item => String(item?.barcode || item?.name || "") === String(patch.matchKey);
+    const itemKey = item => { const bc = String(item?.barcode || '').trim(); return bc && bc !== '—' ? bc : String(item?.name || '').trim(); };
+    const match = item => itemKey(item) === String(patch.matchKey);
     const changes = clone(patch.changes || {});
     const skuChanges = clone(changes);
     delete skuChanges.imageData;
@@ -151,7 +152,7 @@
   }
 
   function applyCommittedPatches(data, state) {
-    (state.productPatches || []).forEach(patch => applyProductPatch(data, patch));
+    (state.productPatches || []).forEach(patch => { applyProductPatch(data, patch); if (patch.changes?.imageData !== undefined) window.dispatchEvent(new CustomEvent('product-image:updated', { detail: { key: patch.matchKey } })); });
     (state.committedPatches || []).forEach(patch => applyPatch(data, patch));
     data.lifecycle = clone(state);
     return data;
