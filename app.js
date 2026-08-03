@@ -1024,11 +1024,14 @@ let cloudClient = null;
 let docRevision = 0;
 let cloudBaseData = null;
 
-(function initCloud() {
-  if (window.supabase && SUPABASE_URL !== '__SUPABASE_URL__' && SUPABASE_URL.length > 10) {
+function ensureCloudClient() {
+  if (cloudClient) return cloudClient;
+  if (window.supabase && SUPABASE_URL !== '__SUPABASE_URL__' && SUPABASE_URL.length > 10 && SUPABASE_ANON_KEY !== '__SUPABASE_ANON_KEY__') {
     cloudClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
-})();
+  return cloudClient;
+}
+ensureCloudClient();
 
 function cloudNote(msg, isError) {
   const el = document.getElementById('cloudSyncStatus');
@@ -1060,7 +1063,7 @@ function translateCloudError(msg) {
 }
 
 async function refreshCloudAccount() {
-  if (!cloudClient) { cloudAccountNote('云端组件未配置。请先创建 Supabase 项目，然后将 URL 和 Key 填入 app.js 中的 SUPABASE_URL 和 SUPABASE_ANON_KEY。', true); return null; }
+  if (!ensureCloudClient()) { cloudAccountNote('云端组件未配置。请先创建 Supabase 项目，然后将 URL 和 Key 填入 app.js 中的 SUPABASE_URL 和 SUPABASE_ANON_KEY。', true); return null; }
   try {
     const { data: { session } } = await cloudClient.auth.getSession();
     if (session && session.user) cloudAccountNote('已登录：' + session.user.email + '。');
@@ -1104,6 +1107,7 @@ async function requireCloudSession() {
 
 /* --- 拉取云端数据 --- */
 async function pullCloudData() {
+  if (!ensureCloudClient()) return cloudNote('云端组件加载失败，请刷新页面后重试。', true);
   cloudNote('正在拉取云端数据...');
   const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
   if (error) return cloudNote(translateCloudError(error.message), true);
@@ -1279,7 +1283,7 @@ async function autoMergeCloudConflict() {
 // A signed-in collaborator always starts from the latest shared document.
 let cloudAutoPullStarted = false;
 async function autoPullCloudData() {
-  if (cloudAutoPullStarted || !cloudClient) return;
+  if (cloudAutoPullStarted || !ensureCloudClient()) return;
   cloudAutoPullStarted = true;
   await pullCloudData();
 }
