@@ -1548,16 +1548,151 @@ window.debugImageSync = {
 async function fixImagesOneClick() {
   cloudNote('正在扫描 IndexedDB 中的图片，请稍候...');
   try {
-    const result = await (window.debugImageSync && debugImageSync.syncAllImages ? debugImageSync.syncAllImages() : (async () => 0)());
+    const dbReq = indexedDB.open('frozen-carton-product-images', 1);
+    const db = await new Promise((resolve, reject) => {
+      dbReq.onupgradeneeded = () => dbReq.result.createObjectStore('images', { keyPath: 'key' });
+      dbReq.onsuccess = () => resolve(dbReq.result);
+      dbReq.onerror = () => reject(dbReq.error);
+    });
+    const records = await new Promise((res, rej) => {
+      const r = db.transaction('images').objectStore('images').getAll();
+      r.onsuccess = () => res(r.result || []);
+      r.onerror = () => rej(r.error);
+    });
+    console.log('[fix-images] IndexedDB 中共有 ' + records.length + ' 张图：');
+    records.forEach(r => {
+      const fileName = (r.file && r.file.name) || '(无文件名)';
+      const size = r.file ? (r.file.size / 1024).toFixed(1) + 'KB' : '?';
+      console.log('  key=' + JSON.stringify(r.key), '| file.name=' + JSON.stringify(fileName), '| size=' + size);
+    });
+
+    const pool = 确保产品池(状态);
+    if (!pool || !pool.length) { cloudNote('⚠️ productPool 为空。', true); return; }
+
+    const norm = s => String(s || '').toLowerCase().replace(/\.[^.]+$/, '').replace(/[\s\-_()（）【】\[\]·]+/g, '');
+    const uniqByName = new Map();
+    pool.forEach(p => {
+      const n = norm(p.name);
+      if (n && !uniqByName.has(n)) uniqByName.set(n, p);
+    });
+    const byBarcode = new Map();
+    pool.forEach(p => {
+      const bc = String(p.barcode || '').trim();
+      if (bc && bc !== '—') byBarcode.set(bc, p);
+    });
+
+    const getImage = async key => {
+      const rec = await new Promise((res, rej) => {
+        const r = db.transaction('images').objectStore('images').get(key);
+        r.onsuccess = () => res(r.result || null);
+        r.onerror = () => rej(r.error);
+      });
+      return rec?.file || null;
+    };
+    const toCloudImage = file => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => resolve(reader.result);
+        img.onload = () => {
+          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * ratio));
+          canvas.height = Math.max(1, Math.round(img.height * ratio));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.70));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    let matchedByKey = 0, matchedByFileName = 0, matchedByLooseKey = 0, unmatched = 0;
+    const unmatchedKeys = [];
+
+    for (const rec of records) {
+      const key = String(rec.key || '');
+      const file = rec.file;
+      if (!file) continue;
+      const fileName = String(file.name || '');
+      let product = null;
+      let matchType = '';
+
+      // 策略 1: 精确 key — product::barcode 或 product::name
+      let candidate = uniqByName.get(norm(key.replace(/^product::/, '').split('::').pop()));
+      if (candidate) { product = candidate; matchType = '精确name'; matchedByKey++; }
+      if (!product && byBarcode.has(key.replace(/^product::/, ''))) {
+        product = byBarcode.get(key.replace(/^product::/, '')); matchType = '精确barcode'; matchedByKey++;
+      }
+
+      // 策略 2: 通过文件名 (file.name) 模糊匹配
+      if (!product) {
+        const fn = norm(fileName);
+        if (fn) {
+          for (const [n, p] of uniqByName) {
+            if (n && (n === fn || fn.includes(n) || n.includes(fn))) { product = p; matchType = '文件名完全包含'; matchedByFileName++; break; }
+          }
+        }
+        if (!product && fn) {
+          for (const p of pool) {
+            const pn = norm(p.name);
+            if (pn && pn.length >= 4 && fn.includes(pn)) { product = p; matchType = '文件名含商品名前缀'; matchedByFileName++; break; }
+          }
+        }
+        if (!product && fn) {
+          for (const [bc, p] of byBarcode) {
+            const bcNorm = norm(bc);
+            if (bcNorm && bcNorm.length >= 8 && fn.includes(bcNorm)) { product = p; matchType = '文件名含条码'; matchedByFileName++; break; }
+          }
+        }
+        if (!product && fn) {
+          for (const p of pool) {
+            const pn = norm(p.name);
+            const pnTail = pn.length >= 6 ? pn.slice(-6) : pn;
+            if (pnTail && pnTail.length >= 6 && fn.includes(pnTail)) { product = p; matchType = '文件名含商品名后缀'; matchedByFileName++; break; }
+          }
+        }
+      }
+
+      // 策略 3: 通过 key 的 :: 后部分模糊匹配（处理 oldKey "门店::商品名"）
+      if (!product) {
+        const seg = key.split('::');
+        const tail = norm(seg[seg.length - 1]);
+        if (tail && tail.length >= 4) {
+          for (const p of pool) {
+            const pn = norm(p.name);
+            if (pn === tail || (pn.length >= 4 && (pn.includes(tail) || tail.includes(pn)))) { product = p; matchType = 'key尾部匹配'; matchedByLooseKey++; break; }
+          }
+        }
+      }
+
+      if (!product) { unmatched++; unmatchedKeys.push(key); console.log('[fix-images] 未匹配:', key, '| file.name=', fileName); continue; }
+
+      try {
+        const imageData = await toCloudImage(file);
+        const mk = String(product.barcode || '').trim() && String(product.barcode || '').trim() !== '—'
+          ? String(product.barcode || '').trim()
+          : String(product.name || '').trim();
+        if (mk && window.ProductLifecycle?.updateProduct) {
+          window.ProductLifecycle.updateProduct(mk, { imageData });
+        }
+        console.log('[fix-images] ✅ ' + matchType + ': ' + product.name + ' ← ' + key + (fileName ? ' [' + fileName + ']' : ''));
+      } catch (e) { console.error('[fix-images] 压缩失败', key, e); }
+    }
+
     const data = window.ProductLifecycle?.getData?.();
     const withImg = (data?.productPool || []).filter(p => p.imageData).length;
-    if (withImg > 0) {
-      cloudNote('✅ 已同步 ' + withImg + ' 张图片到本地产品池。请点击「保存至云端」推送到云端。');
-    } else {
-      cloudNote('⚠️ 本地未发现可同步的图片。请到「产品总池管理」页面手动上传图片。', true);
-    }
+    保存();
     window.dispatchEvent(new CustomEvent('product-image:updated'));
+
+    const summary = '共 ' + records.length + ' 张 ｜ 精确 ' + matchedByKey +
+      ' ｜ 文件名 ' + matchedByFileName + ' ｜ key尾部 ' + matchedByLooseKey +
+      ' ｜ 未匹配 ' + unmatched + ' ｜ productPool ' + withImg + ' 张';
+    cloudNote((unmatched === 0 ? '✅ ' : '⚠️ ') + summary + (unmatched ? '（F12→Console 查看详情，需重新上传未匹配的产品）' : '，请点击「保存至云端」'));
+    console.log('[fix-images]', summary);
   } catch (e) {
     cloudNote('修复失败：' + (e.message || e), true);
+    console.error(e);
   }
 }
