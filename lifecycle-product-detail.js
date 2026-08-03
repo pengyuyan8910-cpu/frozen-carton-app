@@ -108,5 +108,8 @@ picker.onchange = async () => { const file = picker.files?.[0]; if (!file || !se
   const refreshSelected = () => { if (!selected) return; const fresh = products().find(p => productKey(p) === productKey(selected)); if (fresh) { selected = fresh; renderImage(fresh); } };
   window.parent?.addEventListener('product-image:updated', refreshSelected);
   window.parent?.addEventListener('product-lifecycle:product-updated', e => { if (!selected) return; const fresh = products().find(p => productKey(p) === productKey(selected)); if (fresh) { selected = fresh; renderImage(fresh); } });
+  /* 云端拉取/保存后，父页面会派发 state-hydrated 事件并 reload iframe，
+     此监听作为补充：iframe 未重载时也能刷新选中商品的图片 */
+  window.parent?.addEventListener('product-lifecycle:state-hydrated', refreshSelected);
   new MutationObserver(() => requestAnimationFrame(bind)).observe(pool,{childList:true,subtree:true}); bind();
 })();

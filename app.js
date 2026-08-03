@@ -1254,10 +1254,29 @@ async function pullCloudData() {
   cloudBaseData = structuredClone(cloudState);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
+  /* 全局同步：刷新产品生命周期管理 iframe，让运营模式也使用最新数据 */
+  reloadLifecycleFrame();
   const finalImgCount = (window.ProductLifecycle?.getData?.()?.productPool || []).filter(x => x.imageData).length;
   console.log('[cloud-pull] final dataRef productPool items with imageData:', finalImgCount);
   cloudNote('已拉取并完全应用云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '，含 ' + finalImgCount + ' 张商品图片）。');
   window.dispatchEvent(new CustomEvent('product-image:updated'));
+}
+
+/* --- 刷新产品生命周期管理 iframe（全局同步关键步骤） --- */
+function reloadLifecycleFrame() {
+  const frame = document.getElementById('productLifecycleFrame');
+  if (!frame) return;
+  if (!frame.getAttribute('src')) {
+    /* iframe 尚未加载，调用 loadLifecycleFrame 触发首次加载 */
+    window.ProductLifecycle?.init?.();
+    return;
+  }
+  try { frame.contentWindow?.location?.reload?.(); } catch(e) {
+    /* 跨域限制时回退：重新设置 src */
+    const src = frame.getAttribute('src');
+    frame.removeAttribute('src');
+    requestAnimationFrame(() => frame.setAttribute('src', src));
+  }
 }
 
 /* --- 保存至云端 --- */
@@ -1378,6 +1397,8 @@ async function pushCloudData() {
   /* hydrateState 确保 stateRef 与 lifecycle 同步并写入 localStorage */
   if (lifecycle) window.ProductLifecycle?.hydrateState?.(lifecycle, 状态);
   window.ProductLifecycle?.syncData?.(状态);
+  /* 全局同步：刷新产品生命周期管理 iframe，确保运营模式数据一致 */
+  reloadLifecycleFrame();
   cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版（含 ' + imgCount + ' 张商品图片）。');
   window.dispatchEvent(new CustomEvent('product-image:updated'));
 
