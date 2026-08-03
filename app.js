@@ -1263,7 +1263,12 @@ async function pullCloudData() {
 /* --- 保存至云端 --- */
 const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-function cloudCopyState(st) { return JSON.parse(JSON.stringify(清理交互痕迹(st))); }
+function cloudCopyState(st) {
+  const next = 清理计算缓存(st);
+  for(const r of next.skus||[]){delete r.selected;delete r.modifiedFields;delete r.changeNote}
+  delete next._dataSignature;
+  return next;
+}
 
 function cloudRevisionConflict() {
   return { code: 'P0001', message: 'CONFLICT: cloud data changed; merge the latest revision first.' };
@@ -1303,43 +1308,57 @@ async function saveCloudDocument(payload, expectedRevision) {
 async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
-  保存();
-  // Save the exact dataset currently being operated on, not an older published snapshot.
   const payload = cloudCopyState(状态 || 发布状态);
   const lifecycle = window.ProductLifecycle?.getState?.();
   if (lifecycle) {
-    payload.lifecycle = structuredClone(lifecycle);
-    // CRITICAL: apply product patches (including imageData) directly to payload's productPool
-    // This ensures imageData is embedded in productPool items, not just in lifecycle patches
+    payload.lifecycle = lifecycle;
     (lifecycle.productPatches || []).forEach(patch => {
       if (!patch?.matchKey || !patch.changes) return;
       const itemKey = item => { const bc = String(item?.barcode || '').trim(); return bc && bc !== '—' ? bc : String(item?.name || '').trim(); };
       const match = item => itemKey(item) === String(patch.matchKey);
-      const changes = JSON.parse(JSON.stringify(patch.changes));
-      (payload.productPool || []).filter(match).forEach(item => Object.assign(item, changes));
+      (payload.productPool || []).filter(match).forEach(item => Object.assign(item, patch.changes));
     });
   }
   确保产品池(payload);
-  // Debug: count images in payload before saving
-  const imgCount = (payload.productPool || []).filter(p => p.imageData).length;
-  const payloadSize = JSON.stringify(payload).length;
-  console.log('[cloud-push] productPool items with imageData:', imgCount, '| payload size:', (payloadSize / 1024).toFixed(0) + 'KB');
+
+  /* 批量重新压缩图片：360px→200px, 70%→50%, 每张 30KB→~8KB */
+  const pool = payload.productPool || [];
+  let compressed = 0;
+  for (const p of pool) {
+    if (!p.imageData || p.imageData.length < 12000) continue;
+    try {
+      const img = new Image();
+      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = p.imageData; });
+      const max = 200, ratio = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * ratio));
+      canvas.height = Math.max(1, Math.round(img.height * ratio));
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      p.imageData = canvas.toDataURL('image/jpeg', 0.5);
+      compressed++;
+    } catch(e) {}
+  }
+
+  const imgCount = pool.filter(p => p.imageData).length;
+
   const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : docRevision + 1;
-  cloudBaseData = structuredClone(payload);
-  // localStorage 写失败不再阻断流程（云端已成功保存）
-  安全保存本地(草稿保存键, payload);
-  安全保存本地(发布保存键, payload);
-  草稿状态 = 清理计算缓存(structuredClone(payload));
-  发布状态 = 清理计算缓存(structuredClone(payload));
+
+  cloudBaseData = payload;
+  草稿状态 = 清理计算缓存(payload);
+  发布状态 = 草稿状态;
   切换数据源();
-  // Re-apply patches so dataRef.productPool has imageData
   if (lifecycle) window.ProductLifecycle?.applyCommittedPatches?.(状态, lifecycle);
   window.ProductLifecycle?.syncData?.(状态);
   cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版（含 ' + imgCount + ' 张商品图片）。');
   window.dispatchEvent(new CustomEvent('product-image:updated'));
+
+  requestIdleCallback(() => {
+    try { 安全保存本地(草稿保存键, 草稿状态); } catch(e) {}
+    try { 安全保存本地(发布保存键, 发布状态); } catch(e) {}
+  }, { timeout: 2000 });
 }
 
 /* --- 冲突自动合并 --- */
