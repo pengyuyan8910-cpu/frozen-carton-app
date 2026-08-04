@@ -24,7 +24,13 @@
     setNote(`${data.meta?.version || "10%触发"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
     const app = document.createElement("script");
     app.src = `app.js?v=${Date.now()}`;
-    app.onload = () => window.ProductLifecycle?.init?.();
+    app.onload = () => {
+      window.ProductLifecycle?.init?.();
+      const consistency = document.createElement("script");
+      consistency.src = `lifecycle-consistency.js?v=${Date.now()}`;
+      consistency.onerror = () => console.error("生命周期一致性脚本加载失败");
+      document.body.appendChild(consistency);
+    };
     app.onerror = () => setNote("程序加载失败，请联系运营");
     document.body.appendChild(app);
   } catch (err) {
