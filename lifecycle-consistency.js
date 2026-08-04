@@ -25,7 +25,7 @@
 
   function productKey(item) {
     const value = identity(item);
-    return value.barcode || (value.name ? `name:${normalizedName(value.name)}` : "");
+    return value.barcode || value.name;
   }
 
   function displayName(item) {
@@ -119,6 +119,13 @@
     if (completed?.type === "淘汰") return "淘汰完成";
     if (completed?.type === "恢复") return "恢复完成";
 
+    const active = (child.data?.skus || []).some(row =>
+      row?.included !== false &&
+      row?.active !== false &&
+      row?.lifecycleStatus !== "已淘汰" &&
+      sameProduct(row, product)
+    );
+    if (active) return "正常在售";
     const draft = (child.state?.draftProducts || []).some(item => sameProduct(item, product));
     if (draft) return "新品草稿";
     if (product?.active === false || product?.included === false || product?.lifecycleStatus === "已淘汰") return "淘汰完成";
@@ -246,14 +253,14 @@
 
   function patchPlanogramLabels(child) {
     const apply = () => {
-      const legend = child.document.querySelector(".planogram-legend");
-      if (legend) {
-        legend.querySelectorAll(".legend-chip").forEach(node => {
-          if (node.textContent === "待上新") node.textContent = "上新任务执行中";
-          if (node.textContent === "待淘汰") node.textContent = "淘汰任务执行中";
-          if (node.textContent === "恢复中") node.textContent = "恢复任务执行中";
-        });
-      }
+      const nodes = child.document.querySelectorAll(".planogram-legend .legend-chip, .sku-block small, .monitor-grid dd, .monitor-note");
+      nodes.forEach(node => {
+        let value = node.textContent || "";
+        value = value.replaceAll("待上新", "上新任务执行中")
+          .replaceAll("待淘汰", "淘汰任务执行中")
+          .replaceAll("恢复中", "恢复任务执行中");
+        if (value !== node.textContent) node.textContent = value;
+      });
     };
     if (!child.__lifecycleConsistencyPlanogramPatched && typeof child.renderPlanogram === "function") {
       const original = child.renderPlanogram.bind(child);
@@ -297,7 +304,7 @@
   function install() {
     patchParent();
     const frame = document.getElementById("productLifecycleFrame");
-    frame?.addEventListener("load", () => setTimeout(patchChild, 0), { once: true });
+    frame?.addEventListener("load", () => setTimeout(patchChild, 0));
     setTimeout(patchChild, 0);
     window.addEventListener("product-lifecycle:data-committed", refreshVisiblePanels);
     window.addEventListener("product-lifecycle:state-changed", refreshVisiblePanels);
