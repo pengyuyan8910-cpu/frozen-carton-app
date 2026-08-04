@@ -375,15 +375,55 @@ function syncData(data) {
     document.getElementById("storeSelect")?.addEventListener("change", syncSelectedStoreToFrame);
   }
 
+  let lifecycleResizeQueued = false;
+  let pendingLifecycleHeight = 0;
+
+  function lifecycleContentHeight(frame, reportedHeight) {
+    try {
+      const doc = frame.contentDocument;
+      const activeView = doc?.querySelector("main > .view.active");
+      if (activeView) {
+        const scrollTop = doc.defaultView?.scrollY || 0;
+        const bottom = activeView.getBoundingClientRect().bottom + scrollTop;
+        return Math.max(760, Math.min(30000, Math.ceil(bottom + 48)));
+      }
+    } catch (error) {
+      console.warn("生命周期页面高度测量失败", error);
+    }
+    return Math.max(760, Math.min(30000, number(reportedHeight) + 8));
+  }
+
+  function resizeLifecycleFrame(frame, reportedHeight) {
+    pendingLifecycleHeight = reportedHeight;
+    if (lifecycleResizeQueued) return;
+    lifecycleResizeQueued = true;
+    requestAnimationFrame(() => {
+      try {
+        const oldHeight = frame.getBoundingClientRect().height;
+        const nextHeight = lifecycleContentHeight(frame, pendingLifecycleHeight);
+        const frameTop = window.scrollY + frame.getBoundingClientRect().top;
+        const shrankMaterially = oldHeight - nextHeight > 120;
+        const viewportBelowNewContent = window.scrollY > frameTop + nextHeight - window.innerHeight + 32;
+
+        if (Math.abs(oldHeight - nextHeight) > 2) {
+          frame.style.height = `${nextHeight}px`;
+        }
+
+        if (shrankMaterially && viewportBelowNewContent) {
+          window.scrollTo({ top: Math.max(0, frameTop - 72), behavior: "auto" });
+        }
+      } finally {
+        lifecycleResizeQueued = false;
+      }
+    });
+  }
+
   function bindFrameMessages() {
     window.addEventListener("message", event => {
       const message = event.data || {};
       if (message.type === "plm:resize") {
         const frame = document.getElementById("productLifecycleFrame");
-        if (frame) {
-          const height = Math.max(760, Math.min(30000, number(message.height) + 8));
-          frame.style.height = `${height}px`;
-        }
+        if (frame) resizeLifecycleFrame(frame, message.height);
       }
       if (message.type === "plm:select-store" && message.store) {
         const select = document.getElementById("storeSelect");
