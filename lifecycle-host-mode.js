@@ -491,6 +491,10 @@
       bindPoolActions(child);
     };
 
+    ["poolSearch", "poolStatusFilter"].forEach(id => {
+      const element = child.document.getElementById(id);
+      if (element) element.oninput = child.renderPool;
+    });
     child.__unifiedPoolRendererInstalled = true;
   };
 
