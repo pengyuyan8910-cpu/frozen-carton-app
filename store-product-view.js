@@ -27,20 +27,12 @@
   );
  };
  const renderSummary=items=>{
-  const source=uniqueItems(authoritativeStoreRows());
-  const visibleMap=new Map(uniqueItems(items).map(item=>[productKey(item),item]));
-  const a=source.filter(item=>String(item.grade||'').trim()==='A').length;
-  let external=0,total=0;
-  source.forEach(item=>{
-   let calc=null;
-   try{if(typeof window.计算SKU==='function')calc=window.计算SKU(item)}catch(error){calc=null}
-   const visible=visibleMap.get(productKey(item));
-   const externalQty=calc?num(calc.external):num(visible?.external);
-   const staticVol=calc?num(calc.staticVol):num(visible?.volume);
-   if(externalQty>0)external++;
-   total+=staticVol;
-  });
-  summary.innerHTML=`<div class="store-goods-card"><span>当前门店</span><strong>${esc(storeSelect.value||'—')}</strong><small>店员商品池</small></div><div class="store-goods-card"><span>可售商品</span><strong>${source.length}</strong><small>与门店执行使用同一在售SKU口径</small></div><div class="store-goods-card"><span>A 级商品</span><strong>${a}</strong><small>重点保障品</small></div><div class="store-goods-card"><span>需外储商品</span><strong>${external}</strong><small>请按门店补货计划执行</small></div><div class="store-goods-card"><span>静态外储</span><strong>${Math.round(total)}L</strong><small>仅供门店核对</small></div>`
+  const unique=uniqueItems(items);
+  const saleCount=uniqueItems(authoritativeStoreRows()).length;
+  const a=unique.filter(item=>item.grade==='A').length;
+  const external=unique.filter(item=>num(item.external)>0).length;
+  const total=unique.reduce((sum,item)=>sum+num(item.volume),0);
+  summary.innerHTML=`<div class="store-goods-card"><span>当前门店</span><strong>${esc(storeSelect.value||'—')}</strong><small>店员商品池</small></div><div class="store-goods-card"><span>可售商品</span><strong>${saleCount}</strong><small>与门店执行使用同一在售SKU口径</small></div><div class="store-goods-card"><span>A 级商品</span><strong>${a}</strong><small>重点保障品</small></div><div class="store-goods-card"><span>需外储商品</span><strong>${external}</strong><small>请按门店补货计划执行</small></div><div class="store-goods-card"><span>静态外储</span><strong>${Math.round(total)}L</strong><small>仅供门店核对</small></div>`
  };
  const show=async item=>{current=item;drawer.innerHTML=`<div class="sku-drawer-head"><div class="sku-title-row"><div class="sku-image-slot" id="storeImage"></div><div><h3>${esc(item.name)}</h3><p class="sku-kicker">${esc(item.store)} · 门店商品详情</p></div></div><button type="button" class="sku-close" id="closeInspector">关闭</button></div><section class="sku-section"><h4>商品信息</h4><dl class="sku-detail-list"><div><dt>等级</dt><dd>${esc(item.grade)}</dd></div><div><dt>三级类目</dt><dd>${esc(item.category)}</dd></div><div><dt>箱规</dt><dd>${esc(item.carton)}</dd></div><div><dt>当前柜段</dt><dd>${esc(item.cabinet)}</dd></div><div><dt>具体位置</dt><dd>${esc(item.position)}</dd></div></dl></section><section class="sku-section"><h4>补货与库存</h4><dl class="sku-detail-list"><div><dt>触发库存</dt><dd>${esc(item.trigger)}</dd></div><div><dt>可入柜</dt><dd>${esc(item.shelf)}</dd></div><div><dt>需外储</dt><dd>${esc(item.external)}</dd></div><div><dt>静态外储</dt><dd>${esc(item.volume)}</dd></div></dl></section><section class="sku-section sku-store-actions"><h4>门店执行</h4><div class="sku-detail-actions"><button id="storeRiskAction" type="button">查看风险</button><button id="storeAllocationAction" type="button">排柜调整</button></div><p class="store-readonly-note">风险与排柜均按当前门店和当前 SKU 定位；商品资料与图片请在“产品生命周期管理”统一维护。</p></section>`;drawer.querySelector('#closeInspector').onclick=()=>drawer.innerHTML='<div class="sku-empty">选择一行商品，查看门店商品、补货与陈列信息。</div>';drawer.querySelector('#storeRiskAction').onclick=()=>window.dispatchEvent(new CustomEvent('store-sku:action',{detail:{view:'risk',store:item.store,name:item.name}}));drawer.querySelector('#storeAllocationAction').onclick=()=>window.dispatchEvent(new CustomEvent('store-sku:action',{detail:{view:'allocation',store:item.store,name:item.name}}));document.querySelectorAll('#goodsTable tbody tr').forEach(x=>x.classList.toggle('sku-selected',x===item.tr));const slot=drawer.querySelector('#storeImage'),shared=cloudImage(item),file=shared?null:(await imageCompat(item));slot.innerHTML=shared?`<img src="${esc(shared)}" alt="${esc(item.name)} 商品图片">`:file?`<img src="${URL.createObjectURL(file)}" alt="${esc(item.name)} 商品图片">`:'<div class="sku-image-empty">暂无商品图片</div>'};
  let current=null;
