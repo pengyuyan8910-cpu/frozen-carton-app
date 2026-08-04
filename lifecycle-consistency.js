@@ -4,6 +4,11 @@
   const BARCODE_RE = /^\d{6,18}$/;
   const text = value => String(value ?? "").trim();
   const normalizedName = value => text(value).replace(/\s+/g, "").toLowerCase();
+  const escapeHtml = value => text(value).replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[char]);
+  const toNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+  const format = value => String(Math.round(toNumber(value) * 100) / 100);
+  const readData = () => window.ProductLifecycle?.getData?.() || window.UNIFIED_CARTON_DATA || {};
+  const readState = () => window.ProductLifecycle?.getState?.() || {};
 
   function identity(item) {
     const rawName = text(item?.name);
@@ -107,7 +112,7 @@
   }
 
   function latestCompletedTask(child, product) {
-    return (child.state?.tasks || []).find(task => task?.status === "已完成" && sameProduct({
+    return (readState().tasks || []).find(task => task?.status === "已完成" && sameProduct({
       name: task.productName,
       barcode: BARCODE_RE.test(text(task.productKey)) ? task.productKey : ""
     }, product)) || null;
@@ -119,14 +124,14 @@
     if (completed?.type === "淘汰") return "淘汰完成";
     if (completed?.type === "恢复") return "恢复完成";
 
-    const active = (child.data?.skus || []).some(row =>
+    const active = (readData().skus || []).some(row =>
       row?.included !== false &&
       row?.active !== false &&
       row?.lifecycleStatus !== "已淘汰" &&
       sameProduct(row, product)
     );
     if (active) return "正常在售";
-    const draft = (child.state?.draftProducts || []).some(item => sameProduct(item, product));
+    const draft = (readState().draftProducts || []).some(item => sameProduct(item, product));
     if (draft) return "新品草稿";
     if (product?.active === false || product?.included === false || product?.lifecycleStatus === "已淘汰") return "淘汰完成";
     return "正常在售";
@@ -135,9 +140,9 @@
   function childProducts(child) {
     const map = new Map();
     const source = [
-      ...(child.data?.productPool || []),
-      ...(child.data?.skus || []),
-      ...(child.state?.draftProducts || [])
+      ...(readData().productPool || []),
+      ...(readData().skus || []),
+      ...(readState().draftProducts || [])
     ];
     for (const item of source) {
       const key = productKey(item);
@@ -149,7 +154,7 @@
 
   function coverageMap(child) {
     const result = new Map();
-    for (const row of child.data?.skus || []) {
+    for (const row of readData().skus || []) {
       if (row?.included === false || row?.active === false || row?.lifecycleStatus === "已淘汰") continue;
       const key = productKey(row);
       if (!key || !row.store) continue;
@@ -167,7 +172,7 @@
       "淘汰完成": "status-archived",
       "恢复完成": "status-restore"
     };
-    return `<span class="tag ${classes[status] || "status-archived"}">${child.esc(status)}</span>`;
+    return `<span class="tag ${classes[status] || "status-archived"}">${escapeHtml(status)}</span>`;
   }
 
   function replaceStatusOptions(child) {
@@ -175,7 +180,7 @@
     if (!select || select.dataset.lifecycleConsistency === "1") return;
     const current = select.value;
     const values = ["", "正常在售", "新品草稿", "上新完成", "淘汰完成", "恢复完成"];
-    select.innerHTML = values.map(value => `<option value="${child.esc(value)}">${value || "全部状态"}</option>`).join("");
+    select.innerHTML = values.map(value => `<option value="${escapeHtml(value)}">${value || "全部状态"}</option>`).join("");
     if (values.includes(current)) select.value = current;
     select.dataset.lifecycleConsistency = "1";
   }
@@ -184,7 +189,7 @@
     child.allProducts = () => childProducts(child);
     child.productStatus = product => lifecycleStatus(child, product);
     child.productByKey = key => childProducts(child).find(product => productKey(product) === key);
-    child.rowsForProduct = key => (child.data?.skus || []).filter(row => productKey(row) === key);
+    child.rowsForProduct = key => (readData().skus || []).filter(row => productKey(row) === key);
     child.taskProductStatus = task => {
       const product = childProducts(child).find(item => sameProduct(item, {
         name: task.productName,
@@ -201,7 +206,7 @@
       const products = childProducts(child);
       const statuses = products.map(product => lifecycleStatus(child, product));
       const effective = products.filter(product => ["正常在售", "上新完成", "恢复完成"].includes(lifecycleStatus(child, product)));
-      const stores = child.currentStores();
+      const stores = (readData().stores || []).map(store => typeof store === "string" ? store : store.store).filter(Boolean);
       const coverages = coverageMap(child);
 
       child.document.getElementById("poolMetrics").innerHTML = [
@@ -211,8 +216,8 @@
         child.metric("上新完成", statuses.filter(value => value === "上新完成").length, "已完成上新并计入有效SKU", "good"),
         child.metric("淘汰完成", statuses.filter(value => value === "淘汰完成").length, "已完成淘汰，不计入有效SKU", "warn"),
         child.metric("恢复完成", statuses.filter(value => value === "恢复完成").length, "已完成恢复并计入有效SKU"),
-        child.metric("坑位资源", child.state?.slots?.length || 0, "释放与预留位置"),
-        child.metric("进行中任务", (child.state?.tasks || []).filter(task => !["已完成", "已撤销", "已撤回"].includes(task.status)).length, "仅在任务中心显示执行状态")
+        child.metric("坑位资源", readState().slots?.length || 0, "释放与预留位置"),
+        child.metric("进行中任务", (readState().tasks || []).filter(task => !["已完成", "已撤销", "已撤回"].includes(task.status)).length, "仅在任务中心显示执行状态")
       ].join("");
 
       const query = text(child.document.getElementById("poolSearch")?.value);
@@ -221,14 +226,14 @@
         const status = lifecycleStatus(child, product);
         const haystack = [displayName(product), identity(product).barcode, product.category3, product.category4].map(text).join(" ");
         return (!query || haystack.includes(query)) && (!filter || status === filter);
-      }).sort((a, b) => child.num(a.rank || 9999) - child.num(b.rank || 9999));
+      }).sort((a, b) => toNumber(a.rank || 9999) - toNumber(b.rank || 9999));
 
       child.document.getElementById("poolTable").innerHTML = child.table([
-        { name: "商品", cls: "name", render: product => `<strong>${child.esc(displayName(product))}</strong><br><small>${child.esc(identity(product).barcode || "暂无条码")}</small>` },
+        { name: "商品", cls: "name", render: product => `<strong>${escapeHtml(displayName(product))}</strong><br><small>${escapeHtml(identity(product).barcode || "暂无条码")}</small>` },
         { name: "等级", render: product => child.gradeTag(product.grade) },
-        { name: "三级/四级类目", render: product => `${child.esc(product.category3 || "-")} / ${child.esc(product.category4 || "-")}` },
-        { name: "尺寸", render: product => `${child.fmt(product.length)}×${child.fmt(product.width)}×${child.fmt(product.height)}mm` },
-        { name: "箱规", render: product => child.fmt(product.carton) },
+        { name: "三级/四级类目", render: product => `${escapeHtml(product.category3 || "-")} / ${escapeHtml(product.category4 || "-")}` },
+        { name: "尺寸", render: product => `${format(product.length)}×${format(product.width)}×${format(product.height)}mm` },
+        { name: "箱规", render: product => format(product.carton) },
         { name: "门店覆盖", render: product => {
           const count = coverages.get(productKey(product))?.size || 0;
           const percentage = stores.length ? Math.round(count / stores.length * 100) : 0;
@@ -237,7 +242,7 @@
         { name: "生命周期", render: product => statusTag(child, lifecycleStatus(child, product)) },
         { name: "操作", render: product => {
           const status = lifecycleStatus(child, product);
-          const key = child.esc(productKey(product));
+          const key = escapeHtml(productKey(product));
           if (status === "新品草稿") return `<button class="mini-btn primary" onclick="prefillLaunch('${key}')">上新</button>`;
           if (status === "淘汰完成") return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${key}','淘汰')">查看任务</button><button class="mini-btn primary" onclick="prefillRestore('${key}')">恢复在售</button></div>`;
           return `<div class="mini-actions"><button class="mini-btn danger" onclick="prefillRetire('${key}')">淘汰</button></div>`;
@@ -277,7 +282,9 @@
   function patchChild() {
     const frame = document.getElementById("productLifecycleFrame");
     const child = frame?.contentWindow;
-    if (!child || typeof child.renderPool !== "function" || !child.data) return false;
+    if (!child || typeof child.renderPool !== "function") return false;
+    const source = readData();
+    if (!Array.isArray(source.skus) || !Array.isArray(source.stores)) return false;
     if (!child.__lifecycleConsistencyInstalled) {
       patchChildPool(child);
       patchPlanogramLabels(child);
