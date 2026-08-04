@@ -77,7 +77,7 @@
     if (typeof window.产品展示名 === "function") window.产品展示名 = displayName;
 
     patchGoodsRenderer();
-    requestAnimationFrame(updateGoodsSummaryCount);
+    scheduleGoodsSummaryCount();
     window.__lifecycleConsistencyParentInstalled = true;
   }
 
@@ -86,6 +86,10 @@
     if (!store || typeof window.纳入SKU !== "function") return 0;
     const rows = window.纳入SKU(store);
     return new Set((Array.isArray(rows) ? rows : []).map(productKey).filter(Boolean)).size;
+  }
+
+  function scheduleGoodsSummaryCount() {
+    setTimeout(() => requestAnimationFrame(updateGoodsSummaryCount), 0);
   }
 
   function updateGoodsSummaryCount() {
@@ -103,11 +107,11 @@
       const original = window.渲染商品.bind(window);
       window.渲染商品 = (...args) => {
         const result = original(...args);
-        requestAnimationFrame(updateGoodsSummaryCount);
+        scheduleGoodsSummaryCount();
         return result;
       };
     }
-    document.getElementById("storeSelect")?.addEventListener("change", () => requestAnimationFrame(updateGoodsSummaryCount));
+    document.getElementById("storeSelect")?.addEventListener("change", scheduleGoodsSummaryCount);
     window.__lifecycleConsistencyGoodsPatched = true;
   }
 
@@ -303,13 +307,17 @@
       refreshQueued = false;
       patchParent();
       document.querySelector(".tabs button.active")?.click();
-      requestAnimationFrame(updateGoodsSummaryCount);
+      scheduleGoodsSummaryCount();
       patchChild();
     });
   }
 
   function install() {
     patchParent();
+    setTimeout(() => {
+      document.querySelector(".tabs button.active")?.click();
+      scheduleGoodsSummaryCount();
+    }, 0);
     const frame = document.getElementById("productLifecycleFrame");
     frame?.addEventListener("load", () => setTimeout(patchChild, 0));
     setTimeout(patchChild, 0);
