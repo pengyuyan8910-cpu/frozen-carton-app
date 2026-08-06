@@ -351,7 +351,11 @@ const PREVIEW_KEY="frozen_product_lifecycle_management_v2";
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
 const fmt=(v,d=0)=>num(v).toFixed(d).replace(/\.0+$/,"");
-const keyOf=p=>String(p.barcode||p.name||"").trim();
+const clean=v=>String(v||"").trim();
+const looksBarcode=v=>/^\d{8,18}$/.test(clean(v));
+const identityValues=p=>new Set([p?.barcode,p?.name,p?.productKey,p?.productName].map(clean).filter(Boolean));
+const sameProduct=(a,b)=>[...identityValues(a)].some(v=>identityValues(b).has(v));
+const keyOf=p=>{const values=[...identityValues(p)];return values.find(looksBarcode)||values[0]||""};
 const skuWidth=r=>Math.max(0,num(r.displayCols)*num(r.faceWidth));
 const storeName=s=>typeof s==="string"?s:s.store;
 const dateISO=offset=>{const d=new Date();d.setDate(d.getDate()+offset);return d.toISOString().slice(0,10)};
@@ -426,15 +430,23 @@ function allProducts(){
  const map=new Map();(data?.productPool||[]).forEach(p=>{const k=keyOf(p);if(k&&!map.has(k))map.set(k,p)});
  return [...map.values()];
 }
-function productByKey(k){return allProducts().find(p=>keyOf(p)===k)}
-function rowsForProduct(k){return data.skus.filter(r=>keyOf(r)===k)}
+function productByKey(k){
+ const probe={productKey:k};
+ return lifecycleBridge()?.findProduct?.(probe)||allProducts().find(p=>sameProduct(p,probe))||(state.draftProducts||[]).find(p=>sameProduct(p,probe));
+}
+function rowsForProduct(k){const probe={productKey:k};return data.skus.filter(r=>sameProduct(r,probe))}
 function currentStoreRows(store){
  const removedStatuses=new Set(["已释放未分配","已预留给新品"]);
- const removedIds=new Set(state.slots.filter(s=>s.store===store&&removedStatuses.has(s.status)).map(s=>s.originalSkuId));
- return data.skus.filter(r=>r.store===store&&!removedIds.has(r.id));
+ const removedIds=new Set(state.slots.filter(s=>s.store===store&&removedStatuses.has(s.status)).map(s=>String(s.originalSkuId)));
+ const seen=new Set();
+ return data.skus.filter(r=>{
+  if(r.store!==store||r.included===false||removedIds.has(String(r.id))||productStatus(r)==="淘汰完成")return false;
+  const key=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):String(r.id||[keyOf(r),r.cabinetKey,r.position].join("||"));
+  if(seen.has(key))return false;seen.add(key);return true;
+ });
 }
 function launchTaskRows(store){
- return state.tasks.filter(t=>t.type==="上新"&&t.status!=="已撤销").flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="位置冲突已撤销").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
+ return state.tasks.filter(t=>t.type==="上新"&&!['已完成','已撤销','已撤回'].includes(t.status)).flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="位置冲突已撤销").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
 }
 function restoreTaskRows(store){
  return state.tasks.filter(t=>t.type==="恢复"&&!["已撤销"].includes(t.status)).flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="暂不恢复").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
@@ -452,16 +464,18 @@ function productStatus(p){
  return "正常在售";
 }
 function coverageCount(k){
- const set=new Set();
- currentStores().forEach(s=>{
-  if(currentStoreRows(s).some(r=>keyOf(r)===k)||launchTaskRows(s).some(r=>r.productKey===k&&r.taskStatus==="已完成"))set.add(s);
- });
+ const probe={productKey:k},set=new Set();
+ currentStores().forEach(store=>{if(currentStoreRows(store).some(row=>sameProduct(row,probe)))set.add(store)});
  return set.size;
 }
 function currentStores(){return data.stores.map(storeName)}
 function gradeTag(g){const x=String(g||"").toLowerCase();return `<span class="tag ${x}">${esc(g||"未评级")}</span>`}
 function statusTag(s){const cls=s==="正常在售"?"status-normal":s==="上新完成"?"status-launch":s==="淘汰完成"?"status-archived":"status-restore";return `<span class="tag ${cls}">${esc(s)}</span>`}
-function switchView(id){
+function metric(label,value,sub="",cls=""){return `<div class="metric ${cls}"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`}
+function table(cols,rows){
+ if(!rows.length)return `<div class="empty">没有匹配数据。</div>`;
+ return `<table><thead><tr>${cols.map(c=>`<th>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr>${cols.map(c=>`<td class="${c.cls||""}">${c.render?c.render(r,i):esc(r[c.key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+}function switchView(id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
  window.scrollTo({top:0,behavior:"auto"});
@@ -472,13 +486,15 @@ function renderAll(){
 }
 function renderSelectors(){
  const products=allProducts().sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
- const opts=products.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(p.category4||p.category3||"未分类")}</option>`).join("");
+ const launchProducts=[...products,...(state.draftProducts||[]).filter(draft=>!products.some(product=>sameProduct(product,draft)))].sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
+ const launchOpts=launchProducts.map(p=>`<option value="${esc(keyOf(p))}">${esc(looksBarcode(p.name)?p.barcode:p.name)}｜${esc(p.category4||p.category3||"未分类")}</option>`).join("");
+ const formalOpts=products.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(p.category4||p.category3||"未分类")}</option>`).join("");
  const lp=document.getElementById("launchProduct"),rp=document.getElementById("retireProduct"),xrp=document.getElementById("restoreProduct");
  const lv=lp.value,rv=rp.value,xv=xrp.value;
- lp.innerHTML=opts;rp.innerHTML=opts;
- const restoreProducts=products.filter(p=>state.tasks.some(t=>t.type==="淘汰"&&t.productKey===keyOf(p)&&!["已撤销","已撤回"].includes(t.status)));
- xrp.innerHTML=restoreProducts.length?restoreProducts.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(productStatus(p))}</option>`).join(""):`<option value="">暂无待恢复商品</option>`;
- if(products.some(p=>keyOf(p)===lv))lp.value=lv;
+ lp.innerHTML=launchOpts;rp.innerHTML=formalOpts;
+ const restoreProducts=products.filter(p=>state.tasks.some(t=>t.type==="淘汰"&&sameProduct(t,p)&&!["已撤销","已撤回"].includes(t.status)));
+ xrp.innerHTML=restoreProducts.length?restoreProducts.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(productStatus(p))}</option>`).join(""):`<option value="">暂无可恢复商品</option>`;
+ if(launchProducts.some(p=>keyOf(p)===lv))lp.value=lv;
  if(products.some(p=>keyOf(p)===rv))rp.value=rv;
  if(restoreProducts.some(p=>keyOf(p)===xv))xrp.value=xv;
  const stores=currentStores();
@@ -649,7 +665,7 @@ function cabinetRows(store){
  const map=new Map(data.cabinets.filter(c=>c.store===store).map(c=>[c.key,{...c,used:0,items:[]}]));
  currentStoreRows(store).forEach(r=>{const c=map.get(r.cabinetKey);if(c){c.used+=skuWidth(r);c.items.push(r)}});
  launchTaskRows(store).forEach(r=>{if(r.taskStatus!=="已撤销"){const c=map.get(r.cabinetKey);if(c){c.used+=num(r.needWidth);c.items.push(r)}}});
- for(const c of map.values())c.left=Math.max(0,num(c.length)-c.used);
+ for(const c of map.values()){c.used=Number(c.used.toFixed(1));c.left=Number((num(c.length)-c.used).toFixed(1));c.over=c.left<-.5}
  return [...map.values()];
 }
 function isIceProduct(p){return /雪糕|冰品|冰淇淋|甜筒|冰棒|冰杯/.test([p.name,p.category3,p.category4].join(" "))}
@@ -1185,8 +1201,13 @@ function taskProgressHtml(task){
  return `<div class="coverage"><div class="coverage-bar"><i style="width:${p.pct}%"></i></div><span>${p.done}/${p.total}</span></div>`;
 }
 function taskProductStatus(task){
- const p=productByKey(task.productKey);
- return p?productStatus(p):(task.type==="恢复"&&task.status==="已完成"?"正常在售":task.type==="淘汰"&&task.status==="已完成"?"已淘汰":"-");
+ if(task.status==="已完成"){
+  if(task.type==="上新")return "上新完成";
+  if(task.type==="淘汰")return "淘汰完成";
+  if(task.type==="恢复")return "正常在售";
+ }
+ const p=productByKey(task.productKey)||productByKey(task.productName);
+ return p?productStatus(p):"正常在售";
 }
 
 function renderTasks(){
@@ -1230,6 +1251,12 @@ function renderTaskDetail(){
 }
 function completeTask(id){
  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+ const validation=lifecycleBridge()?.validateTaskCompletion?.(t);
+ if(validation&&validation.ok===false){
+  const first=validation.errors?.[0];
+  toast(`无法完成：${first?.store||"门店"} ${first?.cabinet||"柜段"} 容量不足（剩余${fmt(first?.left)}mm，需要${fmt(first?.need)}mm），请重新生成排位方案`);
+  return;
+ }
  t.status="已完成";
  if(t.type==="上新"){
   (t.rows||[]).forEach(r=>r.status="上新完成");

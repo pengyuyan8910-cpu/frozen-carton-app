@@ -70,7 +70,7 @@
     <section id="lifecycle" class="view product-lifecycle-host">
       <iframe
         id="productLifecycleFrame"
-        data-lifecycle-src="product-lifecycle.html?v=20260806_lifecycle-unified1"
+        data-lifecycle-src="product-lifecycle.html?v=20260806_lifecycle-master2"
         title="产品生命周期管理"
         referrerpolicy="same-origin"
       ></iframe>
@@ -79,10 +79,10 @@
     <section id="logic" class="view"><div class="logic-grid"><section class="panel"><h2>核心口径</h2><div id="logicRules" class="logic-text"></div></section><section class="panel"><h2>指标解释</h2><div class="logic-text"><p><strong>触发库存：</strong>满陈数的10%，低于或等于该水位时触发补货。</p><p><strong>最多可补箱数：</strong>同时考虑柜内剩余空间和754L外储上限，告诉门店本次最多能补几箱。</p><p><strong>动态P95峰值：</strong>按动态平均外储体积乘P95折算系数，作为偏保守的高峰容量参考。</p><p><strong>空位建议：</strong>释放柜段后，优先给出同柜别、不会超宽、不会超外储上限的扩陈或移位方案。</p></div></section></div></section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="product-lifecycle-bridge.js?v=20260806_lifecycle-unified1"></script><script src="lifecycle-host-mode.js?v=20260803_manual2"></script>
-  <script src="bootstrap.js?v=20260729_v5"></script>
+  <script src="product-lifecycle-bridge.js?v=20260806_lifecycle-master2"></script><script src="lifecycle-host-mode.js?v=20260803_manual2"></script>
+  <script src="bootstrap.js?v=20260806_master2"></script>
 <script src="layout-preview-v5.js?v=20260729_v5"></script>
-<script src="store-product-view.js?v=20260806_lifecycle-unified1"></script>
+<script src="store-product-view.js?v=20260806_lifecycle-master2"></script>
 
 <dialog id="cloudDialog" class="cloud-dialog">
   <div class="dialog-header">
@@ -115,7 +115,7 @@
   </section>
   <section class="cloud-section">
     <h3>2. 拉取与保存</h3>
-    <p>请先拉取最新云端版本，修改后保存。若其他成员已更新，系统会自动合并不冲突的修改。</p>
+    <p>请先手动拉取最新云端版本，核对后修改，再手动保存。若伙伴已更新导致版本冲突，本次不会写入，请重新拉取后再保存。</p>
     <div class="cloud-actions">
       <button id="cloudPullBtn" class="cloud-btn" type="button">拉取云端数据</button>
       <button id="cloudPushBtn" class="cloud-btn-primary" type="button">保存至云端</button>

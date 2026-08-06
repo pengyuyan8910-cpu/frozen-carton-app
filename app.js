@@ -94,7 +94,7 @@ function 产品已淘汰完成(item){
  return (状态.lifecycle?.tasks||[]).some(t=>t.type==="淘汰"&&t.status==="已完成"&&aliases.has(文(t.productKey)||文(t.productName)));
 }
 function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included&&!产品已淘汰完成(r))}
-function SKU键(r){return 文(r.barcode)||文(r.name)}
+function SKU键(r){const values=[文(r?.barcode),文(r?.name),文(r?.productKey),文(r?.productName)].filter(Boolean);return values.find(v=>/^\d{8,18}$/.test(v))||values[0]||""}
 function 有效SKU池(){const canonical=window.ProductLifecycle?.getActiveProducts?.();if(Array.isArray(canonical))return canonical;const pool=确保产品池(状态).filter(p=>p.active!==false&&!产品已淘汰完成(p));if(pool.length)return pool;const map=new Map();for(const r of 状态.skus){const key=SKU键(r);if(key&&!map.has(key)&&!产品已淘汰完成(r))map.set(key,r)}return[...map.values()]}
 function 门店已纳入键集合(store=门店名()){const set=new Set();for(const r of 纳入SKU(store)){const key=SKU键(r);if(key)set.add(key)}return set}
 function 门店未纳入SKU(store=门店名()){const set=门店已纳入键集合(store);return 有效SKU池().filter(r=>!set.has(SKU键(r)))}
@@ -137,7 +137,7 @@ function 初始SKU行(id){return (初始数据.skus||[]).find(x=>x.id===id)}
 function 初始SKU宽度(r){return Math.max(0,数(r.displayCols)*数(r.faceWidth))}
 function 建立基准(state){if(!state)return;for(const r of state.skus||[]){const b=初始SKU行(r.id);r._baseIncluded=b?!!b.included:false;r._baseCabinetKey=b?b.cabinetKey:r.cabinetKey;r._baseDisplayCols=b?数(b.displayCols):0;r._baseFaceWidth=b?数(b.faceWidth):数(r.faceWidth);r._baseWidth=b?初始SKU宽度(b):0}state._baselineReady=true}
 function 柜段占用明细(r){const out=new Map();const baseKey=r._baseCabinetKey||r.cabinetKey;const baseWidth=基准宽度(r);const newWidth=r.included?SKU占用宽度(r):0;if(r._baseIncluded!==false&&baseKey)out.set(baseKey,(out.get(baseKey)||0)-baseWidth);if(r.included&&r.cabinetKey)out.set(r.cabinetKey,(out.get(r.cabinetKey)||0)+newWidth);return out}
-function 柜段使用(){const map=new Map(状态.cabinets.map(c=>[c.key,{...c,used:数(c.sourceUsed),items:[]}]));for(const r of 状态.skus){const changed=!!(r.customPlacement||(r.modifiedFields&&r.modifiedFields.length)||r._baseIncluded!==!!r.included||r._baseCabinetKey!==r.cabinetKey||数(r._baseDisplayCols)!==数(r.displayCols)||数(r._baseFaceWidth)!==数(r.faceWidth));if(!changed)continue;const detail=柜段占用明细(r);for(const [cabKey,delta] of detail){const c=map.get(cabKey);if(c)c.used+=delta}}for(const r of 状态.skus){if(!r.included)continue;const c=map.get(r.cabinetKey);if(c)c.items.push({id:r.id,name:r.name,used:SKU占用宽度(r),cols:数(r.displayCols)})}for(const c of map.values()){c.used=Number(Math.max(0,c.used).toFixed(1));c.left=Number((数(c.length)-c.used).toFixed(1));c.over=c.left<0}return[...map.values()]}function 门店汇总(store){const rows=纳入SKU(store);
+function 柜段使用(){const map=new Map(状态.cabinets.map(c=>[c.key,{...c,used:0,items:[]}]));const seen=new Set();for(const r of 状态.skus){if(r.included===false||产品已淘汰完成(r))continue;const duplicateKey=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(duplicateKey&&seen.has(duplicateKey))continue;if(duplicateKey)seen.add(duplicateKey);const c=map.get(r.cabinetKey);if(!c)continue;const used=SKU占用宽度(r);c.used+=used;c.items.push({id:r.id,name:r.name,used,cols:数(r.displayCols)})}for(const c of map.values()){c.used=Number(Math.max(0,c.used).toFixed(1));c.left=Number((数(c.length)-c.used).toFixed(1));c.over=c.left<-.5}return[...map.values()]}function 门店汇总(store){const rows=纳入SKU(store);
 const calcs=rows.map(计算SKU);
 const ext=calcs.filter(c=>c.external>0);
 const skuExternalMap=new Map();
@@ -362,7 +362,7 @@ r.customPlacement=true;
 切换("allocation");
 完成提示("新品试算方案已应用：排柜、柜段余量和外储测算已更新。")};
 window.空位方案缓存={};
-function 柜段内SKU(store,cabKey){return 门店SKU(store).filter(r=>r.included&&r.cabinetKey===cabKey)}
+function 柜段内SKU(store,cabKey){const seen=new Set();return 纳入SKU(store).filter(r=>{if(r.cabinetKey!==cabKey)return false;const k=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(k&&seen.has(k))return false;if(k)seen.add(k);return true})}
 function 缩减候选(store,cabKey,excludeId,gap){let freed=0;
 const reducers=[];
 const items=柜段内SKU(store,cabKey).filter(r=>r.id!==excludeId&&数(r.displayCols)>1).sort((a,b)=>等级分(a.grade)-等级分(b.grade)||数(a.dailyQty)-数(b.dailyQty));
@@ -1187,7 +1187,7 @@ async function pushCloudData() {
   if (lifecycle) payload.lifecycle = structuredClone(lifecycle);
   确保产品池(payload);
   const { data, error } = await saveCloudDocument(payload, docRevision);
-  if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
+  if (error) { if (error.code === 'P0001') return cloudNote('云端版本已更新。为避免覆盖伙伴数据，请手动点击“拉取云端数据”，核对后再点击“保存至云端”。本次没有写入任何数据。', true); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : docRevision + 1;
   cloudBaseData = structuredClone(payload);
@@ -1229,39 +1229,6 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
     if (!l && !r) return null;
     return mergeRecord(b, l, r, label + '#' + k, conflicts);
   }).filter(Boolean);
-}
-
-async function autoMergeCloudConflict() {
-  const { data: remote, error } = await cloudClient.from('carton_documents').select('payload,doc_revision').eq('id', 'main').maybeSingle();
-  if (error || !remote) return cloudNote(error ? translateCloudError(error.message) : '无法读取云端最新版本。', true);
-
-  const conflicts = [];
-  const base = cloudBaseData || remote.payload;
-  const local = cloudCopyState(状态 || 发布状态);
-  const merged = structuredClone(remote.payload);
-  merged.stores = mergeListByKey(base.stores, local.stores, remote.payload.stores, 'store', '门店', conflicts);
-  merged.skus = mergeListByKey(base.skus, local.skus, remote.payload.skus, 'id', 'SKU', conflicts);
-  merged.cabinets = mergeListByKey(base.cabinets, local.cabinets, remote.payload.cabinets, 'key', '柜段', conflicts);
-  merged.productPool = mergeListByKey(base.productPool, local.productPool, remote.payload.productPool, 'id', '产品总池', conflicts);
-  if (cloudSame(local.lifecycle, base.lifecycle)) merged.lifecycle = remote.payload.lifecycle;
-  else if (cloudSame(remote.payload.lifecycle, base.lifecycle) || cloudSame(local.lifecycle, remote.payload.lifecycle)) merged.lifecycle = local.lifecycle;
-  else { conflicts.push('生命周期状态'); merged.lifecycle = remote.payload.lifecycle; }
-  if (conflicts.length) {
-    const list = conflicts.slice(0, 5).join('、');
-    return cloudNote('发现 ' + conflicts.length + ' 处数据冲突：' + list + '。冲突处已采用云端版本，请核对后重新保存。', true);
-  }
-
-  const { data, error: saveErr } = await saveCloudDocument(merged, remote.doc_revision);
-  if (saveErr) return cloudNote(saveErr.message, true);
-  const row = Array.isArray(data) ? data[0] : data;
-  docRevision = row ? row.doc_revision : remote.doc_revision + 1;
-  cloudBaseData = structuredClone(merged);
-  安全保存本地(草稿保存键, merged);
-  安全保存本地(发布保存键, merged);
-  草稿状态 = 清理计算缓存(merged); 发布状态 = 草稿状态; 切换数据源();
-  建立基准(草稿状态); 建立基准(发布状态);
-  渲染全部();
-  cloudNote('已自动合并无冲突修改并保存为第 ' + docRevision + ' 版。');
 }
 
 /* --- 事件绑定（延迟等待 DOM 就绪） --- */

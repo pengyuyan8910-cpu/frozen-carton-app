@@ -76,6 +76,7 @@
   function writeState(next) {
     stateRef = normalizeState(clone(next));
     stateRef.updatedAt = new Date().toISOString();
+    if (dataRef) reconcileLifecycleData(dataRef, stateRef);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef));
     } catch (error) {
@@ -142,7 +143,7 @@
 
   function applyProductPatch(data, patch) {
     if (!data || !patch?.matchKey) return;
-    const match = item => String(item?.barcode || item?.name || "") === String(patch.matchKey);
+    const match = item => identityValues(item).has(clean(patch.matchKey));
     const changes = clone(patch.changes || {});
     const skuChanges = clone(changes);
     delete skuChanges.imageData;
@@ -182,7 +183,6 @@
       ? normalizeState(embedded)
       : local;
     stateRef = state;
-    applyCommittedPatches(dataRef, stateRef);
     writeState(stateRef);
     loadLifecycleFrame();
     return true;
@@ -191,6 +191,7 @@
 function syncData(data) {
     if (!isFormalData(data)) return false;
     dataRef = data;
+    reconcileLifecycleData(dataRef, stateRef || blankState());
     dataRef.lifecycle = clone(stateRef || blankState());
     return true;
   }
@@ -200,8 +201,8 @@ function syncData(data) {
     stateRef = normalizeState(clone(next || blankState()));
     if (isFormalData(data)) dataRef = data;
     if (dataRef) {
+      reconcileLifecycleData(dataRef, stateRef);
       dataRef.lifecycle = clone(stateRef);
-      applyCommittedPatches(dataRef, stateRef);
     }
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef)); } catch (error) {
       console.error("产品生命周期管理：云端状态写入失败", error);
@@ -211,16 +212,12 @@ function syncData(data) {
   }
   function getProduct(task) {
     if (!dataRef) return {};
-    const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
-    const byPool = pool.find(item =>
-      String(item.barcode || item.name || "") === String(task.productKey || "") ||
-      item.name === task.productName
-    );
+const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
+    const byPool = pool.find(item => itemsMatch(item, task));
     if (byPool) return byPool;
-    return (dataRef.skus || []).find(item =>
-      String(item.barcode || item.name || "") === String(task.productKey || "") ||
-      item.name === task.productName
-    ) || {};
+    const byDraft = (stateRef?.draftProducts || []).find(item => itemsMatch(item, task));
+    if (byDraft) return byDraft;
+    return (dataRef.skus || []).find(item => itemsMatch(item, task)) || {};
   }
 
   function buildLaunchRow(task, row, index) {
@@ -405,41 +402,203 @@ function syncData(data) {
     return blank;
   }
 
-  // Canonical lifecycle rule shared by the store view and the operations pool.
-  // Only completed tasks change the visible product state; draft/pending tasks never change counts.
-  function productAliases(product) {
-    return new Set([product?.barcode, product?.name].map(value => String(value || "").trim()).filter(Boolean));
+  // Canonical lifecycle rule shared by every module.
+  function clean(value) {
+    return String(value || "").trim();
   }
-  function taskMatchesProduct(task, product) {
-    const aliases = productAliases(product);
-    return [task?.productKey, task?.productName].some(value => aliases.has(String(value || "").trim()));
+  function looksLikeBarcode(value) {
+    return /^\d{8,18}$/.test(clean(value));
+  }
+  function identityValues(item) {
+    return new Set([item?.barcode, item?.name, item?.productKey, item?.productName]
+      .map(clean).filter(Boolean));
+  }
+  function itemsMatch(left, right) {
+    const leftValues = identityValues(left);
+    return [...identityValues(right)].some(value => leftValues.has(value));
+  }
+  function canonicalKey(item) {
+    const values = [...identityValues(item)];
+    return values.find(looksLikeBarcode) || values[0] || "";
+  }
+  function canonicalProductFields(source, task) {
+    const values = [...new Set([...identityValues(source), ...identityValues(task)])];
+    const barcode = values.find(looksLikeBarcode) || clean(source?.barcode);
+    const name = values.find(value => !looksLikeBarcode(value)) || clean(source?.name);
+    return { ...clone(source || {}), name, barcode, active: true };
   }
   function taskTime(task) {
     const value = task?.completedAt || task?.updatedAt || task?.createdAt || "";
     const time = Date.parse(value);
     return Number.isFinite(time) ? time : 0;
   }
+  function taskMatchesProduct(task, product) {
+    return itemsMatch(task, product);
+  }
+  function productStatusForState(product, state) {
+    if (!product) return "\u6b63\u5e38\u5728\u552e";
+    const completed = (state?.tasks || [])
+      .filter(task => task?.status === "\u5df2\u5b8c\u6210" && taskMatchesProduct(task, product))
+      .sort((left, right) => taskTime(right) - taskTime(left));
+    const latest = completed[0];
+    if (latest?.type === "\u6dd8\u6c70") return "\u6dd8\u6c70\u5b8c\u6210";
+    if (latest?.type === "\u4e0a\u65b0") return "\u4e0a\u65b0\u5b8c\u6210";
+    if (latest?.type === "\u6062\u590d") return "\u6b63\u5e38\u5728\u552e";
+    return product.active === false ? "\u6dd8\u6c70\u5b8c\u6210" : "\u6b63\u5e38\u5728\u552e";
+  }
+  function resolveFormalProduct(item) {
+    return (dataRef?.productPool || []).find(product => itemsMatch(product, item)) || null;
+  }
+  function promoteCompletedLaunches(data, state) {
+    data.productPool = Array.isArray(data.productPool) ? data.productPool : [];
+    state.draftProducts = Array.isArray(state.draftProducts) ? state.draftProducts : [];
+    const completed = (state.tasks || []).filter(task => task.type === "\u4e0a\u65b0" && task.status === "\u5df2\u5b8c\u6210");
+    completed.forEach(task => {
+      let formal = data.productPool.find(product => itemsMatch(product, task));
+      const draft = state.draftProducts.find(product => itemsMatch(product, task));
+      const canonical = canonicalProductFields(formal || draft || {}, task);
+      if (!formal) {
+        canonical.id = canonical.id && !String(canonical.id).startsWith("draft_") ? canonical.id : `pool_${task.id}`;
+        data.productPool.push(canonical);
+        formal = canonical;
+      } else {
+        Object.assign(formal, canonical);
+      }
+      state.draftProducts = state.draftProducts.filter(product => !itemsMatch(product, task));
+    });
+  }
+  function dedupeLifecycleRows(data) {
+    const seen = new Set();
+    data.skus = (data.skus || []).filter((row, index) => {
+      if (!row?.lifecycleTaskId) return true;
+      const key = [row.lifecycleTaskId, row.lifecycleTaskRowId || row.id || index].join("||");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  const MASTER_FIELDS = ["name", "barcode", "grade", "category2", "category3", "category4", "length", "width", "height", "volume", "carton", "dailyQty", "dailySales", "faceWidth"];
+  function syncProductMasterFields(data) {
+    (data.skus || []).forEach(row => {
+      if (Object.prototype.hasOwnProperty.call(row, "imageData")) delete row.imageData;
+      const product = (data.productPool || []).find(item => itemsMatch(item, row));
+      if (!product) return;
+      MASTER_FIELDS.forEach(field => {
+        if (product[field] !== undefined && product[field] !== "") row[field] = clone(product[field]);
+      });
+    });
+  }
+  function rowWidth(row) {
+    return Math.max(0, number(row?.displayCols) * number(row?.faceWidth));
+  }
+  function updateTaskPlacement(state, row) {
+    const task = (state.tasks || []).find(item => item.id === row.lifecycleTaskId);
+    if (!task) return;
+    const taskRow = (task.rows || []).find(item => String(item.id || "") === String(row.lifecycleTaskRowId || "")) ||
+      (task.rows || []).find(item => item.store === row.store && itemsMatch(item, row));
+    if (!taskRow) return;
+    Object.assign(taskRow, {
+      cabinetKey: row.cabinetKey,
+      cabinetLabel: row.cabinetLabel,
+      position: row.position,
+      placementStatus: row.placementStatus || "\u5df2\u6821\u9a8c"
+    });
+  }
+  function repairLifecyclePlacements(data, state) {
+    const cabinets = new Map((data.cabinets || []).map(cabinet => [cabinet.key, { ...cabinet, used: 0 }]));
+    const rows = (data.skus || []).filter(row => row.included !== false && productStatusForState(resolveFormalProduct(row) || row, state) !== "\u6dd8\u6c70\u5b8c\u6210");
+    const baseRows = rows.filter(row => !row.lifecycleTaskId);
+    const generatedRows = rows.filter(row => row.lifecycleTaskId).sort((left, right) => {
+      const leftTask = (state.tasks || []).find(task => task.id === left.lifecycleTaskId);
+      const rightTask = (state.tasks || []).find(task => task.id === right.lifecycleTaskId);
+      return taskTime(leftTask) - taskTime(rightTask);
+    });
+    baseRows.forEach(row => {
+      const cabinet = cabinets.get(row.cabinetKey);
+      if (cabinet) cabinet.used += rowWidth(row);
+    });
+    generatedRows.forEach(row => {
+      const width = rowWidth(row);
+      const current = cabinets.get(row.cabinetKey);
+      let target = current && current.used + width <= number(current.length) + 0.5 ? current : null;
+      if (!target) {
+        const currentKind = current?.kind || current?.type || "";
+        target = [...cabinets.values()]
+          .filter(cabinet => cabinet.store === row.store && cabinet.used + width <= number(cabinet.length) + 0.5)
+          .sort((left, right) => {
+            const leftKind = (left.kind || left.type || "") === currentKind ? 0 : 1;
+            const rightKind = (right.kind || right.type || "") === currentKind ? 0 : 1;
+            if (leftKind !== rightKind) return leftKind - rightKind;
+            return (number(left.length) - left.used - width) - (number(right.length) - right.used - width);
+          })[0] || null;
+      }
+      if (target) {
+        target.used += width;
+        if (!current || target.key !== current.key) {
+          row.cabinetKey = target.key;
+          row.cabinetLabel = target.label;
+          row.position = target.position;
+          row.placementStatus = "\u7cfb\u7edf\u5bb9\u91cf\u7ea0\u6b63";
+        } else {
+          row.placementStatus = "\u5df2\u6821\u9a8c";
+        }
+      } else {
+        row.cabinetKey = "";
+        row.cabinetLabel = "\u5f85\u9009\u533a";
+        row.position = "\u672a\u5206\u914d\u67dc\u6bb5";
+        row.placementStatus = "\u67dc\u6bb5\u5bb9\u91cf\u4e0d\u8db3";
+      }
+      updateTaskPlacement(state, row);
+    });
+  }
+  function reconcileLifecycleData(data, state) {
+    if (!data || !state) return data;
+    dedupeLifecycleRows(data);
+    promoteCompletedLaunches(data, state);
+    applyCommittedPatches(data, state);
+    dedupeLifecycleRows(data);
+    syncProductMasterFields(data);
+    repairLifecyclePlacements(data, state);
+    data.lifecycle = clone(state);
+    return data;
+  }
   function formalProducts() {
     const products = Array.isArray(dataRef?.productPool) ? dataRef.productPool : [];
     const seen = new Set();
     return products.filter(product => {
-      const key = String(product?.barcode || product?.name || "").trim();
+      const key = canonicalKey(product);
       if (!key || seen.has(key)) return false;
-      seen.add(key); return true;
+      seen.add(key);
+      return true;
     });
   }
   function productStatus(product) {
-    if (!product || product.active === false) return "\u6dd8\u6c70\u5b8c\u6210";
-    const completed = (stateRef?.tasks || []).filter(task => task?.status === "\u5df2\u5b8c\u6210" && taskMatchesProduct(task, product));
-    completed.sort((left, right) => taskTime(right) - taskTime(left));
-    const latest = completed[0];
-    if (!latest) return "\u6b63\u5e38\u5728\u552e";
-    if (latest.type === "\u6dd8\u6c70") return "\u6dd8\u6c70\u5b8c\u6210";
-    if (latest.type === "\u4e0a\u65b0") return "\u4e0a\u65b0\u5b8c\u6210";
-    return "\u6b63\u5e38\u5728\u552e";
+    const formal = resolveFormalProduct(product) || product;
+    return productStatusForState(formal, stateRef || blankState());
   }
   function activeProducts() {
     return formalProducts().filter(product => productStatus(product) !== "\u6dd8\u6c70\u5b8c\u6210");
+  }
+  function validateTaskCompletion(task) {
+    if (!task || task.type !== "\u4e0a\u65b0") return { ok: true, errors: [] };
+    const cabinets = new Map((dataRef?.cabinets || []).map(cabinet => [cabinet.key, { ...cabinet, used: 0 }]));
+    (dataRef?.skus || []).filter(row => row.included !== false && productStatus(row) !== "\u6dd8\u6c70\u5b8c\u6210").forEach(row => {
+      const cabinet = cabinets.get(row.cabinetKey);
+      if (cabinet) cabinet.used += rowWidth(row);
+    });
+    const errors = [];
+    (task.rows || []).forEach(row => {
+      const alreadyExists = (dataRef?.skus || []).some(item => item.lifecycleTaskId === task.id && String(item.lifecycleTaskRowId) === String(row.id));
+      if (alreadyExists) return;
+      const cabinet = cabinets.get(row.cabinetKey);
+      const width = Math.max(0, number(row.needWidth) || number(row.displayCols) * number(row.faceWidth));
+      if (!cabinet || cabinet.used + width > number(cabinet.length) + 0.5) {
+        errors.push({ store: row.store, cabinet: row.cabinetLabel || row.cabinetKey, need: width, left: cabinet ? number(cabinet.length) - cabinet.used : 0 });
+        return;
+      }
+      cabinet.used += width;
+    });
+    return { ok: errors.length === 0, errors };
   }
   window.ProductLifecycle = {
     version: VERSION,
@@ -450,6 +609,8 @@ function syncData(data) {
     getFormalProducts: () => clone(formalProducts()),
     getActiveProducts: () => clone(activeProducts()),
     getProductStatus: product => productStatus(product),
+    findProduct: item => clone(resolveFormalProduct(item)),
+    validateTaskCompletion,
     getState: () => clone(stateRef || readLocalState()),
     saveState: writeState,
     resetState,
