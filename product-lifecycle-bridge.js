@@ -142,8 +142,7 @@
 
   function applyProductPatch(data, patch) {
     if (!data || !patch?.matchKey) return;
-    const itemKey = item => { const bc = String(item?.barcode || '').trim(); return bc && bc !== '—' ? bc : String(item?.name || '').trim(); };
-    const match = item => itemKey(item) === String(patch.matchKey);
+    const match = item => String(item?.barcode || item?.name || "") === String(patch.matchKey);
     const changes = clone(patch.changes || {});
     const skuChanges = clone(changes);
     delete skuChanges.imageData;
@@ -152,7 +151,7 @@
   }
 
   function applyCommittedPatches(data, state) {
-    (state.productPatches || []).forEach(patch => { applyProductPatch(data, patch); if (patch.changes?.imageData !== undefined) window.dispatchEvent(new CustomEvent('product-image:updated', { detail: { key: patch.matchKey } })); });
+    (state.productPatches || []).forEach(patch => applyProductPatch(data, patch));
     (state.committedPatches || []).forEach(patch => applyPatch(data, patch));
     data.lifecycle = clone(state);
     return data;
@@ -167,9 +166,6 @@
     applyProductPatch(dataRef, { matchKey, changes });
     writeState(state);
     window.dispatchEvent(new CustomEvent("product-lifecycle:product-updated", { detail: { matchKey, changes: clone(changes) } }));
-    if (changes.imageData !== undefined) {
-      window.dispatchEvent(new CustomEvent("product-image:updated", { detail: { key: matchKey } }));
-    }
     return true;
   }
 
@@ -195,14 +191,7 @@
 function syncData(data) {
     if (!isFormalData(data)) return false;
     dataRef = data;
-    /* data is the source of truth — update stateRef FROM data.lifecycle,
-       never overwrite data.lifecycle with a potentially stale stateRef. */
-    if (data.lifecycle && typeof data.lifecycle === "object") {
-      stateRef = normalizeState(clone(data.lifecycle));
-    } else if (!stateRef) {
-      stateRef = blankState();
-      data.lifecycle = clone(stateRef);
-    }
+    dataRef.lifecycle = clone(stateRef || blankState());
     return true;
   }
 
@@ -375,55 +364,15 @@ function syncData(data) {
     document.getElementById("storeSelect")?.addEventListener("change", syncSelectedStoreToFrame);
   }
 
-  let lifecycleResizeQueued = false;
-  let pendingLifecycleHeight = 0;
-
-  function lifecycleContentHeight(frame, reportedHeight) {
-    try {
-      const doc = frame.contentDocument;
-      const activeView = doc?.querySelector("main > .view.active");
-      if (activeView) {
-        const scrollTop = doc.defaultView?.scrollY || 0;
-        const bottom = activeView.getBoundingClientRect().bottom + scrollTop;
-        return Math.max(760, Math.min(30000, Math.ceil(bottom + 48)));
-      }
-    } catch (error) {
-      console.warn("生命周期页面高度测量失败", error);
-    }
-    return Math.max(760, Math.min(30000, number(reportedHeight) + 8));
-  }
-
-  function resizeLifecycleFrame(frame, reportedHeight) {
-    pendingLifecycleHeight = reportedHeight;
-    if (lifecycleResizeQueued) return;
-    lifecycleResizeQueued = true;
-    requestAnimationFrame(() => {
-      try {
-        const oldHeight = frame.getBoundingClientRect().height;
-        const nextHeight = lifecycleContentHeight(frame, pendingLifecycleHeight);
-        const frameTop = window.scrollY + frame.getBoundingClientRect().top;
-        const shrankMaterially = oldHeight - nextHeight > 120;
-        const viewportBelowNewContent = window.scrollY > frameTop + nextHeight - window.innerHeight + 32;
-
-        if (Math.abs(oldHeight - nextHeight) > 2) {
-          frame.style.height = `${nextHeight}px`;
-        }
-
-        if (shrankMaterially && viewportBelowNewContent) {
-          window.scrollTo({ top: Math.max(0, frameTop - 72), behavior: "auto" });
-        }
-      } finally {
-        lifecycleResizeQueued = false;
-      }
-    });
-  }
-
   function bindFrameMessages() {
     window.addEventListener("message", event => {
       const message = event.data || {};
       if (message.type === "plm:resize") {
         const frame = document.getElementById("productLifecycleFrame");
-        if (frame) resizeLifecycleFrame(frame, message.height);
+        if (frame) {
+          const height = Math.max(760, Math.min(30000, number(message.height) + 8));
+          frame.style.height = `${height}px`;
+        }
       }
       if (message.type === "plm:select-store" && message.store) {
         const select = document.getElementById("storeSelect");
@@ -456,12 +405,51 @@ function syncData(data) {
     return blank;
   }
 
+  // Canonical lifecycle rule shared by the store view and the operations pool.
+  // Only completed tasks change the visible product state; draft/pending tasks never change counts.
+  function productAliases(product) {
+    return new Set([product?.barcode, product?.name].map(value => String(value || "").trim()).filter(Boolean));
+  }
+  function taskMatchesProduct(task, product) {
+    const aliases = productAliases(product);
+    return [task?.productKey, task?.productName].some(value => aliases.has(String(value || "").trim()));
+  }
+  function taskTime(task) {
+    const value = task?.completedAt || task?.updatedAt || task?.createdAt || "";
+    const time = Date.parse(value);
+    return Number.isFinite(time) ? time : 0;
+  }
+  function formalProducts() {
+    const products = Array.isArray(dataRef?.productPool) ? dataRef.productPool : [];
+    const seen = new Set();
+    return products.filter(product => {
+      const key = String(product?.barcode || product?.name || "").trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+  }
+  function productStatus(product) {
+    if (!product || product.active === false) return "\u6dd8\u6c70\u5b8c\u6210";
+    const completed = (stateRef?.tasks || []).filter(task => task?.status === "\u5df2\u5b8c\u6210" && taskMatchesProduct(task, product));
+    completed.sort((left, right) => taskTime(right) - taskTime(left));
+    const latest = completed[0];
+    if (!latest) return "\u6b63\u5e38\u5728\u552e";
+    if (latest.type === "\u6dd8\u6c70") return "\u6dd8\u6c70\u5b8c\u6210";
+    if (latest.type === "\u4e0a\u65b0") return "\u4e0a\u65b0\u5b8c\u6210";
+    return "\u6b63\u5e38\u5728\u552e";
+  }
+  function activeProducts() {
+    return formalProducts().filter(product => productStatus(product) !== "\u6dd8\u6c70\u5b8c\u6210");
+  }
   window.ProductLifecycle = {
     version: VERSION,
     prepareData,
     isFormalData,
     init,
     getData: () => dataRef || window.UNIFIED_CARTON_DATA || null,
+    getFormalProducts: () => clone(formalProducts()),
+    getActiveProducts: () => clone(activeProducts()),
+    getProductStatus: product => productStatus(product),
     getState: () => clone(stateRef || readLocalState()),
     saveState: writeState,
     resetState,

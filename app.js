@@ -67,10 +67,7 @@ function 读取本地(key){try{const raw=localStorage.getItem(key);if(!raw)retur
 function 安全保存本地(key,state){try{localStorage.setItem(key,JSON.stringify(状态补丁(state)));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
 function 保存草稿(){安全保存本地(草稿保存键,草稿状态)}
 function 保存发布(){安全保存本地(发布保存键,发布状态)}function 当前是否运营(){return !!q("#opsMode")?.checked}
-function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态;window.ProductLifecycle?.syncData?.(状态);_debouncedRefreshLifecycle()}
-/* 防抖刷新 iframe：渲染全部()频繁调用切换数据源()，防抖避免短时间内多次 postMessage */
-let _lifecycleRefreshTimer=null;
-function _debouncedRefreshLifecycle(){clearTimeout(_lifecycleRefreshTimer);_lifecycleRefreshTimer=setTimeout(()=>refreshLifecycleData(),150)}
+function 切换数据源(){状态=当前是否运营()?草稿状态:发布状态}
 function 保存(){if(当前是否运营()){草稿状态=状态;保存草稿()}else{发布状态=状态;保存发布()}window.ProductLifecycle?.syncData?.(状态)}
 // Lifecycle edits are part of the same shared document, not a separate browser-only cache.
 window.addEventListener("product-lifecycle:state-changed", event=>{
@@ -90,9 +87,15 @@ function 刷新陈列联动(){
 }
 function 门店名(){return 当前.门店||q("#storeSelect").value||状态.stores[0]?.store||""}
 function 门店SKU(store=门店名()){return 状态.skus.filter(r=>r.store===store)}
-function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included)}
+function 产品已淘汰完成(item){
+ const status=window.ProductLifecycle?.getProductStatus?.(item);
+ if(typeof status==="string")return status==="淘汰完成";
+ const key=SKU键(item);const aliases=new Set([key,文(item?.name),文(item?.barcode)]);
+ return (状态.lifecycle?.tasks||[]).some(t=>t.type==="淘汰"&&t.status==="已完成"&&aliases.has(文(t.productKey)||文(t.productName)));
+}
+function 纳入SKU(store=门店名()){return 门店SKU(store).filter(r=>r.included&&!产品已淘汰完成(r))}
 function SKU键(r){return 文(r.barcode)||文(r.name)}
-function 有效SKU池(){const lifecycle=window.ProductLifecycle?.getState?.()||{};const retired=new Set((lifecycle.tasks||[]).filter(t=>t.type==="淘汰"&&t.status==="已完成").map(t=>文(t.productKey)));const pool=确保产品池(状态).filter(p=>p.active!==false&&!retired.has(SKU键(p)));if(pool.length)return pool;const map=new Map();for(const r of 状态.skus){const key=SKU键(r);if(key&&!map.has(key))map.set(key,r)}return[...map.values()]}
+function 有效SKU池(){const canonical=window.ProductLifecycle?.getActiveProducts?.();if(Array.isArray(canonical))return canonical;const pool=确保产品池(状态).filter(p=>p.active!==false&&!产品已淘汰完成(p));if(pool.length)return pool;const map=new Map();for(const r of 状态.skus){const key=SKU键(r);if(key&&!map.has(key)&&!产品已淘汰完成(r))map.set(key,r)}return[...map.values()]}
 function 门店已纳入键集合(store=门店名()){const set=new Set();for(const r of 纳入SKU(store)){const key=SKU键(r);if(key)set.add(key)}return set}
 function 门店未纳入SKU(store=门店名()){const set=门店已纳入键集合(store);return 有效SKU池().filter(r=>!set.has(SKU键(r)))}
 function 唯一SKU数(rows){const set=new Set();for(const r of rows){const key=SKU键(r);if(key)set.add(key)}return set.size}
@@ -478,7 +481,7 @@ const items=[["门店数",rows.length],["有效SKU池",poolCount],["直接整箱
 q("#metricGrid").innerHTML=items.map(([l,v,c=""])=>'<div class="metric '+c+'"><div class="label">'+l+'</div><div class="value">'+v+"</div></div>").join("");
 const kw=文(q("#overviewSearch").value);
 表格("#storeRank",[{name:"门店",value:r=>r.store,cls:()=>"name"},{name:"类型",value:r=>r.type},{name:"有效SKU池",value:r=>r.poolCount},{name:"纳入SKU",value:r=>r.skuCount},{name:"未纳入SKU",value:r=>r.missingSkuCount,cls:r=>r.missingSkuCount?"warning":"ok"},{name:"直接整箱到店SKU数",value:r=>r.direct},{name:"需外储SKU数",value:r=>r.extSku},{name:"静态满载L",value:r=>格(r.staticVol)},{name:"动态P95L",value:r=>格(r.p95)},{name:"建议外储L",value:r=>格(r.suggested,0),cls:r=>r.ok?"ok":"bad"},{name:"高风险",value:r=>r.high},{name:"极高风险",value:r=>r.extreme},{name:"冰柜资源",value:r=>"立柜："+(r.vertical||"-")+"；卧柜："+(r.chest||"-")+"；冰淇淋："+(r.ice||"-"),cls:()=>"name"}],rows.filter(r=>包含(r,kw)).sort((a,b)=>b.suggested-a.suggested))}
-function 商品列(){return[{name:"商品",value:r=>r.name,cls:()=>"name"},{name:"条码",value:r=>文(r.barcode)},{name:"等级",value:r=>标签(r.grade),html:true},{name:"三级类目",value:r=>r.category3},{name:"场景分区",value:r=>场景分区(r)},{name:"陈列柜",value:r=>柜名(r),cls:()=>"name"},{name:"具体位置",value:r=>柜位(r)},{name:"推荐摆法",value:r=>陈列面方向(r)},{name:"占宽mm",value:r=>格(r.faceWidth,0)},{name:"列数",value:r=>格(r.displayCols,0)},{name:"单列容量",value:r=>格(r.perCol,1)},{name:"满陈",value:r=>计算SKU(r).full},{name:"箱规",value:r=>格(r.carton,0)},{name:"触发库存",value:r=>计算SKU(r).trigger},{name:"可入柜",value:r=>计算SKU(r).receivable},{name:"需外储",value:r=>计算SKU(r).external},{name:"静态外储L",value:r=>格(计算SKU(r).staticVol)},{name:"风险",value:r=>风险标签(计算SKU(r).risk),html:true},{name:"起订量周转",value:r=>r.moqDays?格(r.moqDays):""}]}
+function 商品列(){return[{name:"商品",value:r=>r.name,cls:()=>"name"},{name:"等级",value:r=>标签(r.grade),html:true},{name:"三级类目",value:r=>r.category3},{name:"场景分区",value:r=>场景分区(r)},{name:"陈列柜",value:r=>柜名(r),cls:()=>"name"},{name:"具体位置",value:r=>柜位(r)},{name:"推荐摆法",value:r=>陈列面方向(r)},{name:"占宽mm",value:r=>格(r.faceWidth,0)},{name:"列数",value:r=>格(r.displayCols,0)},{name:"单列容量",value:r=>格(r.perCol,1)},{name:"满陈",value:r=>计算SKU(r).full},{name:"箱规",value:r=>格(r.carton,0)},{name:"触发库存",value:r=>计算SKU(r).trigger},{name:"可入柜",value:r=>计算SKU(r).receivable},{name:"需外储",value:r=>计算SKU(r).external},{name:"静态外储L",value:r=>格(计算SKU(r).staticVol)},{name:"风险",value:r=>风险标签(计算SKU(r).risk),html:true},{name:"起订量周转",value:r=>r.moqDays?格(r.moqDays):""}]}
 function 柜名(r){return 状态.cabinets.find(c=>c.key===r.cabinetKey)?.label||r.cabinetLabel||""}
 function 柜位(r){return 状态.cabinets.find(c=>c.key===r.cabinetKey)?.position||r.position||""}
 function 渲染门店(){const store=门店名();
@@ -1013,124 +1016,6 @@ window.改新增门店SKU=(id,k,v)=>{
 if(q("#opsMode"))q("#opsMode").checked=false; // 初始强制店员模式，密码通过前不显示运营端
 渲染全部();
 
-/* ==================== 全局图片迁移（不依赖 UI 渲染） ====================
- * 页面加载后自动扫描 IndexedDB，将旧 store::name 键的图片迁移到
- * product::barcode 键，并写入 productPool.imageData 用于云端同步。
- * 独立于 sku-inspector / lifecycle-product-detail 的局部迁移。
- * ================================================================= */
-(async function globalImageMigration() {
-  // 不再用 localStorage 标记，每次加载都扫描，但只处理尚未同步的图片（避免重复工作）
-  try {
-    const pool = 确保产品池(状态); if (!pool || !pool.length) return;
-    const nameToProduct = new Map();
-    pool.forEach(p => nameToProduct.set(String(p.name || '').trim(), p));
-
-    const db = await new Promise((resolve, reject) => {
-      const r = indexedDB.open('frozen-carton-product-images', 1);
-      r.onupgradeneeded = () => r.result.createObjectStore('images', { keyPath: 'key' });
-      r.onsuccess = () => resolve(r.result);
-      r.onerror = () => reject(r.error);
-    });
-
-    const keys = await new Promise((res, rej) => {
-      const r = db.transaction('images').objectStore('images').getAllKeys();
-      r.onsuccess = () => res(r.result || []);
-      r.onerror = () => rej(r.error);
-    });
-
-    let migrated = 0;
-    const toCloudImage = file => new Promise((resolve, reject) => {
-      if (typeof file === 'string' && file.startsWith('data:image')) {
-        const img = new Image();
-        img.onload = () => {
-          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.width * ratio));
-          canvas.height = Math.max(1, Math.round(img.height * ratio));
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.70));
-        };
-        img.onerror = () => resolve(file);
-        img.src = file;
-        return;
-      }
-      const reader = new FileReader();
-      reader.onerror = () => reject(reader.error);
-      reader.onload = () => {
-        const img = new Image();
-        img.onerror = () => resolve(reader.result);
-        img.onload = () => {
-          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.width * ratio));
-          canvas.height = Math.max(1, Math.round(img.height * ratio));
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.70));
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    const putImage = (key, file) => new Promise((resolve, reject) => {
-      const r = db.transaction('images', 'readwrite').objectStore('images').put({ key, file, updatedAt: Date.now() });
-      r.onsuccess = resolve;
-      r.onerror = () => reject(r.error);
-    });
-
-    const getImage = key => new Promise((resolve, reject) => {
-      const r = db.transaction('images').objectStore('images').get(key);
-      r.onsuccess = () => resolve(r.result?.file || null);
-      r.onerror = () => reject(r.error);
-    });
-
-    const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, '');
-
-    for (const ok of keys) {
-      const s = String(ok);
-      if (s.startsWith('product::')) continue;
-      const idx = s.indexOf('::');
-      if (idx < 0) continue;
-      const name = s.slice(idx + 2).trim();
-      const normName = norm(name);
-      // 多重策略匹配产品
-      const product = nameToProduct.get(name)
-        || pool.find(p => norm(p.name) === normName)
-        || pool.find(p => norm(p.name).includes(normName) || (normName.length > 2 && normName.includes(norm(p.name))));
-      if (!product) continue;
-
-      const file = await getImage(s);
-      if (!file) continue;
-
-      // 已是 productPool 中的图片则跳过（避免重复工作）
-      if (product.imageData) continue;
-
-      // 写入新键
-      const bc = String(product.barcode || '').trim();
-      const newKey = bc && bc !== '—' ? `product::${bc}` : `product::${String(product.name || '').trim()}`;
-      await putImage(newKey, file);
-
-      // 写入 productPool
-      try {
-        const imageData = await toCloudImage(file);
-        const pk = bc && bc !== '—' ? bc : String(product.name || '').trim();
-        if (pk && window.ProductLifecycle?.updateProduct) {
-          window.ProductLifecycle.updateProduct(pk, { imageData });
-        }
-      } catch (e) { console.error('[global-image-migration] toCloudImage failed for', name, e); }
-      migrated++;
-    }
-
-    if (migrated > 0) {
-      console.log('[global-image-migration] synced', migrated, 'new images to productPool');
-      保存();
-      window.dispatchEvent(new CustomEvent('product-image:updated'));
-    }
-  } catch (e) {
-    console.error('[global-image-migration] error:', e);
-  }
-})();
-
 /* ==================== Supabase 云端多人协作 ====================
  * 配置说明：创建 Supabase 项目后，将以下两个占位符替换为实际值
  *   SUPABASE_URL: 项目 URL (Settings → API → Project URL)
@@ -1140,7 +1025,7 @@ const SUPABASE_URL = 'https://pdlxrolyftdolkwmdwrg.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ehwIMLAALRzB4VRZwQ4quA_yS7Yh7Gg';
 
 let cloudClient = null;
-let docRevision = Number(localStorage.getItem('fc_cloud_doc_revision') || 0);
+let docRevision = 0;
 let cloudBaseData = null;
 
 function ensureCloudClient() {
@@ -1231,75 +1116,31 @@ async function pullCloudData() {
   cloudNote('正在拉取云端数据...');
   const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
   if (error) return cloudNote(translateCloudError(error.message), true);
-  if (!data) { docRevision = 0; localStorage.setItem('fc_cloud_doc_revision', 0); cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击"保存至云端"创建首版底表。'); }
+  if (!data) { docRevision = 0; cloudBaseData = null; return cloudNote('云端尚未初始化。请确认本地数据无误后点击“保存至云端”创建首版底表。'); }
   const p = data.payload;
   if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
 
   // Pull is intentionally authoritative: never merge this browser's old lifecycle cache back in.
   const cloudState = structuredClone(p);
   确保产品池(cloudState);
-  // Debug: check cloud data for images before applying
-  const cloudImgInPool = (cloudState.productPool || []).filter(x => x.imageData).length;
-  const cloudPatches = (cloudState.lifecycle?.productPatches || []).filter(x => x.changes?.imageData).length;
-  console.log('[cloud-pull] productPool items with imageData:', cloudImgInPool, '| patches with imageData:', cloudPatches);
-  // hydrateState applies productPatches to dataRef.productPool, embedding imageData
   window.ProductLifecycle?.hydrateState?.(cloudState.lifecycle || null, cloudState);
-  // Debug: verify images were applied
-  const afterHydrate = (cloudState.productPool || []).filter(x => x.imageData).length;
-  console.log('[cloud-pull] productPool items with imageData AFTER hydrate:', afterHydrate);
   安全保存本地(草稿保存键, cloudState);
   安全保存本地(发布保存键, cloudState);
   草稿状态 = 清理计算缓存(structuredClone(cloudState));
   发布状态 = 清理计算缓存(structuredClone(cloudState));
   切换数据源();
+  window.ProductLifecycle?.syncData?.(状态);
   docRevision = data.doc_revision;
-  localStorage.setItem('fc_cloud_doc_revision', docRevision);
   cloudBaseData = structuredClone(cloudState);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
-  /* 全局同步：刷新产品生命周期管理 iframe，让运营模式也使用最新数据 */
-  reloadLifecycleFrame();
-  const finalImgCount = (window.ProductLifecycle?.getData?.()?.productPool || []).filter(x => x.imageData).length;
-  console.log('[cloud-pull] final dataRef productPool items with imageData:', finalImgCount);
-  cloudNote('已拉取并完全应用云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '，含 ' + finalImgCount + ' 张商品图片）。');
-  window.dispatchEvent(new CustomEvent('product-image:updated'));
+  cloudNote('已拉取并完全应用云端第 ' + docRevision + ' 版（' + new Date(data.updated_at).toLocaleString('zh-CN') + '）。');
 }
-
-/* --- 刷新产品生命周期管理 iframe（全局同步关键步骤） ---
-   用 postMessage 通知 iframe 重新读取数据，比整页刷新更快、不闪烁、不丢失滚动位置。
-   iframe 收到 plm:refresh-data 后会调 loadState()+loadData() 重新从父页面读取最新数据。
-   所有数据变更走 切换数据源()→_debouncedRefreshLifecycle() 自动触发，无需手动调用。 */
-function refreshLifecycleData() {
-  const frame = document.getElementById('productLifecycleFrame');
-  if (!frame) return;
-  if (!frame.getAttribute('src')) {
-    /* iframe 尚未加载，调用 init 触发首次加载 */
-    window.ProductLifecycle?.init?.();
-    return;
-  }
-  try {
-    frame.contentWindow?.postMessage({ type: 'plm:refresh-data' }, '*');
-  } catch(e) {
-    /* 降级：整页刷新 */
-    try { frame.contentWindow?.location?.reload?.(); } catch(e2) {
-      const src = frame.getAttribute('src');
-      frame.removeAttribute('src');
-      requestAnimationFrame(() => frame.setAttribute('src', src));
-    }
-  }
-}
-/* 保留旧函数名作为别名 */
-function reloadLifecycleFrame() { refreshLifecycleData(); }
 
 /* --- 保存至云端 --- */
 const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-function cloudCopyState(st) {
-  const next = 清理计算缓存(st);
-  for(const r of next.skus||[]){delete r.selected;delete r.modifiedFields;delete r.changeNote}
-  delete next._dataSignature;
-  return next;
-}
+function cloudCopyState(st) { return JSON.parse(JSON.stringify(清理交互痕迹(st))); }
 
 function cloudRevisionConflict() {
   return { code: 'P0001', message: 'CONFLICT: cloud data changed; merge the latest revision first.' };
@@ -1339,85 +1180,24 @@ async function saveCloudDocument(payload, expectedRevision) {
 async function pushCloudData() {
   if (!await requireCloudSession()) return;
   cloudNote('正在保存至云端...');
+  保存();
+  // Save the exact dataset currently being operated on, not an older published snapshot.
   const payload = cloudCopyState(状态 || 发布状态);
   const lifecycle = window.ProductLifecycle?.getState?.();
-  if (lifecycle) {
-    payload.lifecycle = lifecycle;
-    (lifecycle.productPatches || []).forEach(patch => {
-      if (!patch?.matchKey || !patch.changes) return;
-      const itemKey = item => { const bc = String(item?.barcode || '').trim(); return bc && bc !== '—' ? bc : String(item?.name || '').trim(); };
-      const match = item => itemKey(item) === String(patch.matchKey);
-      (payload.productPool || []).filter(match).forEach(item => Object.assign(item, patch.changes));
-    });
-  }
+  if (lifecycle) payload.lifecycle = structuredClone(lifecycle);
   确保产品池(payload);
-
-  /* 批量重新压缩图片：360px→200px, 70%→50%, 每张 30KB→~8KB */
-  const pool = payload.productPool || [];
-  let compressed = 0;
-  for (const p of pool) {
-    if (!p.imageData || p.imageData.length < 12000) continue;
-    try {
-      const img = new Image();
-      await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = p.imageData; });
-      const max = 200, ratio = Math.min(1, max / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(img.width * ratio));
-      canvas.height = Math.max(1, Math.round(img.height * ratio));
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      p.imageData = canvas.toDataURL('image/jpeg', 0.5);
-      compressed++;
-    } catch(e) {}
-  }
-
-  const imgCount = pool.filter(p => p.imageData).length;
-
-  /* 用户要求数据以本地为主：强制覆盖云端，不合并。
-     读取当前云端版本号 → 写入 nextRev，无论是否冲突都覆盖。 */
-  const { data: existingRow, error: readErr } = await cloudClient.from('carton_documents').select('doc_revision').eq('id', 'main').maybeSingle();
-  if (readErr) return cloudNote(translateCloudError(readErr.message), true);
-  const currentRev = existingRow?.doc_revision || 0;
-  const nextRev = currentRev + 1;
-  const pushAt = new Date().toISOString();
-  const { data: updateData, error: updateErr } = await cloudClient
-    .from('carton_documents')
-    .update({ payload, doc_revision: nextRev, updated_at: pushAt })
-    .eq('id', 'main')
-    .select('doc_revision,updated_at')
-    .maybeSingle();
-  if (updateErr) return cloudNote(translateCloudError(updateErr.message), true);
-  if (updateData) {
-    const r = Array.isArray(updateData) ? updateData[0] : updateData;
-    docRevision = r ? r.doc_revision : nextRev;
-  } else {
-    /* 行不存在 → 首次插入 */
-    const { data: insData, error: insErr } = await cloudClient
-      .from('carton_documents')
-      .insert({ id: 'main', payload, doc_revision: 1, updated_at: pushAt })
-      .select('doc_revision,updated_at')
-      .single();
-    if (insErr) return cloudNote(translateCloudError(insErr.message), true);
-    const r = Array.isArray(insData) ? insData[0] : insData;
-    docRevision = r ? r.doc_revision : 1;
-  }
-  localStorage.setItem('fc_cloud_doc_revision', docRevision);
-
-  cloudBaseData = payload;
-  草稿状态 = 清理计算缓存(payload);
-  发布状态 = 草稿状态;
+  const { data, error } = await saveCloudDocument(payload, docRevision);
+  if (error) { if (error.code === 'P0001') return autoMergeCloudConflict(); return cloudNote(translateCloudError(error.message), true); }
+  const row = Array.isArray(data) ? data[0] : data;
+  docRevision = row ? row.doc_revision : docRevision + 1;
+  cloudBaseData = structuredClone(payload);
+  安全保存本地(草稿保存键, payload);
+  安全保存本地(发布保存键, payload);
+  草稿状态 = 清理计算缓存(structuredClone(payload));
+  发布状态 = 清理计算缓存(structuredClone(payload));
   切换数据源();
-  /* hydrateState 确保 stateRef 与 lifecycle 同步并写入 localStorage */
-  if (lifecycle) window.ProductLifecycle?.hydrateState?.(lifecycle, 状态);
   window.ProductLifecycle?.syncData?.(状态);
-  /* 全局同步：刷新产品生命周期管理 iframe，确保运营模式数据一致 */
-  reloadLifecycleFrame();
-  cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版（含 ' + imgCount + ' 张商品图片）。');
-  window.dispatchEvent(new CustomEvent('product-image:updated'));
-
-  requestIdleCallback(() => {
-    try { 安全保存本地(草稿保存键, 草稿状态); } catch(e) {}
-    try { 安全保存本地(发布保存键, 发布状态); } catch(e) {}
-  }, { timeout: 2000 });
+  cloudNote('已保存当前完整数据至云端第 ' + docRevision + ' 版。');
 }
 
 /* --- 冲突自动合并 --- */
@@ -1475,131 +1255,14 @@ async function autoMergeCloudConflict() {
   if (saveErr) return cloudNote(saveErr.message, true);
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = row ? row.doc_revision : remote.doc_revision + 1;
-  localStorage.setItem('fc_cloud_doc_revision', docRevision);
   cloudBaseData = structuredClone(merged);
   安全保存本地(草稿保存键, merged);
   安全保存本地(发布保存键, merged);
   草稿状态 = 清理计算缓存(merged); 发布状态 = 草稿状态; 切换数据源();
-  /* hydrateState 确保 stateRef 与合并后的 lifecycle 同步 */
-  if (merged.lifecycle) window.ProductLifecycle?.hydrateState?.(merged.lifecycle, 状态);
-  window.ProductLifecycle?.syncData?.(状态);
   建立基准(草稿状态); 建立基准(发布状态);
   渲染全部();
   cloudNote('已自动合并无冲突修改并保存为第 ' + docRevision + ' 版。');
-  window.dispatchEvent(new CustomEvent('product-image:updated'));
 }
-
-/* --- 调试与修复工具 --- */
-window.debugImageSync = {
-  // 检查本地 productPool 中的图片数量
-  localPool: () => {
-    const data = window.ProductLifecycle?.getData?.();
-    const pool = data?.productPool || [];
-    const withImg = pool.filter(p => p.imageData);
-    console.log('=== 本地 productPool 图片状态 ===');
-    console.log('总数:', pool.length, '| 有图片:', withImg.length);
-    withImg.forEach(p => console.log('  ', p.barcode || p.name, '->', (p.imageData?.length || 0) + ' chars'));
-    return { total: pool.length, withImage: withImg.length };
-  },
-  // 检查 lifecycle patches 中的图片
-  localPatches: () => {
-    const state = window.ProductLifecycle?.getState?.();
-    const patches = state?.productPatches || [];
-    const imgPatches = patches.filter(p => p.changes?.imageData);
-    console.log('=== 本地 lifecycle patches 图片状态 ===');
-    console.log('patches 总数:', patches.length, '| 含图片:', imgPatches.length);
-    imgPatches.forEach(p => console.log('  ', p.matchKey, '->', (p.changes.imageData?.length || 0) + ' chars'));
-    return { total: patches.length, withImage: imgPatches.length };
-  },
-  // 检查云端数据中的图片
-  cloud: async () => {
-    if (!ensureCloudClient()) return console.log('云端未配置');
-    const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
-    if (error || !data) return console.log('云端数据读取失败:', error?.message || '无数据');
-    const pool = data.payload?.productPool || [];
-    const patches = data.payload?.lifecycle?.productPatches || [];
-    const poolImg = pool.filter(p => p.imageData).length;
-    const patchImg = patches.filter(p => p.changes?.imageData).length;
-    console.log('=== 云端图片状态 (revision ' + data.doc_revision + ') ===');
-    console.log('productPool:', pool.length, '项, 有图片:', poolImg);
-    console.log('lifecycle patches:', patches.length, '个, 含图片:', patchImg);
-    console.log('更新时间:', new Date(data.updated_at).toLocaleString('zh-CN'));
-    return { revision: data.doc_revision, poolImg, patchImg };
-  },
-  // 强制重新迁移图片（清除迁移标记）
-  reMigrate: () => {
-    localStorage.removeItem('fc-image-migrated-v2');
-    localStorage.removeItem('fc-image-migrated-v3');
-    console.log('迁移标记已清除，刷新页面后将重新执行图片迁移。');
-  },
-  // 手动将所有 IndexedDB 图片写入 productPool
-  syncAllImages: async () => {
-    const pool = 确保产品池(状态);
-    if (!pool || !pool.length) return console.log('productPool 为空');
-    let count = 0;
-    const db = await new Promise((resolve, reject) => {
-      const r = indexedDB.open('frozen-carton-product-images', 1);
-      r.onupgradeneeded = () => r.result.createObjectStore('images', { keyPath: 'key' });
-      r.onsuccess = () => resolve(r.result);
-      r.onerror = () => reject(r.error);
-    });
-    const getImage = key => new Promise((resolve, reject) => {
-      const r = db.transaction('images').objectStore('images').get(key);
-      r.onsuccess = () => resolve(r.result?.file || null);
-      r.onerror = () => reject(r.error);
-    });
-    const keys = await new Promise((res, rej) => {
-      const r = db.transaction('images').objectStore('images').getAllKeys();
-      r.onsuccess = () => res(r.result || []);
-      r.onerror = () => rej(r.error);
-    });
-    const toCloudImage = file => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(reader.error);
-      reader.onload = () => {
-        const img = new Image();
-        img.onerror = () => resolve(reader.result);
-        img.onload = () => {
-          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.width * ratio));
-          canvas.height = Math.max(1, Math.round(img.height * ratio));
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.70));
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-    for (const p of pool) {
-      const bc = String(p.barcode || '').trim();
-      const key = bc && bc !== '—' ? bc : String(p.name || '').trim();
-      if (!key) continue;
-      // Try new key first, then old store::name keys
-      let file = await getImage(`product::${key}`);
-      if (!file) {
-        // Try matching by name in old keys
-        for (const ok of keys) {
-          const s = String(ok);
-          if (s.startsWith('product::')) continue;
-          if (s.endsWith(`::${p.name}`)) { file = await getImage(s); break; }
-        }
-      }
-      if (!file) continue;
-      try {
-        const imageData = await toCloudImage(file);
-        if (window.ProductLifecycle?.updateProduct) {
-          window.ProductLifecycle.updateProduct(key, { imageData });
-          count++;
-        }
-      } catch (e) { console.error('sync failed for', p.name, e); }
-    }
-    保存();
-    console.log('已将', count, '张图片写入 productPool。请点击"保存至云端"。');
-    window.dispatchEvent(new CustomEvent('product-image:updated'));
-    return count;
-  }
-};
 
 /* --- 事件绑定（延迟等待 DOM 就绪） --- */
 (function bindCloudEvents() {
@@ -1616,162 +1279,8 @@ window.debugImageSync = {
     on('cloudSignOutBtn', cloudSignOut);
     on('cloudPullBtn', pullCloudData);
     on('cloudPushBtn', pushCloudData);
-    on('cloudFixImagesBtn', fixImagesOneClick);
     var dialog = document.getElementById('cloudDialog');
     if (dialog) dialog.addEventListener('click', function (e) { if (e.target === dialog) dialog.close(); });
   }
   tryBind();
 })();
-
-/* --- 一键修复图片（页面按钮调用，无需控制台） --- */
-async function fixImagesOneClick() {
-  cloudNote('正在扫描 IndexedDB 中的图片，请稍候...');
-  try {
-    const dbReq = indexedDB.open('frozen-carton-product-images', 1);
-    const db = await new Promise((resolve, reject) => {
-      dbReq.onupgradeneeded = () => dbReq.result.createObjectStore('images', { keyPath: 'key' });
-      dbReq.onsuccess = () => resolve(dbReq.result);
-      dbReq.onerror = () => reject(dbReq.error);
-    });
-    const records = await new Promise((res, rej) => {
-      const r = db.transaction('images').objectStore('images').getAll();
-      r.onsuccess = () => res(r.result || []);
-      r.onerror = () => rej(r.error);
-    });
-    console.log('[fix-images] IndexedDB 中共有 ' + records.length + ' 张图：');
-    records.forEach(r => {
-      const fileName = (r.file && r.file.name) || '(无文件名)';
-      const size = r.file ? (r.file.size / 1024).toFixed(1) + 'KB' : '?';
-      console.log('  key=' + JSON.stringify(r.key), '| file.name=' + JSON.stringify(fileName), '| size=' + size);
-    });
-
-    const pool = 确保产品池(状态);
-    if (!pool || !pool.length) { cloudNote('⚠️ productPool 为空。', true); return; }
-
-    const norm = s => String(s || '').toLowerCase().replace(/\.[^.]+$/, '').replace(/[\s\-_()（）【】\[\]·]+/g, '');
-    const uniqByName = new Map();
-    pool.forEach(p => {
-      const n = norm(p.name);
-      if (n && !uniqByName.has(n)) uniqByName.set(n, p);
-    });
-    const byBarcode = new Map();
-    pool.forEach(p => {
-      const bc = String(p.barcode || '').trim();
-      if (bc && bc !== '—') byBarcode.set(bc, p);
-    });
-
-    const getImage = async key => {
-      const rec = await new Promise((res, rej) => {
-        const r = db.transaction('images').objectStore('images').get(key);
-        r.onsuccess = () => res(r.result || null);
-        r.onerror = () => rej(r.error);
-      });
-      return rec?.file || null;
-    };
-    const toCloudImage = file => new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onerror = () => reject(reader.error);
-      reader.onload = () => {
-        const img = new Image();
-        img.onerror = () => resolve(reader.result);
-        img.onload = () => {
-          const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(img.width * ratio));
-          canvas.height = Math.max(1, Math.round(img.height * ratio));
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.70));
-        };
-        img.src = reader.result;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    let matchedByKey = 0, matchedByFileName = 0, matchedByLooseKey = 0, unmatched = 0;
-    const unmatchedKeys = [];
-
-    for (const rec of records) {
-      const key = String(rec.key || '');
-      const file = rec.file;
-      if (!file) continue;
-      const fileName = String(file.name || '');
-      let product = null;
-      let matchType = '';
-
-      // 策略 1: 精确 key — product::barcode 或 product::name
-      let candidate = uniqByName.get(norm(key.replace(/^product::/, '').split('::').pop()));
-      if (candidate) { product = candidate; matchType = '精确name'; matchedByKey++; }
-      if (!product && byBarcode.has(key.replace(/^product::/, ''))) {
-        product = byBarcode.get(key.replace(/^product::/, '')); matchType = '精确barcode'; matchedByKey++;
-      }
-
-      // 策略 2: 通过文件名 (file.name) 模糊匹配
-      if (!product) {
-        const fn = norm(fileName);
-        if (fn) {
-          for (const [n, p] of uniqByName) {
-            if (n && (n === fn || fn.includes(n) || n.includes(fn))) { product = p; matchType = '文件名完全包含'; matchedByFileName++; break; }
-          }
-        }
-        if (!product && fn) {
-          for (const p of pool) {
-            const pn = norm(p.name);
-            if (pn && pn.length >= 4 && fn.includes(pn)) { product = p; matchType = '文件名含商品名前缀'; matchedByFileName++; break; }
-          }
-        }
-        if (!product && fn) {
-          for (const [bc, p] of byBarcode) {
-            const bcNorm = norm(bc);
-            if (bcNorm && bcNorm.length >= 8 && fn.includes(bcNorm)) { product = p; matchType = '文件名含条码'; matchedByFileName++; break; }
-          }
-        }
-        if (!product && fn) {
-          for (const p of pool) {
-            const pn = norm(p.name);
-            const pnTail = pn.length >= 6 ? pn.slice(-6) : pn;
-            if (pnTail && pnTail.length >= 6 && fn.includes(pnTail)) { product = p; matchType = '文件名含商品名后缀'; matchedByFileName++; break; }
-          }
-        }
-      }
-
-      // 策略 3: 通过 key 的 :: 后部分模糊匹配（处理 oldKey "门店::商品名"）
-      if (!product) {
-        const seg = key.split('::');
-        const tail = norm(seg[seg.length - 1]);
-        if (tail && tail.length >= 4) {
-          for (const p of pool) {
-            const pn = norm(p.name);
-            if (pn === tail || (pn.length >= 4 && (pn.includes(tail) || tail.includes(pn)))) { product = p; matchType = 'key尾部匹配'; matchedByLooseKey++; break; }
-          }
-        }
-      }
-
-      if (!product) { unmatched++; unmatchedKeys.push(key); console.log('[fix-images] 未匹配:', key, '| file.name=', fileName); continue; }
-
-      try {
-        const imageData = await toCloudImage(file);
-        const mk = String(product.barcode || '').trim() && String(product.barcode || '').trim() !== '—'
-          ? String(product.barcode || '').trim()
-          : String(product.name || '').trim();
-        if (mk && window.ProductLifecycle?.updateProduct) {
-          window.ProductLifecycle.updateProduct(mk, { imageData });
-        }
-        console.log('[fix-images] ✅ ' + matchType + ': ' + product.name + ' ← ' + key + (fileName ? ' [' + fileName + ']' : ''));
-      } catch (e) { console.error('[fix-images] 压缩失败', key, e); }
-    }
-
-    const data = window.ProductLifecycle?.getData?.();
-    const withImg = (data?.productPool || []).filter(p => p.imageData).length;
-    保存();
-    window.dispatchEvent(new CustomEvent('product-image:updated'));
-
-    const summary = '共 ' + records.length + ' 张 ｜ 精确 ' + matchedByKey +
-      ' ｜ 文件名 ' + matchedByFileName + ' ｜ key尾部 ' + matchedByLooseKey +
-      ' ｜ 未匹配 ' + unmatched + ' ｜ productPool ' + withImg + ' 张';
-    cloudNote((unmatched === 0 ? '✅ ' : '⚠️ ') + summary + (unmatched ? '（F12→Console 查看详情，需重新上传未匹配的产品）' : '，请点击「保存至云端」'));
-    console.log('[fix-images]', summary);
-  } catch (e) {
-    cloudNote('修复失败：' + (e.message || e), true);
-    console.error(e);
-  }
-}

@@ -137,7 +137,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
       <div><h2>产品总池</h2><p>统一查看商品生命周期、门店覆盖率和批量操作入口。</p></div>
       <div class="toolbar">
         <input id="poolSearch" type="search" placeholder="搜索商品、条码、类目">
-        <select id="poolStatusFilter"><option value="">全部状态</option><option>正常在售</option><option>待上新</option><option>待淘汰</option><option>恢复中</option><option>已淘汰</option></select>
+        <select id="poolStatusFilter"><option value="">全部状态</option><option>正常在售</option><option>上新完成</option><option>淘汰完成</option></select>
         <button id="exportProductPoolBtn" class="btn" type="button">导出当前产品池</button>
         <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button>
       </div>
@@ -419,8 +419,11 @@ function normalizeData(){
   const m=new Map();data.skus.forEach(r=>{const k=keyOf(r);if(k&&!m.has(k))m.set(k,{...r,id:"pool_"+m.size,active:true})});data.productPool=[...m.values()];
  }
 }
+function lifecycleBridge(){return window.parent&&window.parent!==window?window.parent.ProductLifecycle:null}
 function allProducts(){
- const map=new Map();[...(data?.productPool||[]),...(state.draftProducts||[])].forEach(p=>{const k=keyOf(p);if(k&&!map.has(k))map.set(k,p)});
+ const shared=lifecycleBridge()?.getFormalProducts?.();
+ if(Array.isArray(shared))return shared;
+ const map=new Map();(data?.productPool||[]).forEach(p=>{const k=keyOf(p);if(k&&!map.has(k))map.set(k,p)});
  return [...map.values()];
 }
 function productByKey(k){return allProducts().find(p=>keyOf(p)===k)}
@@ -436,27 +439,16 @@ function launchTaskRows(store){
 function restoreTaskRows(store){
  return state.tasks.filter(t=>t.type==="恢复"&&!["已撤销"].includes(t.status)).flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="暂不恢复").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
 }
+function productAliases(p){return new Set([String(p?.barcode||"").trim(),String(p?.name||"").trim()].filter(Boolean))}
 function productStatus(p){
- const k=keyOf(p);
- const ignored=new Set(["已撤销","部分撤销"]);
- const latest=state.tasks.find(t=>t.productKey===k&&!ignored.has(t.status));
- if(latest){
-  if(latest.type==="恢复"){
-   if(latest.status==="已完成")return "正常在售";
-   if(latest.status==="已撤销")return "待淘汰";
-   return "恢复中";
-  }
-  if(latest.type==="淘汰"){
-   if(["已撤回","部分撤回"].includes(latest.status))return latest.status==="已撤回"?"正常在售":"恢复中";
-   if(latest.status==="已完成")return "已淘汰";
-   return "待淘汰";
-  }
-  if(latest.type==="上新"){
-   return latest.status==="已完成"?"正常在售":"待上新";
-  }
- }
- if(state.draftProducts.some(x=>keyOf(x)===k))return "待上新";
- if(p.active===false)return "已淘汰";
+ const shared=lifecycleBridge()?.getProductStatus?.(p);
+ if(typeof shared==="string")return shared;
+ if(p?.active===false)return "淘汰完成";
+ const aliases=productAliases(p);
+ const completed=(state.tasks||[]).filter(t=>t.status==="已完成"&&[String(t.productKey||"").trim(),String(t.productName||"").trim()].some(k=>aliases.has(k))).sort((a,b)=>Date.parse(b.completedAt||b.updatedAt||b.createdAt||0)-Date.parse(a.completedAt||a.updatedAt||a.createdAt||0));
+ const latest=completed[0];
+ if(latest?.type==="淘汰")return "淘汰完成";
+ if(latest?.type==="上新")return "上新完成";
  return "正常在售";
 }
 function coverageCount(k){
@@ -468,12 +460,7 @@ function coverageCount(k){
 }
 function currentStores(){return data.stores.map(storeName)}
 function gradeTag(g){const x=String(g||"").toLowerCase();return `<span class="tag ${x}">${esc(g||"未评级")}</span>`}
-function statusTag(s){const cls=s==="正常在售"?"status-normal":s==="待上新"?"status-launch":s==="待淘汰"?"status-retire":s==="恢复中"?"status-restore":"status-archived";return `<span class="tag ${cls}">${esc(s)}</span>`}
-function metric(label,value,sub="",cls=""){return `<div class="metric ${cls}"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`}
-function table(cols,rows){
- if(!rows.length)return `<div class="empty">没有匹配数据。</div>`;
- return `<table><thead><tr>${cols.map(c=>`<th>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr>${cols.map(c=>`<td class="${c.cls||""}">${c.render?c.render(r,i):esc(r[c.key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-}
+function statusTag(s){const cls=s==="正常在售"?"status-normal":s==="上新完成"?"status-launch":s==="淘汰完成"?"status-archived":"status-restore";return `<span class="tag ${cls}">${esc(s)}</span>`}
 function switchView(id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
@@ -534,20 +521,17 @@ function renderProductCards(){
 }
 function renderPool(){
  const products=allProducts();
- // 统计口径：有效 SKU 只取运营产品总池中仍启用、且未完成淘汰的正式商品；待上新草稿不计入。
- const effectiveProducts=products.filter(p=>p.active!==false&&!state.draftProducts.some(d=>keyOf(d)===keyOf(p))&&productStatus(p)!=="已淘汰");
+ // 统一口径：仅正式产品池；淘汰完成不计入在售。草稿和未完成任务不改变商品状态或统计。
+ const effectiveProducts=products.filter(p=>productStatus(p)!=="淘汰完成");
  const totalStores=currentStores().length;
- const statuses=effectiveProducts.map(productStatus);
+ const statuses=products.map(productStatus);
  document.getElementById("poolMetrics").innerHTML=[
-  metric("有效SKU",effectiveProducts.length,"运营产品总池中已启用、未淘汰的正式SKU"),
-  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"有效SKU中未进入变更任务","good"),
-  metric("待上新",statuses.filter(x=>x==="待上新").length,"含新品草稿与任务",""),
-  metric("待淘汰",statuses.filter(x=>x==="待淘汰").length,"等待门店执行","warn"),
-  metric("恢复中",statuses.filter(x=>x==="恢复中").length,"恢复原位或重新排位"),
-  metric("坑位资源",state.slots.length,"释放与预留位置"),
-  metric("进行中任务",state.tasks.filter(t=>!["已完成","已撤销"].includes(t.status)).length,"上新、淘汰与恢复")
- ].join("");
- const q=document.getElementById("poolSearch").value.trim(),sf=document.getElementById("poolStatusFilter").value;
+  metric("在售SKU",effectiveProducts.length,"正式产品池中已启用、未淘汰的SKU"),
+  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"未发生已完成生命周期变更","good"),
+  metric("上新完成",statuses.filter(x=>x==="上新完成").length,"已完成上新并计入在售"),
+  metric("淘汰完成",statuses.filter(x=>x==="淘汰完成").length,"已完成淘汰，不计入在售","warn"),
+  metric("坑位资源",state.slots.length,"释放与预留位置")
+ ].join(""); const q=document.getElementById("poolSearch").value.trim(),sf=document.getElementById("poolStatusFilter").value;
  const rows=products.filter(p=>{const s=[p.name,p.barcode,p.category3,p.category4].join(" ");return(!q||s.includes(q))&&(!sf||productStatus(p)===sf)}).sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
  document.getElementById("poolTable").innerHTML=table([
   {name:"商品",cls:"name",render:p=>`<strong>${esc(p.name)}</strong><br><small>${esc(p.barcode||"暂无条码")}</small>`},
@@ -559,9 +543,8 @@ function renderPool(){
   {name:"生命周期",render:p=>statusTag(productStatus(p))},
   {name:"操作",render:p=>{
    const s=productStatus(p),k=esc(keyOf(p));
-   if(s==="待淘汰")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看任务</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">恢复在售</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">继续淘汰</button></div>`;
-   if(s==="恢复中")return `<div class="mini-actions"><button class="mini-btn primary" onclick="openProductTask('${k}','恢复')">查看恢复</button><button class="mini-btn" onclick="prefillRestore('${k}')">调整方案</button></div>`;
-   if(s==="待上新")return `<div class="mini-actions"><button class="mini-btn primary" onclick="prefillLaunch('${k}')">调整上新</button><button class="mini-btn" onclick="openProductTask('${k}','上新')">查看任务</button></div>`;
+   if(s==="淘汰完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看淘汰记录</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">恢复在售</button></div>`;
+   if(s==="上新完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','上新')">查看上新记录</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
    return `<div class="mini-actions"><button class="mini-btn primary" onclick="prefillLaunch('${k}')">上新</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
   }}
  ],rows);
@@ -1396,9 +1379,6 @@ window.addEventListener("message",e=>{
    select.value=msg.store;renderPlanogram();
   }
  }
- if(msg.type==="plm:refresh-data"){
-  state=loadState();loadData().then(()=>{renderAll();notifyParentSize();});
- }
 });
 if("ResizeObserver" in window){
  new ResizeObserver(()=>notifyParentSize()).observe(document.documentElement);
@@ -1411,6 +1391,6 @@ if("ResizeObserver" in window){
  bind();try{await loadData();renderAll();notifyParentSize();}catch(error){showFormalDataError(error);}
 })();
 </script>
-<script src="lifecycle-product-detail.js?v=20260803_cloud3"></script>
+<script src="lifecycle-product-detail.js?v=20260803_manual2"></script>
 </body>
 </html>
