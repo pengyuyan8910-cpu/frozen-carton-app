@@ -201,10 +201,10 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
     <aside class="panel side-note">
       <h3>本版会同时测算</h3>
       <ol>
-        <li>承接已释放或待淘汰坑位</li>
+        <li>承接已释放或淘汰执行中的坑位</li>
         <li>利用柜段自然余量直接上新</li>
         <li>压缩相邻低优先级商品排面</li>
-        <li>替换待淘汰或低优先级商品</li>
+        <li>替换淘汰执行中的商品或低优先级商品</li>
         <li>跨柜段移动原商品后腾出连续位置</li>
         <li>不满足硬约束时暂不上新</li>
       </ol>
@@ -229,8 +229,8 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
     </section>
     <aside class="panel side-note">
       <h3>淘汰后的显示</h3>
-      <div class="legend-stack"><span class="legend-chip retire">待淘汰商品</span><span class="legend-chip release">待释放坑位</span><span class="legend-chip free">已释放空位</span></div>
-      <p>商品不会立刻从陈列图消失。完成撤柜前显示“待淘汰”，撤柜后变为带宽度信息的可用坑位。</p>
+      <div class="legend-stack"><span class="legend-chip retire">淘汰执行中商品</span><span class="legend-chip release">待释放坑位</span><span class="legend-chip free">已释放空位</span></div>
+      <p>商品不会立刻从陈列图消失。完成撤柜前显示“淘汰执行中”，撤柜后变为带宽度信息的可用坑位。</p>
     </aside>
   </div>
   <section class="panel"><div class="panel-title"><div><h2>淘汰影响扫描</h2><p>展示每家门店原位置、释放宽度和后续坑位状态。</p></div></div><div id="retireResult" class="table-wrap"><div class="empty">请选择商品并扫描影响。</div></div></section>
@@ -242,7 +242,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
     <section class="panel form-panel">
       <div class="panel-title">
         <div>
-          <h2>恢复待淘汰商品</h2>
+          <h2>恢复淘汰执行中商品</h2>
           <p>逐店判断原位是否仍可使用；原位被占用时再进入多策略重新排位。</p>
         </div>
       </div>
@@ -310,7 +310,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
       </div>
     </div>
     <div id="restoreResult" class="table-wrap">
-      <div class="empty">请选择待淘汰商品并扫描。</div>
+      <div class="empty">请选择淘汰执行中商品并扫描。</div>
     </div>
   </section>
 </section>
@@ -339,7 +339,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
       <div class="toolbar"><label class="inline-field">门店<select id="planogramStore"></select></label><button id="openCurrentTaskBtn" class="btn">定位当前任务</button></div>
     </div>
     <div id="planogramMetrics" class="metric-grid compact"></div>
-    <div class="planogram-legend" style="padding:0 20px 14px"><span class="legend-chip base">正常陈列</span><span class="legend-chip retire">待淘汰</span><span class="legend-chip launch">待上新</span><span class="legend-chip" style="background:#efeaff;color:#5c3f9a">恢复中</span><span class="legend-chip free">释放空位</span></div>
+    <div class="planogram-legend" style="padding:0 20px 14px"><span class="legend-chip base">正常陈列</span><span class="legend-chip retire">淘汰执行中</span><span class="legend-chip launch">上新执行中</span><span class="legend-chip" style="background:#efeaff;color:#5c3f9a">恢复中</span><span class="legend-chip free">释放空位</span></div>
     <div class="planogram-layout"><div id="planogramCanvas" class="planogram-canvas"></div><aside id="planogramMonitor" class="planogram-monitor"><div class="empty">点击商品或坑位查看联动详情。</div></aside></div>
   </section>
 </section>
@@ -429,8 +429,8 @@ async function loadData(){
  if(!data&&isFormalData(window.UNIFIED_CARTON_DATA))data=window.UNIFIED_CARTON_DATA;
  if(!isFormalData(data))throw new Error(FORMAL_DATA_ERROR);
  normalizeData();
- const productCount=allProducts().length;
- document.getElementById("dataStatus").textContent=`${source}｜${data.stores.length}家门店｜${productCount}个商品｜任务完成后同步正式陈列图`;
+ const productCount=allProducts().filter(product=>productStatus(product)!=="淘汰完成").length;
+ document.getElementById("dataStatus").textContent=`${source}｜${data.stores.length}家门店｜${productCount}个在售SKU｜任务完成后同步正式陈列图`;
  notifyParentSize();
 }
 function normalizeData(){
@@ -472,7 +472,7 @@ function restoreTaskRows(store){
 function productAliases(p){return new Set([String(p?.barcode||"").trim(),String(p?.name||"").trim()].filter(Boolean))}
 function productStatus(p){
  const shared=lifecycleBridge()?.getProductStatus?.(p);if(typeof shared==="string")return shared;
- if(p?.active===false||p?.lifecycleStatus==="淘汰完成")return "淘汰完成";
+ if(p?.active===false||["淘汰完成","已淘汰"].includes(p?.lifecycleStatus))return "淘汰完成";
  return p?.lifecycleStatus==="上新完成"?"上新完成":"在售SKU";
 }
 function coverageCount(k){
@@ -482,7 +482,7 @@ function coverageCount(k){
 }
 function currentStores(){return data.stores.map(storeName)}
 function gradeTag(g){const x=String(g||"").toLowerCase();return `<span class="tag ${x}">${esc(g||"未评级")}</span>`}
-function statusTag(s){const cls=s==="在售SKU"?"status-normal":s==="上新完成"?"status-launch":s==="淘汰完成"?"status-archived":"status-restore";return `<span class="tag ${cls}">${esc(s)}</span>`}
+function statusTag(s){const cls=s==="在售SKU"?"status-normal":["上新完成","上新执行中"].includes(s)?"status-launch":["淘汰完成"].includes(s)?"status-archived":s==="淘汰执行中"?"status-retire":"status-restore";return `<span class="tag ${cls}">${esc(s)}</span>`}
 function metric(label,value,sub="",cls=""){return `<div class="metric ${cls}"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`}
 function table(cols,rows){
  if(!rows.length)return `<div class="empty">没有匹配数据。</div>`;
@@ -578,7 +578,7 @@ function renderPool(){
    const s=productStatus(p),k=esc(keyOf(p));
    if(s==="淘汰完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看淘汰记录</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">恢复在售</button></div>`;
    if(s==="上新完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','上新')">查看上新记录</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
-   return `<div class="mini-actions"><button class="mini-btn primary" onclick="prefillLaunch('${k}')">上新</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
+   return `<div class="mini-actions"><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
   }}
  ],rows);
 }
@@ -746,7 +746,7 @@ function makeLaunchCandidate(p,store,c,o,cols,method,extra={}){
  if(s.strategy==="category")score+=cat.points*1.7;
  if(s.strategy==="minimal")score+=method==="natural"?32:method==="released"?28:method==="pending"?20:-10;
  if(s.strategy==="external")score+=Math.max(0,38-q.externalL*.5)+cols*4;
- const methodName={released:"承接已释放坑位",pending:"承接待淘汰坑位",natural:"利用柜段自然余量",shrink:"压缩相邻商品排面",replace:"替换低优先级商品",move:"跨柜段调位"}[method]||method;
+ const methodName={released:"承接已释放坑位",pending:"承接淘汰执行中的坑位",natural:"利用柜段自然余量",shrink:"压缩相邻商品排面",replace:"替换低优先级商品",move:"跨柜段调位"}[method]||method;
  const adjustment={released:"无需移动商品",pending:"等待原商品撤柜",natural:"无需移动商品",shrink:"调整1个商品排面",replace:"淘汰并替换1个商品",move:"跨柜移动1个商品"}[method]||"";
  return{
   id:`${store}__${method}__${c.key}__${cols}__${extra.shrinkSkuId||extra.replaceSkuId||extra.moveSkuId||extra.sourceSlotId||""}`,
@@ -1123,7 +1123,7 @@ function renderRetireResult(){
  document.getElementById("retireResult").innerHTML=table([
   {name:"门店",cls:"name",render:r=>esc(r.store)},{name:"原位置",render:r=>`${esc(r.cabinetLabel)} ${esc(r.position)}`},
   {name:"原陈列",render:r=>`${fmt(r.displayCols)}列 × ${fmt(r.faceWidth)}mm`},{name:"释放宽度",render:r=>`<strong>${fmt(r.width)}mm</strong>`},
-  {name:"执行方式",render:r=>esc(document.getElementById("retireMode").selectedOptions[0].textContent)},{name:"坑位后续状态",render:r=>statusTag(target==="待释放"?"待淘汰":"已淘汰")}
+  {name:"执行方式",render:r=>esc(document.getElementById("retireMode").selectedOptions[0].textContent)},{name:"坑位后续状态",render:r=>statusTag(target==="待释放"?"淘汰执行中":"淘汰完成")}
  ],retirePlans);
 }
 function applyRetire(){
@@ -1162,7 +1162,7 @@ function renderSlots(){
  document.getElementById("slotTable").innerHTML=table([
   {name:"坑位编号",render:s=>esc(s.id)},{name:"门店",cls:"name",render:s=>esc(s.store)},{name:"位置",render:s=>`${esc(s.cabinetLabel)} ${esc(s.position)}`},
   {name:"可用宽度",render:s=>`<strong>${fmt(s.width)}mm</strong>`},{name:"释放来源",render:s=>esc(s.originalProduct||"-")},{name:"目标新品",render:s=>esc(s.targetProduct||"-")},
-  {name:"状态",render:s=>statusTag(s.status==="待释放"?"待淘汰":s.status==="已释放未分配"?"已淘汰":"待上新")},
+  {name:"状态",render:s=>statusTag(s.status==="待释放"?"淘汰执行中":s.status==="已释放未分配"?"淘汰完成":"上新执行中")},
   {name:"操作",render:s=>s.status==="待释放"?`<button class="mini-btn primary" onclick="completeSlot('${esc(s.id)}')">模拟撤柜完成</button>`:"-"}
  ],rows);
 }
@@ -1315,8 +1315,8 @@ function renderPlanogram(){
  const adjustmentCount=new Set([...shrinkById.keys(),...replaceById.keys(),...moveById.keys()]).size;
  document.getElementById("planogramMetrics").innerHTML=[
   metric("正常陈列",currentStoreRows(store).length,"SKU陈列行"),
-  metric("待淘汰/替换",pendingRetire.length+replaceById.size,"保留原商品状态","warn"),
-  metric("待上新",launches.filter(x=>x.taskStatus!=="已完成").length,"虚拟新品块"),
+  metric("淘汰执行中/替换",pendingRetire.length+replaceById.size,"保留原商品状态","warn"),
+  metric("上新执行中",launches.filter(x=>x.taskStatus!=="已完成").length,"虚拟新品块"),
   metric("联动调整",adjustmentCount+released.length+restores.length,"压缩、替换、移位、恢复","good")
  ].join("");
 
@@ -1349,7 +1349,7 @@ function renderPlanogram(){
       const cols=shrink?num(shrink.shrinkToCols):num(r.displayCols);
       const width=Math.max(num(r.faceWidth),num(r.faceWidth)*Math.max(1,cols));
       let type="base",sub=`${fmt(cols)}列 · ${fmt(width)}mm`,status="正常陈列",kind="商品",task="";
-      if(isRetire){type="retire";status="待淘汰";sub=`待淘汰 · 释放${fmt(skuWidth(r))}mm`}
+      if(isRetire){type="retire";status="淘汰执行中";sub=`淘汰执行中 · 释放${fmt(skuWidth(r))}mm`}
       if(replace){type="replace";status="待替换";sub=`待替换 → ${replace.productName}`;task=replace.taskId}
       if(shrink){type="adjusted";status="排面调整";sub=`${fmt(shrink.shrinkFromCols)}列→${fmt(shrink.shrinkToCols)}列 · 释放${fmt(r.faceWidth)}mm`;task=shrink.taskId}
       if(moved){type="move";status="跨柜调位";sub=`由${r._movePlan.moveFromLabel} ${r._movePlan.moveFromPosition}移入`;task=r._movePlan.taskId}
@@ -1372,7 +1372,7 @@ function renderPlanogram(){
 }
 
 function showMonitor(d){
- const mapped=d.status==="正常陈列"||d.status==="已完成上新"?"在售SKU":d.status==="待淘汰"||d.status==="待替换"?"待淘汰":d.status==="恢复待执行"?"恢复中":d.status==="待门店执行"||d.status==="排面调整"||d.status==="跨柜调位"?"待上新":"已淘汰";
+ const mapped=d.status==="正常陈列"||d.status==="已完成上新"?"在售SKU":d.status==="待淘汰"||d.status==="待替换"?"淘汰执行中":d.status==="恢复待执行"?"恢复中":d.status==="待门店执行"||d.status==="排面调整"||d.status==="跨柜调位"?"上新执行中":"淘汰完成";
  document.getElementById("planogramMonitor").innerHTML=`<h3 class="monitor-title">${esc(d.product||d.kind)}</h3><div class="monitor-status">${statusTag(mapped)}</div><dl class="monitor-grid"><dt>对象类型</dt><dd>${esc(d.kind)}</dd><dt>门店</dt><dd>${esc(d.store)}</dd><dt>陈列柜</dt><dd>${esc(d.cabinet)}</dd><dt>具体位置</dt><dd>${esc(d.position)}</dd><dt>当前联动状态</dt><dd>${esc(d.status)}</dd><dt>占用/释放宽度</dt><dd>${fmt(d.width)}mm</dd><dt>类目/用途</dt><dd>${esc(d.category||"-")}</dd><dt>关联任务</dt><dd>${esc(d.task||"无")}</dd></dl><div class="monitor-note">${esc(d.change||"该区域与产品池状态、任务中心和坑位资源池使用同一套预览状态。")}</div>`;
 }
 window.prefillLaunch=k=>{switchView("launch");document.getElementById("launchProduct").value=k;renderStorePickers();renderProductCards()};

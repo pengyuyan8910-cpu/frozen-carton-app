@@ -130,18 +130,12 @@
   }
 
   function selectedSku(card) {
-    const store = currentStore();
-    const rows = appState().skus || [];
-    const selectedId = appCurrent().陈列图选中SKU;
-    if (selectedId) {
-      const byId = rows.find(function (row) { return row.id === selectedId && row.store === store; });
-      if (byId) return byId;
-    }
     const meta = text(card.querySelector('.selection-meta'));
     const barcode = (meta.split(/[｜|]/)[0] || '').trim();
     const name = text(card.querySelector('.selection-head strong'));
-    return rows.find(function (row) { return row.store === store && String(row.barcode || '') === barcode; }) ||
-      rows.find(function (row) { return row.store === store && row.name === name; }) || null;
+    const rows = appState().skus || [];
+    return rows.find(function (row) { return String(row.barcode || '') === barcode; }) ||
+      rows.find(function (row) { return row.name === name; }) || null;
   }
 
   function enhanceSelectedCard() {
@@ -568,7 +562,7 @@
 
     safeMerge(sheet, 4, 1, 4, lastCol);
     const legend = sheet.getCell(4, 1);
-    legend.value = '颜色：正常陈列=浅绿　外储=浅灰　已修改=浅黄　待上新=浅蓝　待淘汰=浅橙　恢复中=浅紫　空位=白色';
+    legend.value = '颜色：正常陈列=浅绿　外储=浅灰　已修改=浅黄　上新执行中=浅蓝　淘汰执行中=浅橙　恢复中=浅紫　空位=白色';
     applyCellStyle(legend, 'FFFFFFFF', 'FF596861', false);
     legend.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
 

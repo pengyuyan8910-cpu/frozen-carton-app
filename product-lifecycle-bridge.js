@@ -68,23 +68,13 @@
     return state;
   }
 
-  function readLocalState() {
-    try {
-      return normalizeState(JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"));
-    } catch (error) {
-      console.warn("产品生命周期管理：本地状态读取失败", error);
-      return blankState();
-    }
-  }
+  // 生命周期状态只允许嵌套在主文档中，避免运营端与店员端各持一份状态。
+  function readLocalState() { return blankState(); }
 
   function writeState(next) {
     stateRef = normalizeState(clone(next));
     stateRef.updatedAt = new Date().toISOString();
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef));
-    } catch (error) {
-      console.error("产品生命周期管理：本地状态保存失败", error);
-    }
+
     if (dataRef) dataRef.lifecycle = clone(stateRef);
     window.dispatchEvent(new CustomEvent("product-lifecycle:state-changed", { detail: clone(stateRef) }));
     return stateRef;
@@ -125,8 +115,8 @@
 
     if (patch.type === "addSku") {
       const exists = data.skus.some(row =>
-        row.lifecycleTaskId === patch.row?.lifecycleTaskId &&
-        row.lifecycleTaskRowId === patch.row?.lifecycleTaskRowId
+        (row.lifecycleTaskId === patch.row?.lifecycleTaskId && row.lifecycleTaskRowId === patch.row?.lifecycleTaskRowId) ||
+        (row.store === patch.row?.store && row.included !== false && itemsMatch(row, patch.row))
       );
       if (!exists && patch.row) data.skus.push(clone(patch.row));
       return;
@@ -183,13 +173,9 @@
     }
     dataRef = data;
     const embedded = data.lifecycle && typeof data.lifecycle === "object" ? data.lifecycle : null;
-    const local = readLocalState();
-    const state = embedded
-      ? normalizeState(embedded)
-      : local;
+    const state = embedded ? normalizeState(embedded) : blankState();
     stateRef = state;
     reconcileLifecycleData(dataRef, stateRef);
-    persistStateCache();
     return true;
   }
 
@@ -213,16 +199,12 @@ function syncData(data) {
       reconcileLifecycleData(dataRef, stateRef);
       dataRef.lifecycle = clone(stateRef);
     }
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef)); } catch (error) {
-      console.error("产品生命周期管理：云端状态写入失败", error);
-    }
+
     window.dispatchEvent(new CustomEvent("product-lifecycle:state-hydrated", { detail: clone(stateRef) }));
     return clone(stateRef);
   }
   function persistStateCache() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef || blankState())); } catch (error) {
-      console.error("产品生命周期管理：本地状态保存失败", error);
-    }
+
     if (dataRef) dataRef.lifecycle = clone(stateRef || blankState());
   }
   function getProduct(task) {
@@ -411,7 +393,6 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
 
   function resetState() {
     const blank = blankState();
-    try { localStorage.removeItem(STORAGE_KEY); } catch (error) {}
     stateRef = blank;
     if (dataRef) dataRef.lifecycle = clone(blank);
     return blank;
@@ -444,12 +425,17 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   }
   function taskTime(task) {
     const value = task?.completedAt || task?.updatedAt || task?.createdAt || "";
-    const time = Date.parse(value);
+    let time = Date.parse(value);
+    if (!Number.isFinite(time)) time = Date.parse(clean(value).replace(/[年月]/g, "/").replace(/日/g, ""));
+    if (!Number.isFinite(time)) {
+      const idTime = clean(task?.id).match(/(\d{11,14})/);
+      time = idTime ? Number(idTime[1]) : 0;
+    }
     return Number.isFinite(time) ? time : 0;
   }
   function productStatusForState(product) {
     if (!product) return "在售SKU";
-    if (product.active === false || product.lifecycleStatus === "淘汰完成") return "淘汰完成";
+    if (product.active === false || ["淘汰完成", "已淘汰"].includes(product.lifecycleStatus)) return "淘汰完成";
     if (product.lifecycleStatus === "上新完成") return "上新完成";
     return "在售SKU";
   }
@@ -517,21 +503,30 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     return formal;
   }
   function migrateCompletedTasksToMaster(data, state) {
-    if (number(data.lifecycleMasterVersion) >= 3) return;
-    (state.tasks || [])
-      .filter(task => task.status === "已完成")
-      .slice()
-      .sort((left, right) => taskTime(left) - taskTime(right))
-      .forEach(task => applyLifecycleTaskToMaster(data, state, task));
-    data.lifecycleMasterVersion = 3;
+    if (number(data.lifecycleMasterVersion) >= 4) return;
+    // 每个 SKU 只采用最后一个明确完成的任务，未完成任务绝不改变主数据。
+    const latest = new Map();
+    (state.tasks || []).filter(task => task.status === "已完成").forEach((task, index) => {
+      const key = canonicalKey(task);
+      if (!key) return;
+      const candidate = { task, time: taskTime(task), index };
+      const current = latest.get(key);
+      if (!current || candidate.time > current.time || (candidate.time === current.time && candidate.index < current.index)) latest.set(key, candidate);
+    });
+    [...latest.values()].sort((left, right) => left.time - right.time).forEach(item => applyLifecycleTaskToMaster(data, state, item.task));
+    data.lifecycleMasterVersion = 4;
   }
   function dedupeLifecycleRows(data) {
-    const seen = new Set();
+    const taskRows = new Set();
+    const baseRows = new Set((data.skus || []).filter(row => !row?.lifecycleTaskId).map(row => [row.store, canonicalKey(row)].join("||")));
+    const generatedProducts = new Set();
     data.skus = (data.skus || []).filter((row, index) => {
       if (!row?.lifecycleTaskId) return true;
-      const key = [row.lifecycleTaskId, row.lifecycleTaskRowId || row.id || index].join("||");
-      if (seen.has(key)) return false;
-      seen.add(key);
+      const taskKey = [row.lifecycleTaskId, row.lifecycleTaskRowId || row.id || index].join("||");
+      const productKey = [row.store, canonicalKey(row)].join("||");
+      if (taskRows.has(taskKey) || baseRows.has(productKey) || generatedProducts.has(productKey)) return false;
+      taskRows.add(taskKey);
+      generatedProducts.add(productKey);
       return true;
     });
   }
@@ -610,7 +605,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     dedupeLifecycleRows(data);
     rebuildProductCache();
     syncProductMasterFields(data);
-    repairLifecyclePlacements(data, state);
+    // 加载和同步只对账，不在后台自动移动任何门店陈列。容量在编辑与任务完成时拦截。
     data.lifecycle = clone(state);
     rebuildProductCache();
     return data;
@@ -662,7 +657,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     getProductStatus: product => productStatus(product),
     findProduct: item => resolveFormalProduct(item),
     validateTaskCompletion,
-    getState: () => clone(stateRef || readLocalState()),
+    getState: () => clone(stateRef || blankState()),
     saveState: writeState,
     resetState,
     commitCompletedTask,
