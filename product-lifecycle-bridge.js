@@ -1,4 +1,4 @@
-(() => {
+﻿(() => {
   "use strict";
 
   const STORAGE_KEY = "frozen_product_lifecycle_management_v2";
@@ -424,6 +424,28 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     const name = values.find(value => !looksLikeBarcode(value)) || clean(source?.name);
     return { ...clone(source || {}), name, barcode };
   }
+  const PRODUCT_POOL_FIELDS = [
+    "id", "name", "barcode", "grade", "rank", "category2", "category3", "category4",
+    "length", "width", "height", "volume", "carton", "dailyQty", "dailySales", "moq",
+    "moqDays", "faceWidth", "imageData", "imageUrl"
+  ];
+  function productPoolSource(data, state, task) {
+    const draft = (state?.draftProducts || []).find(product => itemsMatch(product, task));
+    if (draft) return draft;
+    return (data?.skus || []).find(row => row?.lifecycleTaskId === task?.id && itemsMatch(row, task)) ||
+      (data?.skus || []).find(row => itemsMatch(row, task)) || null;
+  }
+  function toProductPoolRecord(source, task) {
+    const canonical = canonicalProductFields(source || {}, task);
+    if (!canonical.name || !canonical.barcode) return null;
+    const product = {};
+    PRODUCT_POOL_FIELDS.forEach(field => {
+      if (source && Object.prototype.hasOwnProperty.call(source, field)) product[field] = clone(source[field]);
+    });
+    product.name = canonical.name;
+    product.barcode = canonical.barcode;
+    return product;
+  }
   function taskTime(task) {
     const value = task?.completedAt || task?.updatedAt || task?.createdAt || "";
     let time = Date.parse(value);
@@ -479,19 +501,35 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     }
     return (dataRef?.productPool || []).find(product => itemsMatch(product, item)) || null;
   }
+  function promoteCompletedLaunchTask(data, state, task) {
+    if (!task || task.status !== "已完成" || task.type !== "上新") return { product: null, created: false, reason: "任务未完成或不是上新任务" };
+    data.productPool = Array.isArray(data.productPool) ? data.productPool : [];
+    state.draftProducts = Array.isArray(state.draftProducts) ? state.draftProducts : [];
+    let product = data.productPool.find(item => itemsMatch(item, task));
+    if (product) return { product, created: false, reason: "产品已在总池" };
+    const source = productPoolSource(data, state, task);
+    const record = toProductPoolRecord(source, task);
+    if (!record) return { product: null, created: false, reason: "缺少可核对的商品主数据，未自动建池" };
+    record.id = record.id && !String(record.id).startsWith("draft_") ? record.id : `pool_${task.id}`;
+    product = {
+      ...record,
+      active: true,
+      lifecycleStatus: "上新完成",
+      lifecycleTaskId: task.id,
+      lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
+    };
+    data.productPool.push(product);
+    state.draftProducts = state.draftProducts.filter(item => !itemsMatch(item, task));
+    return { product, created: true, reason: "已从任务对应主数据纳入产品总池" };
+  }
   function applyLifecycleTaskToMaster(data, state, task) {
     if (!task || task.status !== "已完成") return null;
     data.productPool = Array.isArray(data.productPool) ? data.productPool : [];
     state.draftProducts = Array.isArray(state.draftProducts) ? state.draftProducts : [];
     let formal = data.productPool.find(product => itemsMatch(product, task));
     if (task.type === "上新") {
-      const draft = state.draftProducts.find(product => itemsMatch(product, task));
-      if (!formal) {
-        const canonical = canonicalProductFields(draft || {}, task);
-        canonical.id = canonical.id && !String(canonical.id).startsWith("draft_") ? canonical.id : `pool_${task.id}`;
-        data.productPool.push(canonical);
-        formal = canonical;
-      }
+      formal = promoteCompletedLaunchTask(data, state, task).product;
+      if (!formal) return null;
       Object.assign(formal, {
         ...canonicalProductFields(formal, task),
         active: true,
@@ -499,7 +537,6 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
         lifecycleTaskId: task.id,
         lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
       });
-      state.draftProducts = state.draftProducts.filter(product => !itemsMatch(product, task));
     } else if (formal && task.type === "淘汰") {
       Object.assign(formal, {
         active: false,
@@ -516,6 +553,30 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       });
     }
     return formal;
+  }
+  function repairCompletedLaunchTasks() {
+    if (!dataRef) return { ok: false, promoted: [], skipped: [], message: "统一数据尚未加载" };
+    const state = normalizeState(clone(stateRef || blankState()));
+    const promoted = [];
+    const skipped = [];
+    (state.tasks || [])
+      .filter(task => task?.type === "上新" && task?.status === "已完成")
+      .sort((a, b) => taskTime(a) - taskTime(b))
+      .forEach(task => {
+        const before = (dataRef.productPool || []).find(product => itemsMatch(product, task));
+        if (before) return;
+        const result = promoteCompletedLaunchTask(dataRef, state, task);
+        if (result.created) promoted.push({ taskId: task.id, barcode: result.product.barcode, name: result.product.name });
+        else skipped.push({ taskId: task.id, barcode: task.productName, name: task.productKey, reason: result.reason });
+      });
+    rebuildProductCache();
+    if (promoted.length) {
+      writeState(state);
+      const frame = document.getElementById("productLifecycleFrame");
+      frame?.contentWindow?.postMessage({ type: "plm:products-repaired", promoted }, "*");
+      window.dispatchEvent(new CustomEvent("product-lifecycle:data-committed", { detail: { type: "上新入池修复", promoted } }));
+    }
+    return { ok: true, promoted, skipped, message: promoted.length ? `已将 ${promoted.length} 个已完成上新SKU纳入产品总池` : "没有可补齐的已完成上新SKU" };
   }
   function migrateCompletedTasksToMaster(data, state) {
     // 历史任务只用于读取时推导状态；禁止在加载、拉取或页面刷新时改写业务数据。
@@ -603,10 +664,16 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     return { ok: errors.length === 0, errors };
   }
   // 仅用于用户主动“保存至云端”时，将已完成任务这一既有事实写回产品池状态。
-  // 不创建、不删除商品；不触碰 SKU 行、门店、柜段、陈列位置、图片或任何经营字段。
+  // 仅可从对应草稿/任务主数据补齐“已完成上新”且缺失的产品池记录；不删除商品，不触碰 SKU 行、门店、柜段、陈列位置、图片或任何经营字段。
   function buildPersistenceCopy(data) {
     const copy = clone(data || {});
     const persistedState = normalizeState(clone(copy.lifecycle || stateRef || blankState()));
+    // 只在用户明确点击“保存至云端”时补齐历史已完成上新任务；拉取、刷新和读取不会改写原数据。
+    (persistedState.tasks || [])
+      .filter(task => task?.type === "上新" && task?.status === "已完成")
+      .sort((a, b) => taskTime(a) - taskTime(b))
+      .forEach(task => { promoteCompletedLaunchTask(copy, persistedState, task); });
+    copy.lifecycle = clone(persistedState);
     (copy.productPool || []).forEach(product => {
       const latestTask = latestCompletedTaskFor(product, persistedState);
       if (!latestTask) return;
@@ -643,6 +710,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     updateProduct,
     syncData,
     applyCommittedPatches,
-    buildPersistenceCopy
+    buildPersistenceCopy,
+    repairCompletedLaunchTasks
   };
 })();

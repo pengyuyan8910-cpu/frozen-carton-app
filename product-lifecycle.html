@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -157,7 +157,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
         <input id="poolSearch" type="search" placeholder="搜索商品、条码、类目">
         <select id="poolStatusFilter"><option value="">全部状态</option><option>在售SKU</option><option>上新完成</option><option>淘汰完成</option></select>
         <button id="exportProductPoolBtn" class="btn" type="button">导出当前产品池</button>
-        <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button>
+        <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button><button id="repairCompletedLaunchBtn" class="btn" type="button" hidden>整理已完成上新入池</button>
       </div>
     </div>
     <div id="poolTable" class="table-wrap"></div>
@@ -553,8 +553,20 @@ function renderProductCards(){
  render("retireProductCard",document.getElementById("retireProduct").value);
  render("restoreProductCard",document.getElementById("restoreProduct").value);
 }
+function missingCompletedLaunchTasks(){
+ const products=allProducts();
+ return (state.tasks||[])
+  .filter(task=>task?.type==="上新"&&task?.status==="已完成")
+  .filter(task=>!products.some(product=>sameProduct(product,task)));
+}
 function renderPool(){
  const products=allProducts();
+ const repairBtn=document.getElementById("repairCompletedLaunchBtn");
+ const pendingRepairs=missingCompletedLaunchTasks();
+ if(repairBtn){
+  repairBtn.hidden=!pendingRepairs.length;
+  repairBtn.textContent=pendingRepairs.length?`整理 ${pendingRepairs.length} 个已完成上新入池`:"整理已完成上新入池";
+ }
  // 统一口径：仅正式产品池；淘汰完成不计入在售。草稿和未完成任务不改变商品状态或统计。
  const effectiveProducts=products.filter(p=>productStatus(p)!=="淘汰完成");
  const totalStores=currentStores().length;
@@ -1398,6 +1410,16 @@ function bind(){
  document.getElementById("planogramStore").onchange=renderPlanogram;
  document.getElementById("openCurrentTaskBtn").onclick=()=>{if(selectedTaskId)focusTask(selectedTaskId);else toast("请先在任务中心选择任务")};
  document.getElementById("exportProductPoolBtn").onclick=exportProductPoolXlsx;
+ document.getElementById("repairCompletedLaunchBtn").onclick=()=>{
+  const repair=window.parent?.ProductLifecycle?.repairCompletedLaunchTasks?.();
+  if(!repair?.ok){toast(repair?.message||"暂时无法执行修复");return;}
+  if(repair.promoted?.length){
+   state=loadState();
+   data=window.parent?.ProductLifecycle?.getData?.()||data;
+   normalizeData();renderAll();notifyParentSize();
+   toast(`${repair.promoted.length} 个已完成上新SKU已纳入产品总池，请到“云端协作”手动保存`);
+  }else toast(repair.message||"没有可补齐的SKU");
+ };
  document.getElementById("createDraftProductBtn").onclick=()=>document.getElementById("draftProductDialog").showModal();
  document.getElementById("closeDraftDialog").onclick=document.getElementById("cancelDraftProduct").onclick=()=>document.getElementById("draftProductDialog").close();
  document.getElementById("draftProductForm").onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);const p=Object.fromEntries(f.entries());["length","width","height","carton","volume"].forEach(k=>p[k]=num(p[k]));if(!p.volume)p.volume=p.length*p.width*p.height/1e6;p.id="draft_"+Date.now();p.active=true;p.rank=9999;state.draftProducts.push(p);saveState();document.getElementById("draftProductDialog").close();e.currentTarget.reset();renderAll();prefillLaunch(keyOf(p));toast("新品草稿已加入产品总池")};
@@ -1418,6 +1440,12 @@ function notifyParentSize(){
 }
 window.addEventListener("message",e=>{
  const msg=e.data||{};
+ if(msg.type==="plm:products-repaired"){
+  state=loadState();
+  data=window.parent?.ProductLifecycle?.getData?.()||data;
+  normalizeData();renderAll();notifyParentSize();
+  if(msg.promoted?.length)toast(`${msg.promoted.length} 个已完成上新SKU已纳入产品总池，请手动保存云端`);
+ }
  if(msg.type==="plm:set-store"&&msg.store){
   const select=document.getElementById("planogramStore");
   if(select&&[...select.options].some(o=>o.value===msg.store)){

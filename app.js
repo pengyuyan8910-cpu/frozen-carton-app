@@ -1,4 +1,4 @@
-const 初始数据=window.UNIFIED_CARTON_DATA;
+﻿const 初始数据=window.UNIFIED_CARTON_DATA;
 const 复核报告=window.UNIFIED_CARTON_REPORT||{};
 const 草稿保存键="frozen_carton_unified_scene_draft_v1";
 const 发布保存键="frozen_carton_unified_scene_published_v1";
@@ -1241,7 +1241,8 @@ async function pushCloudData() {
   // Save the exact dataset currently being operated on, not an older published snapshot.
   const payload = cloudCopyState(状态 || 发布状态);
   const lifecycle = window.ProductLifecycle?.getState?.();
-  if (lifecycle) payload.lifecycle = structuredClone(lifecycle);
+  // buildPersistenceCopy 已在手动保存时生成去草稿、任务状态一致的生命周期快照；不要再用旧 state 覆盖它。
+  if (lifecycle && !payload.lifecycle) payload.lifecycle = structuredClone(lifecycle);
   确保产品池(payload);
   const { data, error } = await saveCloudDocument(payload, docRevision);
   if (error) { if (error.code === 'P0001') return cloudNote('云端版本已更新。为避免覆盖伙伴数据，请手动点击“拉取云端数据”，核对后再点击“保存至云端”。本次没有写入任何数据。', true); return cloudNote(translateCloudError(error.message), true); }
