@@ -436,7 +436,7 @@ async function loadData(){
 function normalizeData(){
  data.stores=(data.stores||[]).map(s=>typeof s==="string"?{store:s}:s).filter(s=>s.store);
  data.cabinets=(data.cabinets||[]).map((c,i)=>({...c,id:c.id||"cab_"+i,key:c.key||`${c.store}__${c.label}__${c.position}`,length:num(c.length)||710,depth:num(c.depth)||534,height:num(c.height)||250}));
- data.skus=(data.skus||[]).filter(r=>r.included!==false);
+ data.skus=Array.isArray(data.skus)?data.skus:[];
  if(!Array.isArray(data.productPool)||!data.productPool.length){
   const m=new Map();data.skus.forEach(r=>{const k=keyOf(r);if(k&&!m.has(k))m.set(k,{...r,id:"pool_"+m.size,active:true})});data.productPool=[...m.values()];
  }
@@ -452,7 +452,7 @@ function productByKey(k){
  const probe={productKey:k};
  return lifecycleBridge()?.findProduct?.(probe)||allProducts().find(p=>sameProduct(p,probe))||(state.draftProducts||[]).find(p=>sameProduct(p,probe));
 }
-function rowsForProduct(k){const probe={productKey:k};return data.skus.filter(r=>sameProduct(r,probe))}
+function rowsForProduct(k){const probe={productKey:k};return data.skus.filter(r=>r.included!==false&&sameProduct(r,probe))}
 function currentStoreRows(store){
  const removedStatuses=new Set(["已释放未分配","已预留给新品"]);
  const removedIds=new Set(state.slots.filter(s=>s.store===store&&removedStatuses.has(s.status)).map(s=>String(s.originalSkuId)));
@@ -1270,7 +1270,7 @@ function renderTaskDetail(){
  selectedTaskId=t.id;
  const terminal=["已完成","已撤销","已撤回"].includes(t.status);
  const progress=taskProgress(t);
- el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" onclick="completeTask('${esc(t.id)}')" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button></div></div>`+
+ el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" type="button" data-complete-task="${esc(t.id)}" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button></div></div>`+
  table([
   {name:"门店",cls:"name",render:r=>esc(r.store)},
   {name:"位置",render:r=>`${esc(r.cabinetLabel||"-")} ${esc(r.position||"")}`},
@@ -1394,6 +1394,10 @@ window.completeSlot=completeSlot;window.showTask=showTask;window.completeTask=co
 
 function bind(){
  document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+ document.getElementById("taskDetail").onclick=e=>{
+  const button=e.target.closest("[data-complete-task]");
+  if(button&&!button.disabled)completeTask(button.dataset.completeTask);
+ };
  ["poolSearch","poolStatusFilter"].forEach(id=>document.getElementById(id).oninput=renderPool);
  ["slotSearch","slotStatusFilter"].forEach(id=>document.getElementById(id).oninput=renderSlots);
  document.getElementById("launchProduct").onchange=()=>{renderStorePickers();renderProductCards();launchPlans=[];renderLaunchResult()};
@@ -1440,7 +1444,13 @@ function notifyParentSize(){
 }
 window.addEventListener("message",e=>{
  const msg=e.data||{};
- if(msg.type==="plm:products-repaired"){
+ if(msg.type==="plm:state-hydrated"||msg.type==="plm:data-refreshed"){
+  state=loadState();
+  data=window.parent?.ProductLifecycle?.getData?.()||data;
+  normalizeData();
+  launchPlans=[];retirePlans=[];restorePlans=[];
+  renderAll();notifyParentSize();
+ } if(msg.type==="plm:products-repaired"){
   state=loadState();
   data=window.parent?.ProductLifecycle?.getData?.()||data;
   normalizeData();renderAll();notifyParentSize();

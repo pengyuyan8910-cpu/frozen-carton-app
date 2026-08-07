@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   "use strict";
 
   const STORAGE_KEY = "frozen_product_lifecycle_management_v2";
@@ -179,7 +179,11 @@
     return true;
   }
 
-function syncData(data) {
+  function notifyLifecycleFrame(type = "plm:data-refreshed") {
+    const frame = document.getElementById("productLifecycleFrame");
+    frame?.contentWindow?.postMessage({ type }, "*");
+  }
+  function syncData(data) {
     if (!isFormalData(data)) return false;
     if (data === dataRef) {
       if (stateRef) data.lifecycle = clone(stateRef);
@@ -188,6 +192,7 @@ function syncData(data) {
     dataRef = data;
     reconcileLifecycleData(dataRef, stateRef || blankState());
     dataRef.lifecycle = clone(stateRef || blankState());
+    notifyLifecycleFrame();
     return true;
   }
 
@@ -201,6 +206,7 @@ function syncData(data) {
     }
 
     window.dispatchEvent(new CustomEvent("product-lifecycle:state-hydrated", { detail: clone(stateRef) }));
+    notifyLifecycleFrame("plm:state-hydrated");
     return clone(stateRef);
   }
   function persistStateCache() {
@@ -645,12 +651,44 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   function validateTaskCompletion(task) {
     if (!task || task.type !== "\u4e0a\u65b0") return { ok: true, errors: [] };
     const cabinets = new Map((dataRef?.cabinets || []).map(cabinet => [cabinet.key, { ...cabinet, used: 0 }]));
-    (dataRef?.skus || []).filter(row => row.included !== false && productStatus(row) !== "\u6dd8\u6c70\u5b8c\u6210").forEach(row => {
+    const taskRows = Array.isArray(task.rows) ? task.rows : [];
+    const sourceById = new Map((dataRef?.skus || []).map(row => [String(row.id), row]));
+    const removedIds = new Set();
+    const shrinkRows = new Map();
+    const moveRows = new Map();
+    taskRows.forEach(row => {
+      if (row.sourceSkuId) removedIds.add(String(row.sourceSkuId));
+      if (row.originalSkuId) removedIds.add(String(row.originalSkuId));
+      if (row.sourceSlotId) {
+        const slot = (stateRef?.slots || []).find(item => String(item.id) === String(row.sourceSlotId));
+        if (slot?.originalSkuId) removedIds.add(String(slot.originalSkuId));
+      }
+      if (row.replaceSkuId) removedIds.add(String(row.replaceSkuId));
+      if (row.shrinkSkuId) {
+        const source = sourceById.get(String(row.shrinkSkuId));
+        if (source) shrinkRows.set(String(row.shrinkSkuId), { source, row });
+      }
+      if (row.moveSkuId) {
+        const source = sourceById.get(String(row.moveSkuId));
+        if (source) moveRows.set(String(row.moveSkuId), { source, row });
+      }
+    });
+    // 先扣除本次方案会释放、替换、压缩或移位的原排面，再验证新品写入后的柜段容量。
+    (dataRef?.skus || []).filter(row => row.included !== false && productStatus(row) !== "\u6dd8\u6c70\u5b8c\u6210" && !removedIds.has(String(row.id)) && !shrinkRows.has(String(row.id)) && !moveRows.has(String(row.id))).forEach(row => {
       const cabinet = cabinets.get(row.cabinetKey);
       if (cabinet) cabinet.used += rowWidth(row);
     });
+    shrinkRows.forEach(({ source, row }) => {
+      const cabinet = cabinets.get(source.cabinetKey);
+      const cols = Math.max(0, number(row.shrinkToCols || row.displayCols || source.displayCols));
+      if (cabinet) cabinet.used += cols * Math.max(1, number(row.shrinkFaceWidth || source.faceWidth));
+    });
+    moveRows.forEach(({ source, row }) => {
+      const target = cabinets.get(row.moveToKey || row.moveToCabinetKey);
+      if (target) target.used += rowWidth({ displayCols: row.moveToCols || source.displayCols, faceWidth: row.moveToFaceWidth || source.faceWidth });
+    });
     const errors = [];
-    (task.rows || []).forEach(row => {
+    taskRows.forEach(row => {
       const alreadyExists = (dataRef?.skus || []).some(item => item.lifecycleTaskId === task.id && String(item.lifecycleTaskRowId) === String(row.id));
       if (alreadyExists) return;
       const cabinet = cabinets.get(row.cabinetKey);
@@ -662,8 +700,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       cabinet.used += width;
     });
     return { ok: errors.length === 0, errors };
-  }
-  // 仅用于用户主动“保存至云端”时，将已完成任务这一既有事实写回产品池状态。
+  }  // 仅用于用户主动“保存至云端”时，将已完成任务这一既有事实写回产品池状态。
   // 仅可从对应草稿/任务主数据补齐“已完成上新”且缺失的产品池记录；不删除商品，不触碰 SKU 行、门店、柜段、陈列位置、图片或任何经营字段。
   function buildPersistenceCopy(data) {
     const copy = clone(data || {});
