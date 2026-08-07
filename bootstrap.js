@@ -1,8 +1,9 @@
 (async function 启动数据加载(){
+  const DATA_VERSION = "20260807_master3";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
-    const res = await fetch(`${file}?v=${Date.now()}`, { cache: "no-store" });
+    const res = await fetch(`${file}?v=${DATA_VERSION}`, { cache: "default" });
     if (!res.ok) throw new Error(`${file} 加载失败：${res.status}`);
     return res.json();
   };
@@ -19,11 +20,10 @@
     window.UNIFIED_CARTON_DATA = data;
     window.UNIFIED_CARTON_REPORT = report || {};
     window.UNIFIED_CARTON_VERSION = version || {};
-    if (window.ProductLifecycle?.prepareData) window.ProductLifecycle.prepareData(data);
     const status = report?.passed === false ? "复核失败" : "复核通过";
     setNote(`${data.meta?.version || "10%触发"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
     const app = document.createElement("script");
-    app.src = `app.js?v=${Date.now()}`;
+    app.src = `app.js?v=${DATA_VERSION}`;
     app.onload = () => window.ProductLifecycle?.init?.();
     app.onerror = () => setNote("程序加载失败，请联系运营");
     document.body.appendChild(app);

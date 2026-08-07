@@ -7,6 +7,10 @@
   let dataRef = null;
   let stateRef = null;
   let initialized = false;
+  let productIndex = new Map();
+  let formalCache = [];
+  let activeCache = [];
+  let activeAliasCache = new Set();
 
   const clone = value => JSON.parse(JSON.stringify(value));
   const number = value => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -76,7 +80,6 @@
   function writeState(next) {
     stateRef = normalizeState(clone(next));
     stateRef.updatedAt = new Date().toISOString();
-    if (dataRef) reconcileLifecycleData(dataRef, stateRef);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef));
     } catch (error) {
@@ -165,8 +168,10 @@
     if (existing) Object.assign(existing.changes, clone(changes));
     else state.productPatches.push({ matchKey, changes: clone(changes), updatedAt: new Date().toISOString() });
     applyProductPatch(dataRef, { matchKey, changes });
+    rebuildProductCache();
     writeState(state);
     window.dispatchEvent(new CustomEvent("product-lifecycle:product-updated", { detail: { matchKey, changes: clone(changes) } }));
+    if (Object.prototype.hasOwnProperty.call(changes, "imageData")) window.dispatchEvent(new CustomEvent("product-image:updated", { detail: { matchKey } }));
     return true;
   }
 
@@ -183,13 +188,17 @@
       ? normalizeState(embedded)
       : local;
     stateRef = state;
-    writeState(stateRef);
-    loadLifecycleFrame();
+    reconcileLifecycleData(dataRef, stateRef);
+    persistStateCache();
     return true;
   }
 
 function syncData(data) {
     if (!isFormalData(data)) return false;
+    if (data === dataRef) {
+      if (stateRef) data.lifecycle = clone(stateRef);
+      return true;
+    }
     dataRef = data;
     reconcileLifecycleData(dataRef, stateRef || blankState());
     dataRef.lifecycle = clone(stateRef || blankState());
@@ -210,6 +219,12 @@ function syncData(data) {
     window.dispatchEvent(new CustomEvent("product-lifecycle:state-hydrated", { detail: clone(stateRef) }));
     return clone(stateRef);
   }
+  function persistStateCache() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stateRef || blankState())); } catch (error) {
+      console.error("产品生命周期管理：本地状态保存失败", error);
+    }
+    if (dataRef) dataRef.lifecycle = clone(stateRef || blankState());
+  }
   function getProduct(task) {
     if (!dataRef) return {};
 const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
@@ -226,7 +241,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       id: `lifecycle_${task.id}_${index}`,
       lifecycleTaskId: task.id,
       lifecycleTaskRowId: row.id || `${task.id}_${index}`,
-      lifecycleStatus: "正常在售",
+      lifecycleStatus: "上新完成",
       store: row.store,
       included: true,
       active: true,
@@ -291,7 +306,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
         const changes = {
           included: true,
           active: true,
-          lifecycleStatus: "正常在售",
+          lifecycleStatus: "在售SKU",
           lifecycleTaskId: task.id
         };
         if (row.restoreMethod === "replan") {
@@ -325,6 +340,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     if (!task || task.status !== "已完成") return false;
     const state = normalizeState(nextState || stateRef || blankState());
     const existing = new Set((state.committedPatches || []).map(item => item.id));
+    if (dataRef) applyLifecycleTaskToMaster(dataRef, state, task);
     patchesForTask(task).forEach(patch => {
       if (!existing.has(patch.id)) {
         state.committedPatches.push(patch);
@@ -332,6 +348,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
         if (dataRef) applyPatch(dataRef, patch);
       }
     });
+    rebuildProductCache();
     writeState(state);
     if (dataRef) dataRef.lifecycle = clone(stateRef);
     window.dispatchEvent(new CustomEvent("product-lifecycle:data-committed", {
@@ -353,6 +370,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     if (!tab || !view) return;
 
     tab.addEventListener("click", () => {
+      loadLifecycleFrame();
       document.querySelectorAll(".tabs button").forEach(button => button.classList.toggle("active", button === tab));
       document.querySelectorAll("main > .view").forEach(section => section.classList.toggle("active", section === view));
       syncSelectedStoreToFrame();
@@ -388,10 +406,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     bindFrameMessages();
     const frame = document.getElementById("productLifecycleFrame");
     frame?.addEventListener("load", syncSelectedStoreToFrame);
-    if (isFormalData(dataRef || window.UNIFIED_CARTON_DATA)) {
-      if (!dataRef) prepareData(window.UNIFIED_CARTON_DATA);
-      else loadLifecycleFrame();
-    }
+    if (isFormalData(dataRef || window.UNIFIED_CARTON_DATA) && !dataRef) prepareData(window.UNIFIED_CARTON_DATA);
   }
 
   function resetState() {
@@ -425,47 +440,90 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     const values = [...new Set([...identityValues(source), ...identityValues(task)])];
     const barcode = values.find(looksLikeBarcode) || clean(source?.barcode);
     const name = values.find(value => !looksLikeBarcode(value)) || clean(source?.name);
-    return { ...clone(source || {}), name, barcode, active: true };
+    return { ...clone(source || {}), name, barcode };
   }
   function taskTime(task) {
     const value = task?.completedAt || task?.updatedAt || task?.createdAt || "";
     const time = Date.parse(value);
     return Number.isFinite(time) ? time : 0;
   }
-  function taskMatchesProduct(task, product) {
-    return itemsMatch(task, product);
+  function productStatusForState(product) {
+    if (!product) return "在售SKU";
+    if (product.active === false || product.lifecycleStatus === "淘汰完成") return "淘汰完成";
+    if (product.lifecycleStatus === "上新完成") return "上新完成";
+    return "在售SKU";
   }
-  function productStatusForState(product, state) {
-    if (!product) return "\u6b63\u5e38\u5728\u552e";
-    const completed = (state?.tasks || [])
-      .filter(task => task?.status === "\u5df2\u5b8c\u6210" && taskMatchesProduct(task, product))
-      .sort((left, right) => taskTime(right) - taskTime(left));
-    const latest = completed[0];
-    if (latest?.type === "\u6dd8\u6c70") return "\u6dd8\u6c70\u5b8c\u6210";
-    if (latest?.type === "\u4e0a\u65b0") return "\u4e0a\u65b0\u5b8c\u6210";
-    if (latest?.type === "\u6062\u590d") return "\u6b63\u5e38\u5728\u552e";
-    return product.active === false ? "\u6dd8\u6c70\u5b8c\u6210" : "\u6b63\u5e38\u5728\u552e";
+  function rebuildProductCache() {
+    productIndex = new Map();
+    formalCache = [];
+    activeCache = [];
+    activeAliasCache = new Set();
+    const seen = new Set();
+    for (const product of (dataRef?.productPool || [])) {
+      const productKey = canonicalKey(product);
+      if (!productKey || seen.has(productKey)) continue;
+      seen.add(productKey);
+      formalCache.push(product);
+      for (const value of identityValues(product)) productIndex.set(value, product);
+      if (productStatusForState(product) !== "淘汰完成") {
+        activeCache.push(product);
+        for (const value of identityValues(product)) activeAliasCache.add(value);
+      }
+    }
   }
   function resolveFormalProduct(item) {
+    for (const value of identityValues(item)) {
+      const found = productIndex.get(value);
+      if (found) return found;
+    }
     return (dataRef?.productPool || []).find(product => itemsMatch(product, item)) || null;
   }
-  function promoteCompletedLaunches(data, state) {
+  function applyLifecycleTaskToMaster(data, state, task) {
+    if (!task || task.status !== "已完成") return null;
     data.productPool = Array.isArray(data.productPool) ? data.productPool : [];
     state.draftProducts = Array.isArray(state.draftProducts) ? state.draftProducts : [];
-    const completed = (state.tasks || []).filter(task => task.type === "\u4e0a\u65b0" && task.status === "\u5df2\u5b8c\u6210");
-    completed.forEach(task => {
-      let formal = data.productPool.find(product => itemsMatch(product, task));
+    let formal = data.productPool.find(product => itemsMatch(product, task));
+    if (task.type === "上新") {
       const draft = state.draftProducts.find(product => itemsMatch(product, task));
-      const canonical = canonicalProductFields(formal || draft || {}, task);
       if (!formal) {
+        const canonical = canonicalProductFields(draft || {}, task);
         canonical.id = canonical.id && !String(canonical.id).startsWith("draft_") ? canonical.id : `pool_${task.id}`;
         data.productPool.push(canonical);
         formal = canonical;
-      } else {
-        Object.assign(formal, canonical);
       }
+      Object.assign(formal, {
+        ...canonicalProductFields(formal, task),
+        active: true,
+        lifecycleStatus: "上新完成",
+        lifecycleTaskId: task.id,
+        lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
+      });
       state.draftProducts = state.draftProducts.filter(product => !itemsMatch(product, task));
-    });
+    } else if (formal && task.type === "淘汰") {
+      Object.assign(formal, {
+        active: false,
+        lifecycleStatus: "淘汰完成",
+        lifecycleTaskId: task.id,
+        lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
+      });
+    } else if (formal && task.type === "恢复") {
+      Object.assign(formal, {
+        active: true,
+        lifecycleStatus: "在售SKU",
+        lifecycleTaskId: task.id,
+        lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
+      });
+    }
+    return formal;
+  }
+  function migrateCompletedTasksToMaster(data, state) {
+    if (number(data.lifecycleMasterVersion) >= 3) return;
+    (state.tasks || [])
+      .filter(task => task.status === "已完成")
+      .slice()
+      .sort((left, right) => taskTime(left) - taskTime(right))
+      .forEach(task => applyLifecycleTaskToMaster(data, state, task));
+    data.lifecycleMasterVersion = 3;
   }
   function dedupeLifecycleRows(data) {
     const seen = new Set();
@@ -481,7 +539,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   function syncProductMasterFields(data) {
     (data.skus || []).forEach(row => {
       if (Object.prototype.hasOwnProperty.call(row, "imageData")) delete row.imageData;
-      const product = (data.productPool || []).find(item => itemsMatch(item, row));
+      const product = resolveFormalProduct(row);
       if (!product) return;
       MASTER_FIELDS.forEach(field => {
         if (product[field] !== undefined && product[field] !== "") row[field] = clone(product[field]);
@@ -506,21 +564,13 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   }
   function repairLifecyclePlacements(data, state) {
     const cabinets = new Map((data.cabinets || []).map(cabinet => [cabinet.key, { ...cabinet, used: 0 }]));
-    const rows = (data.skus || []).filter(row => row.included !== false && productStatusForState(resolveFormalProduct(row) || row, state) !== "\u6dd8\u6c70\u5b8c\u6210");
-    const baseRows = rows.filter(row => !row.lifecycleTaskId);
-    const generatedRows = rows.filter(row => row.lifecycleTaskId).sort((left, right) => {
-      const leftTask = (state.tasks || []).find(task => task.id === left.lifecycleTaskId);
-      const rightTask = (state.tasks || []).find(task => task.id === right.lifecycleTaskId);
-      return taskTime(leftTask) - taskTime(rightTask);
-    });
-    baseRows.forEach(row => {
-      const cabinet = cabinets.get(row.cabinetKey);
-      if (cabinet) cabinet.used += rowWidth(row);
-    });
-    generatedRows.forEach(row => {
+    const rows = (data.skus || [])
+      .filter(row => row.included !== false && productStatusForState(resolveFormalProduct(row) || row) !== "\u6dd8\u6c70\u5b8c\u6210")
+      .sort((left, right) => Number(Boolean(left.lifecycleTaskId)) - Number(Boolean(right.lifecycleTaskId)) || number(left.rank) - number(right.rank));
+    rows.forEach(row => {
       const width = rowWidth(row);
       const current = cabinets.get(row.cabinetKey);
-      let target = current && current.used + width <= number(current.length) + 0.5 ? current : null;
+      let target = current && current.store === row.store && current.used + width <= number(current.length) + 0.5 ? current : null;
       if (!target) {
         const currentKind = current?.kind || current?.type || "";
         target = [...cabinets.values()]
@@ -534,6 +584,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       }
       if (target) {
         target.used += width;
+        row.inStaging = false;
         if (!current || target.key !== current.key) {
           row.cabinetKey = target.key;
           row.cabinetLabel = target.label;
@@ -546,38 +597,35 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
         row.cabinetKey = "";
         row.cabinetLabel = "\u5f85\u9009\u533a";
         row.position = "\u672a\u5206\u914d\u67dc\u6bb5";
+        row.inStaging = true;
         row.placementStatus = "\u67dc\u6bb5\u5bb9\u91cf\u4e0d\u8db3";
       }
       updateTaskPlacement(state, row);
     });
-  }
-  function reconcileLifecycleData(data, state) {
+  }  function reconcileLifecycleData(data, state) {
     if (!data || !state) return data;
     dedupeLifecycleRows(data);
-    promoteCompletedLaunches(data, state);
+    migrateCompletedTasksToMaster(data, state);
     applyCommittedPatches(data, state);
     dedupeLifecycleRows(data);
+    rebuildProductCache();
     syncProductMasterFields(data);
     repairLifecyclePlacements(data, state);
     data.lifecycle = clone(state);
+    rebuildProductCache();
     return data;
   }
   function formalProducts() {
-    const products = Array.isArray(dataRef?.productPool) ? dataRef.productPool : [];
-    const seen = new Set();
-    return products.filter(product => {
-      const key = canonicalKey(product);
-      if (!key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    return formalCache;
   }
   function productStatus(product) {
-    const formal = resolveFormalProduct(product) || product;
-    return productStatusForState(formal, stateRef || blankState());
+    return productStatusForState(resolveFormalProduct(product) || product);
   }
   function activeProducts() {
-    return formalProducts().filter(product => productStatus(product) !== "\u6dd8\u6c70\u5b8c\u6210");
+    return activeCache;
+  }
+  function isActiveProduct(item) {
+    return [...identityValues(item)].some(value => activeAliasCache.has(value));
   }
   function validateTaskCompletion(task) {
     if (!task || task.type !== "\u4e0a\u65b0") return { ok: true, errors: [] };
@@ -606,10 +654,13 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     isFormalData,
     init,
     getData: () => dataRef || window.UNIFIED_CARTON_DATA || null,
-    getFormalProducts: () => clone(formalProducts()),
-    getActiveProducts: () => clone(activeProducts()),
+    getFormalProducts: () => formalProducts(),
+    getActiveProducts: () => activeProducts(),
+    getActiveProductKeys: () => activeAliasCache,
+    getCanonicalProductKey: item => canonicalKey(resolveFormalProduct(item) || item),
+    isActiveProduct,
     getProductStatus: product => productStatus(product),
-    findProduct: item => clone(resolveFormalProduct(item)),
+    findProduct: item => resolveFormalProduct(item),
     validateTaskCompletion,
     getState: () => clone(stateRef || readLocalState()),
     saveState: writeState,

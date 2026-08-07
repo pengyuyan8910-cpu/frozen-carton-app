@@ -100,7 +100,25 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.workspace-grid,.planogram-layout{grid-template-columns:1fr}.planogram-monitor{position:static}.side-note{order:-1}}
 @media(max-width:700px){.topbar{padding:20px;display:block}.top-actions{margin-top:14px}.safe-banner{padding:10px 20px}.tabs{padding:10px}.panel-title{display:block}.panel-title .toolbar{margin-top:12px}.metric-grid,.metric-grid.compact{grid-template-columns:repeat(2,1fr)}main{padding:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cabinet-row{grid-template-columns:82px minmax(0,1fr)}}
 </style>
-<link rel="stylesheet" href="lifecycle-product-detail.css?v=20260801_pool7">
+<style id="lifecycle-product-detail-inline">
+#pool.plm-detail-open>.panel{margin-right:370px}.plm-detail-open{position:relative}#plmProductInspector{position:fixed;right:20px;top:108px;width:340px;max-height:calc(100vh - 126px);overflow:auto;padding:18px;background:#fff;border:1px solid #d9e4de;border-radius:14px;box-shadow:0 18px 40px rgba(30,56,45,.16);z-index:100}.plm-detail-head{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:start;padding-bottom:16px;border-bottom:1px solid #e3ebe6}.plm-image{width:104px;height:104px}.plm-image button{position:relative;width:104px;height:104px;padding:0;overflow:hidden;border:1px solid #d8e3dd;border-radius:8px;background:#f7faf8;color:#286649}.plm-image img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}.plm-image button span{position:absolute;left:0;right:0;bottom:0;padding:7px 3px;background:rgba(11,53,38,.72);color:#fff;font-size:11px;opacity:0}.plm-image button:hover span{opacity:1}.plm-detail-head h3{margin:0 0 6px;font-size:17px;line-height:1.3}.plm-detail-head p,.plm-detail-head span{margin:0;color:#62736a;font-size:12px}.plm-detail-head>button{height:30px;background:#fff;border:1px solid #d8e3dd;border-radius:6px;color:#617168}.plm-detail-head+section,#plmProductInspector section+section{padding-top:16px;margin-top:16px;border-top:1px solid #e3ebe6}#plmProductInspector h4{margin:0 0 10px;font-size:14px}#plmProductInspector dl{display:grid;gap:9px;margin:0}#plmProductInspector dl div{display:flex;justify-content:space-between;gap:12px;font-size:13px}#plmProductInspector dt{color:#6c7b72}#plmProductInspector dd{margin:0;font-weight:700;text-align:right}.plm-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.plm-detail-actions button{height:36px;border-radius:7px;border:1px solid #b7d4c5;background:#fff;color:#196445;font-weight:800}.plm-detail-actions button:first-child{background:#16724e;border-color:#16724e;color:#fff}#plmProductInspector section p{margin:10px 0 0;color:#68776f;font-size:12px;line-height:1.55}.plm-image-modal{position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:rgba(7,34,25,.42);z-index:1000}.plm-image-modal>div{width:min(680px,100%);max-height:80vh;overflow:auto;padding:20px;border-radius:12px;background:#fff}.plm-image-modal h3{margin:0 0 14px}.plm-image-modal label{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:9px 0;border-bottom:1px solid #edf2ef;font-size:13px}.plm-image-modal select{min-width:0}.plm-image-modal footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.plm-image-modal button{height:36px;padding:0 14px;border-radius:7px;border:1px solid #bdd7c9;background:#fff}.plm-image-modal #plmSaveBatch{background:#16724e;border-color:#16724e;color:#fff}@media(max-width:1100px){#pool.plm-detail-open>.panel{margin-right:0}#plmProductInspector{position:static;width:auto;max-height:none;margin:14px 20px}}
+#poolTable tbody tr.plm-product-row{cursor:pointer}#poolTable tbody tr.plm-product-row:hover td{background:#f1faf5}#poolTable tbody tr.plm-product-row td:first-child strong:after{content:'  查看详情';display:inline-block;margin-left:8px;color:#16724e;font-size:11px;font-weight:700}
+
+.plm-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.plm-edit-field{display:grid;gap:5px;color:#62736a;font-size:12px}.plm-edit-field input{width:100%;height:34px;padding:0 9px;border:1px solid #cfddd5;border-radius:6px;color:#17372a;background:#fff}.plm-save-product{width:100%;height:38px;margin-top:14px;border:1px solid #16724e;border-radius:7px;background:#16724e;color:#fff;font-weight:800}@media(max-width:1100px){.plm-edit-grid{grid-template-columns:1fr}}
+
+/* 产品详情与产品总池同层布局：不覆盖总览指标，滚动时始终随表格可见。 */
+#pool.plm-detail-open>.panel{margin-right:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}#pool.plm-detail-open>.panel>.panel-title{grid-column:1/-1}#pool.plm-detail-open>.panel>.table-wrap{grid-column:1;grid-row:2}#pool.plm-detail-open>.panel>#plmProductInspector{position:sticky;right:auto;top:78px;width:auto;max-height:calc(100vh - 96px);grid-column:2;grid-row:2;margin:0;align-self:start;z-index:3}@media(max-width:1100px){#pool.plm-detail-open>.panel{display:block}#pool.plm-detail-open>.panel>#plmProductInspector{position:static;width:auto;margin:16px 0 0}}
+
+/* 产品详情与产品总池同层布局：不覆盖总览指标，滚动时始终随表格可见。 */
+#pool.plm-detail-open>.panel{margin-right:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}#pool.plm-detail-open>.panel>.panel-title{grid-column:1/-1}#pool.plm-detail-open>.panel>.table-wrap{grid-column:1;grid-row:2}#pool.plm-detail-open>.panel>#plmProductInspector{position:sticky;right:auto;top:78px;width:auto;max-height:calc(100vh - 96px);grid-column:2;grid-row:2;margin:0;align-self:start;z-index:3}@media(max-width:1100px){#pool.plm-detail-open>.panel{display:block}#pool.plm-detail-open>.panel>#plmProductInspector{position:static;width:auto;margin:16px 0 0}}
+
+/* 每次点击 SKU 后，将详情栏定位到该表格行右侧，而非固定在视窗顶部。 */
+#pool{position:relative}#pool.plm-detail-open>.panel{display:block!important;margin-right:370px!important}#pool #plmProductInspector{position:absolute!important;right:0!important;top:auto;width:340px!important;max-height:none!important;margin:0!important;z-index:5}@media(max-width:1100px){#pool.plm-detail-open>.panel{margin-right:0!important}#pool #plmProductInspector{position:static!important;width:auto!important;margin:16px 0!important}}
+
+/* 选中行的右侧锚点：卡片标题位于行上方，避免行首生硬贴边。 */
+#pool #plmProductInspector{transition:top .16s ease,box-shadow .16s ease}#pool #plmProductInspector:before{content:'';position:absolute;left:-9px;top:104px;width:16px;height:16px;background:#fff;border-left:1px solid #d9e4de;border-bottom:1px solid #d9e4de;transform:rotate(45deg);z-index:-1}
+
+</style>
 </head>
 <body>
 
@@ -137,7 +155,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
       <div><h2>产品总池</h2><p>统一查看商品生命周期、门店覆盖率和批量操作入口。</p></div>
       <div class="toolbar">
         <input id="poolSearch" type="search" placeholder="搜索商品、条码、类目">
-        <select id="poolStatusFilter"><option value="">全部状态</option><option>正常在售</option><option>上新完成</option><option>淘汰完成</option></select>
+        <select id="poolStatusFilter"><option value="">全部状态</option><option>在售SKU</option><option>上新完成</option><option>淘汰完成</option></select>
         <button id="exportProductPoolBtn" class="btn" type="button">导出当前产品池</button>
         <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button>
       </div>
@@ -453,15 +471,9 @@ function restoreTaskRows(store){
 }
 function productAliases(p){return new Set([String(p?.barcode||"").trim(),String(p?.name||"").trim()].filter(Boolean))}
 function productStatus(p){
- const shared=lifecycleBridge()?.getProductStatus?.(p);
- if(typeof shared==="string")return shared;
- if(p?.active===false)return "淘汰完成";
- const aliases=productAliases(p);
- const completed=(state.tasks||[]).filter(t=>t.status==="已完成"&&[String(t.productKey||"").trim(),String(t.productName||"").trim()].some(k=>aliases.has(k))).sort((a,b)=>Date.parse(b.completedAt||b.updatedAt||b.createdAt||0)-Date.parse(a.completedAt||a.updatedAt||a.createdAt||0));
- const latest=completed[0];
- if(latest?.type==="淘汰")return "淘汰完成";
- if(latest?.type==="上新")return "上新完成";
- return "正常在售";
+ const shared=lifecycleBridge()?.getProductStatus?.(p);if(typeof shared==="string")return shared;
+ if(p?.active===false||p?.lifecycleStatus==="淘汰完成")return "淘汰完成";
+ return p?.lifecycleStatus==="上新完成"?"上新完成":"在售SKU";
 }
 function coverageCount(k){
  const probe={productKey:k},set=new Set();
@@ -470,7 +482,7 @@ function coverageCount(k){
 }
 function currentStores(){return data.stores.map(storeName)}
 function gradeTag(g){const x=String(g||"").toLowerCase();return `<span class="tag ${x}">${esc(g||"未评级")}</span>`}
-function statusTag(s){const cls=s==="正常在售"?"status-normal":s==="上新完成"?"status-launch":s==="淘汰完成"?"status-archived":"status-restore";return `<span class="tag ${cls}">${esc(s)}</span>`}
+function statusTag(s){const cls=s==="在售SKU"?"status-normal":s==="上新完成"?"status-launch":s==="淘汰完成"?"status-archived":"status-restore";return `<span class="tag ${cls}">${esc(s)}</span>`}
 function metric(label,value,sub="",cls=""){return `<div class="metric ${cls}"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`}
 function table(cols,rows){
  if(!rows.length)return `<div class="empty">没有匹配数据。</div>`;
@@ -479,10 +491,15 @@ function table(cols,rows){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
  window.scrollTo({top:0,behavior:"auto"});
- if(id==="planogram")renderPlanogram();
+ renderAll(id);
 }
-function renderAll(){
- renderSelectors();renderPool();renderRestore();renderSlots();renderTasks();renderPlanogram();
+function renderCurrentView(id){
+ const view=id||document.querySelector(".tabs button.active")?.dataset.view||"pool";
+ const renderers={pool:renderPool,launch:renderLaunchResult,retire:renderRetireResult,restore:renderRestore,slots:renderSlots,tasks:renderTasks,planogram:renderPlanogram};
+ (renderers[view]||renderPool)();
+}
+function renderAll(id){
+ renderSelectors();renderCurrentView(id);
 }
 function renderSelectors(){
  const products=allProducts().sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
@@ -542,10 +559,10 @@ function renderPool(){
  const totalStores=currentStores().length;
  const statuses=products.map(productStatus);
  document.getElementById("poolMetrics").innerHTML=[
-  metric("在售SKU",effectiveProducts.length,"正式产品池中已启用、未淘汰的SKU"),
-  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"未发生已完成生命周期变更","good"),
-  metric("上新完成",statuses.filter(x=>x==="上新完成").length,"已完成上新并计入在售"),
-  metric("淘汰完成",statuses.filter(x=>x==="淘汰完成").length,"已完成淘汰，不计入在售","warn"),
+  metric("在售SKU",effectiveProducts.length,"生命周期产品总池唯一在售口径","good"),
+  metric("上新完成",statuses.filter(x=>x==="上新完成").length,"已完成并纳入在售SKU"),
+  metric("淘汰完成",statuses.filter(x=>x==="淘汰完成").length,"已完成且不计入在售SKU","warn"),
+  metric("进行中任务",state.tasks.filter(task=>!["已完成","已撤销","已撤回"].includes(task.status)).length,"尚未改变商品在售状态"),
   metric("坑位资源",state.slots.length,"释放与预留位置")
  ].join(""); const q=document.getElementById("poolSearch").value.trim(),sf=document.getElementById("poolStatusFilter").value;
  const rows=products.filter(p=>{const s=[p.name,p.barcode,p.category3,p.category4].join(" ");return(!q||s.includes(q))&&(!sf||productStatus(p)===sf)}).sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
@@ -1204,10 +1221,10 @@ function taskProductStatus(task){
  if(task.status==="已完成"){
   if(task.type==="上新")return "上新完成";
   if(task.type==="淘汰")return "淘汰完成";
-  if(task.type==="恢复")return "正常在售";
+  if(task.type==="恢复")return "在售SKU";
  }
  const p=productByKey(task.productKey)||productByKey(task.productName);
- return p?productStatus(p):"正常在售";
+ return p?productStatus(p):"在售SKU";
 }
 
 function renderTasks(){
@@ -1355,7 +1372,7 @@ function renderPlanogram(){
 }
 
 function showMonitor(d){
- const mapped=d.status==="正常陈列"||d.status==="已完成上新"?"正常在售":d.status==="待淘汰"||d.status==="待替换"?"待淘汰":d.status==="恢复待执行"?"恢复中":d.status==="待门店执行"||d.status==="排面调整"||d.status==="跨柜调位"?"待上新":"已淘汰";
+ const mapped=d.status==="正常陈列"||d.status==="已完成上新"?"在售SKU":d.status==="待淘汰"||d.status==="待替换"?"待淘汰":d.status==="恢复待执行"?"恢复中":d.status==="待门店执行"||d.status==="排面调整"||d.status==="跨柜调位"?"待上新":"已淘汰";
  document.getElementById("planogramMonitor").innerHTML=`<h3 class="monitor-title">${esc(d.product||d.kind)}</h3><div class="monitor-status">${statusTag(mapped)}</div><dl class="monitor-grid"><dt>对象类型</dt><dd>${esc(d.kind)}</dd><dt>门店</dt><dd>${esc(d.store)}</dd><dt>陈列柜</dt><dd>${esc(d.cabinet)}</dd><dt>具体位置</dt><dd>${esc(d.position)}</dd><dt>当前联动状态</dt><dd>${esc(d.status)}</dd><dt>占用/释放宽度</dt><dd>${fmt(d.width)}mm</dd><dt>类目/用途</dt><dd>${esc(d.category||"-")}</dd><dt>关联任务</dt><dd>${esc(d.task||"无")}</dd></dl><div class="monitor-note">${esc(d.change||"该区域与产品池状态、任务中心和坑位资源池使用同一套预览状态。")}</div>`;
 }
 window.prefillLaunch=k=>{switchView("launch");document.getElementById("launchProduct").value=k;renderStorePickers();renderProductCards()};
@@ -1418,6 +1435,73 @@ if("ResizeObserver" in window){
  bind();try{await loadData();renderAll();notifyParentSize();}catch(error){showFormalDataError(error);}
 })();
 </script>
-<script src="lifecycle-product-detail.js?v=20260803_manual2"></script>
+<script id="lifecycle-product-detail-inline">
+(() => {
+  const pool = document.getElementById('poolTable');
+  const section = document.getElementById('pool');
+  if (!pool || !section) return;
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const productKey = p => String(p.barcode || p.name || '').trim();
+  const imageKey = p => `product::${productKey(p)}`;
+  const numeric = new Set(['carton','dailyQty','faceWidth']);
+  const products = () => typeof allProducts === 'function' ? allProducts() : [];
+  const findProduct = name => products().find(p => p.name === name);
+  const db = () => new Promise((resolve, reject) => { const r = indexedDB.open('frozen-carton-product-images', 1); r.onupgradeneeded = () => r.result.createObjectStore('images', { keyPath:'key' }); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
+  const getImage = async key => { try { const d = await db(); return await new Promise((resolve, reject) => { const r = d.transaction('images').objectStore('images').get(key); r.onsuccess = () => resolve(r.result?.file || null); r.onerror = () => reject(r.error); }); } catch { return null; } };
+const putImage = async (key, file) => { const d = await db(); return new Promise((resolve, reject) => { const r = d.transaction('images','readwrite').objectStore('images').put({ key, file, updatedAt:Date.now() }); r.onsuccess = resolve; r.onerror = () => reject(r.error); }); };
+  const toCloudImage = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(reader.error); reader.onload = () => { const img = new Image(); img.onerror = () => resolve(reader.result); img.onload = () => { const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height)); const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(img.width * ratio)); canvas.height = Math.max(1, Math.round(img.height * ratio)); canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', .70)); }; img.src = reader.result; }; reader.readAsDataURL(file); });
+  const syncImage = async (product, file) => { const imageData = await toCloudImage(file); await putImage(imageKey(product), file); const saved = window.parent?.ProductLifecycle?.updateProduct?.(productKey(product), { imageData }); if (!saved) throw new Error('图片未写入产品总池'); return imageData; };
+  let selected = null;
+  const picker = document.createElement('input'); picker.type = 'file'; picker.accept = 'image/*'; picker.hidden = true; document.body.appendChild(picker);
+
+async function renderImage(p) {
+    const slot = document.querySelector('#plmProductInspector .plm-image'); if (!slot) return;
+    const file = p.imageData ? null : await getImage(imageKey(p));
+    const src = p.imageData || (file ? URL.createObjectURL(file) : '');
+    slot.innerHTML = src ? `<button id="plmReplaceImage" type="button"><img src="${esc(src)}" alt="${esc(p.name)}"><span>更换图片</span></button>` : `<button id="plmUploadImage" type="button">上传商品图片</button>`;
+    slot.querySelector('button').onclick = () => picker.click();
+  }
+  function field(label, name, value, type='text') { return `<label class="plm-edit-field"><span>${label}</span><input data-field="${name}" type="${type}" value="${esc(value ?? '')}"></label>`; }
+  async function show(p, rowEl) {
+    selected = p;
+    let aside = document.getElementById('plmProductInspector');
+    if (!aside) { aside = document.createElement('aside'); aside.id = 'plmProductInspector'; section.appendChild(aside); section.classList.add('plm-detail-open'); }
+    const panel = section.querySelector('.panel');
+    const rowTop = rowEl ? rowEl.getBoundingClientRect().top - section.getBoundingClientRect().top : 300;
+    const panelTop = panel ? panel.getBoundingClientRect().top - section.getBoundingClientRect().top : 300;
+    // 详情卡片以选中行作为锚点，但让标题略高于行，避免卡片像从该行向下坠落。
+    const detailTop = Math.max(panelTop + 58, rowTop - 88);
+    aside.style.top = Math.round(detailTop) + 'px';
+    const coverage = typeof coverageCount === 'function' ? coverageCount(productKey(p)) : '—';
+    const row = typeof rowsForProduct === 'function' ? rowsForProduct(productKey(p))[0] : null;
+    const faceWidth = p.faceWidth ?? row?.faceWidth ?? 0;
+    aside.innerHTML = `<div class="plm-detail-head"><div class="plm-image"></div><div><h3>${esc(p.name)}</h3><p>${esc(p.barcode || '暂无条码')}</p><span>产品总池 · 统一维护</span></div><button id="plmCloseDetail" type="button">关闭</button></div>
+      <section><h4>商品资料（修改后同步所有模块）</h4><div class="plm-edit-grid">
+      ${field('产品名称','name',p.name)}${field('等级','grade',p.grade)}${field('条码','barcode',p.barcode)}${field('三级类目','category3',p.category3)}${field('箱规','carton',p.carton,'number')}${field('日均销量','dailyQty',p.dailyQty,'number')}${field('单列占宽 mm','faceWidth',faceWidth,'number')}</div>
+      <button id="plmSaveProduct" class="plm-save-product" type="button">保存并同步全部门店 / 陈列图</button></section>
+      <section><h4>覆盖信息</h4><dl><div><dt>尺寸</dt><dd>${esc(p.length)}×${esc(p.width)}×${esc(p.height)}mm</dd></div><div><dt>门店覆盖</dt><dd>${esc(coverage)}</dd></div></dl><p>风险和排柜调整请在“商品明细”中按具体门店执行。</p></section>`;
+// 内容渲染完成后，用实际卡片高度让“信息栏中部”与被点击 SKU 行对齐。
+    requestAnimationFrame(() => {
+      const rowCenter = rowTop + (rowEl?.getBoundingClientRect().height || 44) / 2;
+      const minTop = panelTop + 58;
+      aside.style.top = Math.round(Math.max(minTop, rowCenter - aside.offsetHeight / 2)) + 'px';
+    });    aside.querySelector('#plmCloseDetail').onclick = () => { aside.remove(); section.classList.remove('plm-detail-open'); };
+    aside.querySelector('#plmSaveProduct').onclick = () => {
+      const changes = {}; aside.querySelectorAll('[data-field]').forEach(input => { const name = input.dataset.field; changes[name] = numeric.has(name) ? Number(input.value || 0) : input.value.trim(); });
+      const originalKey = productKey(p);
+      if (!changes.name) return alert('产品名称不能为空。');
+      if (window.parent?.ProductLifecycle?.updateProduct?.(originalKey, changes)) {
+        window.parent.postMessage({ type:'plm:product-updated', product:changes.name }, '*');
+      } else alert('商品资料暂时无法保存，请刷新后重试。');
+    };
+    await renderImage(p);
+  }
+picker.onchange = async () => { const file = picker.files?.[0]; if (!file || !selected) return; if (!file.type.startsWith('image/')) return alert('请选择图片文件。'); try { await syncImage(selected, file); picker.value = ''; await renderImage(selected); alert('图片已绑定到当前产品总池。请到“云端协作”手动点击“保存至云端”后，再由伙伴手动拉取。'); } catch (error) { alert('图片保存失败，请重试。'); console.error(error); } };
+  const matchFile = file => { const stem = file.name.replace(/\.[^.]+$/, '').trim(); return products().find(p => stem === p.name || stem === String(p.barcode || '') || stem === `${p.barcode}_${p.name}`) || null; };
+  function openBatch() { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.multiple=true; input.onchange=async()=>{ const files=[...input.files].filter(file=>file.type.startsWith('image/')); let count=0; for (const file of files) { const p=matchFile(file); if (p) { await syncImage(p,file); count++; } } if(selected) renderImage(selected); alert(`已绑定 ${count} 张图片；未匹配的图片未写入。请到“云端协作”手动点击“保存至云端”。`); }; input.click(); }
+  function bind() { [...pool.querySelectorAll('tbody tr')].forEach(tr => { const name=tr.querySelector('td:first-child strong')?.textContent.trim() || ''; const p=findProduct(name); if(!p) return; tr.classList.add('plm-product-row'); tr.onclick=e=>{ if(!e.target.closest('button')) show(p, tr); }; }); const toolbar=document.querySelector('#pool .toolbar'); if(toolbar&&!document.getElementById('plmBatchImages')) { const b=document.createElement('button'); b.id='plmBatchImages'; b.className='btn'; b.type='button'; b.textContent='批量上传图片'; b.onclick=openBatch; toolbar.appendChild(b); } }
+  new MutationObserver(() => requestAnimationFrame(bind)).observe(pool,{childList:true,subtree:true}); bind();
+})();
+</script>
 </body>
 </html>
