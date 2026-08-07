@@ -367,7 +367,8 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       if (message.type === "plm:resize") {
         const frame = document.getElementById("productLifecycleFrame");
         if (frame) {
-          const height = Math.max(760, Math.min(30000, number(message.height) + 8));
+          // 空状态页按真实内容收缩；保留少量安全高度，避免 iframe 出现大块空白.
+          const height = Math.max(360, Math.min(30000, number(message.height) + 8));
           frame.style.height = `${height}px`;
         }
       }

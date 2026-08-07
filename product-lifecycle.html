@@ -492,6 +492,7 @@ function table(cols,rows){
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
  window.scrollTo({top:0,behavior:"auto"});
  renderAll(id);
+ requestAnimationFrame(notifyParentSize);
 }
 function renderCurrentView(id){
  const view=id||document.querySelector(".tabs button.active")?.dataset.view||"pool";
@@ -1411,7 +1412,7 @@ state={draftProducts:[],tasks:[],slots:[],committedPatches:[]};launchPlans=[];re
 function notifyParentSize(){
  try{
   if(window.parent!==window){
-   window.parent.postMessage({type:"plm:resize",height:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)},"*");
+   window.parent.postMessage({type:"plm:resize",height:document.body.scrollHeight},"*");
   }
  }catch(e){}
 }
