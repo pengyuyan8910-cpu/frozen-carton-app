@@ -433,8 +433,22 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     }
     return Number.isFinite(time) ? time : 0;
   }
+  function latestCompletedTaskFor(product, state = stateRef) {
+    let latest = null;
+    (state?.tasks || []).forEach((task, index) => {
+      if (task?.status !== "已完成" || !itemsMatch(product, task)) return;
+      const candidate = { task, time: taskTime(task), index };
+      if (!latest || candidate.time > latest.time || (candidate.time === latest.time && candidate.index < latest.index)) latest = candidate;
+    });
+    return latest?.task || null;
+  }
   function productStatusForState(product) {
     if (!product) return "在售SKU";
+    // 任务是状态事实，读取时只推导展示，不得反写产品池、SKU 行或门店排柜。
+    const latestTask = latestCompletedTaskFor(product);
+    if (latestTask?.type === "淘汰") return "淘汰完成";
+    if (latestTask?.type === "上新") return "上新完成";
+    if (latestTask?.type === "恢复") return "在售SKU";
     if (product.active === false || ["淘汰完成", "已淘汰"].includes(product.lifecycleStatus)) return "淘汰完成";
     if (product.lifecycleStatus === "上新完成") return "上新完成";
     return "在售SKU";
@@ -503,18 +517,8 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     return formal;
   }
   function migrateCompletedTasksToMaster(data, state) {
-    if (number(data.lifecycleMasterVersion) >= 4) return;
-    // 每个 SKU 只采用最后一个明确完成的任务，未完成任务绝不改变主数据。
-    const latest = new Map();
-    (state.tasks || []).filter(task => task.status === "已完成").forEach((task, index) => {
-      const key = canonicalKey(task);
-      if (!key) return;
-      const candidate = { task, time: taskTime(task), index };
-      const current = latest.get(key);
-      if (!current || candidate.time > current.time || (candidate.time === current.time && candidate.index < current.index)) latest.set(key, candidate);
-    });
-    [...latest.values()].sort((left, right) => left.time - right.time).forEach(item => applyLifecycleTaskToMaster(data, state, item.task));
-    data.lifecycleMasterVersion = 4;
+    // 历史任务只用于读取时推导状态；禁止在加载、拉取或页面刷新时改写业务数据。
+    return data;
   }
   function dedupeLifecycleRows(data) {
     const taskRows = new Set();
@@ -557,56 +561,10 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       placementStatus: row.placementStatus || "\u5df2\u6821\u9a8c"
     });
   }
-  function repairLifecyclePlacements(data, state) {
-    const cabinets = new Map((data.cabinets || []).map(cabinet => [cabinet.key, { ...cabinet, used: 0 }]));
-    const rows = (data.skus || [])
-      .filter(row => row.included !== false && productStatusForState(resolveFormalProduct(row) || row) !== "\u6dd8\u6c70\u5b8c\u6210")
-      .sort((left, right) => Number(Boolean(left.lifecycleTaskId)) - Number(Boolean(right.lifecycleTaskId)) || number(left.rank) - number(right.rank));
-    rows.forEach(row => {
-      const width = rowWidth(row);
-      const current = cabinets.get(row.cabinetKey);
-      let target = current && current.store === row.store && current.used + width <= number(current.length) + 0.5 ? current : null;
-      if (!target) {
-        const currentKind = current?.kind || current?.type || "";
-        target = [...cabinets.values()]
-          .filter(cabinet => cabinet.store === row.store && cabinet.used + width <= number(cabinet.length) + 0.5)
-          .sort((left, right) => {
-            const leftKind = (left.kind || left.type || "") === currentKind ? 0 : 1;
-            const rightKind = (right.kind || right.type || "") === currentKind ? 0 : 1;
-            if (leftKind !== rightKind) return leftKind - rightKind;
-            return (number(left.length) - left.used - width) - (number(right.length) - right.used - width);
-          })[0] || null;
-      }
-      if (target) {
-        target.used += width;
-        row.inStaging = false;
-        if (!current || target.key !== current.key) {
-          row.cabinetKey = target.key;
-          row.cabinetLabel = target.label;
-          row.position = target.position;
-          row.placementStatus = "\u7cfb\u7edf\u5bb9\u91cf\u7ea0\u6b63";
-        } else {
-          row.placementStatus = "\u5df2\u6821\u9a8c";
-        }
-      } else {
-        row.cabinetKey = "";
-        row.cabinetLabel = "\u5f85\u9009\u533a";
-        row.position = "\u672a\u5206\u914d\u67dc\u6bb5";
-        row.inStaging = true;
-        row.placementStatus = "\u67dc\u6bb5\u5bb9\u91cf\u4e0d\u8db3";
-      }
-      updateTaskPlacement(state, row);
-    });
-  }  function reconcileLifecycleData(data, state) {
+  function repairLifecyclePlacements(data, state) { return []; }
+  function reconcileLifecycleData(data, state) {
     if (!data || !state) return data;
-    dedupeLifecycleRows(data);
-    migrateCompletedTasksToMaster(data, state);
-    applyCommittedPatches(data, state);
-    dedupeLifecycleRows(data);
-    rebuildProductCache();
-    syncProductMasterFields(data);
-    // 加载和同步只对账，不在后台自动移动任何门店陈列。容量在编辑与任务完成时拦截。
-    data.lifecycle = clone(state);
+    // 只建立主数据索引：不回放任务、不应用旧补丁、不去重/增删 SKU、不同步字段、不调柜。
     rebuildProductCache();
     return data;
   }
@@ -643,6 +601,25 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     });
     return { ok: errors.length === 0, errors };
   }
+  // 仅用于用户主动“保存至云端”时，将已完成任务这一既有事实写回产品池状态。
+  // 不创建、不删除商品；不触碰 SKU 行、门店、柜段、陈列位置、图片或任何经营字段。
+  function buildPersistenceCopy(data) {
+    const copy = clone(data || {});
+    const persistedState = normalizeState(clone(copy.lifecycle || stateRef || blankState()));
+    (copy.productPool || []).forEach(product => {
+      const latestTask = latestCompletedTaskFor(product, persistedState);
+      if (!latestTask) return;
+      const changedAt = latestTask.completedAt || latestTask.updatedAt || latestTask.createdAt || "";
+      if (latestTask.type === "淘汰") {
+        Object.assign(product, { active: false, lifecycleStatus: "淘汰完成", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
+      } else if (latestTask.type === "上新") {
+        Object.assign(product, { active: true, lifecycleStatus: "上新完成", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
+      } else if (latestTask.type === "恢复") {
+        Object.assign(product, { active: true, lifecycleStatus: "在售SKU", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
+      }
+    });
+    return copy;
+  }
   window.ProductLifecycle = {
     version: VERSION,
     prepareData,
@@ -660,9 +637,11 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     getState: () => clone(stateRef || blankState()),
     saveState: writeState,
     resetState,
+    hydrateState,
     commitCompletedTask,
     updateProduct,
     syncData,
-    applyCommittedPatches
+    applyCommittedPatches,
+    buildPersistenceCopy
   };
 })();

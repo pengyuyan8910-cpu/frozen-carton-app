@@ -14,9 +14,16 @@ function 产品池有效(){return window.ProductLifecycle?.getActiveProducts?.()
 function 产品转SKU(p,store){return{id:"poolsku_"+Date.now()+"_"+Math.random().toString(36).slice(2),store,included:true,status:"产品池新增",grade:p.grade||"未评级",rank:数(p.rank)||9999,category2:p.category2||"",category3:p.category3||"",category4:p.category4||"",name:p.name||"新品",barcode:p.barcode||"",length:数(p.length),width:数(p.width),height:数(p.height),volume:数(p.volume)||数(p.length)*数(p.width)*数(p.height)/1e6,carton:Math.max(1,数(p.carton)||1),dailyQty:数(p.dailyQty),dailySales:数(p.dailySales),moq:数(p.moq),moqDays:数(p.moqDays),cabinetKey:"",cabinetLabel:"",position:"",displayCols:1,perCol:1,faceWidth:0,placements:[],customPlacement:true,currentStock:"",planCartons:1,sourceAdvice:"产品池新增",sourceAction:"待排柜",note:"产品池新增"}}
 
 function 初始状态(){const st=清理交互痕迹(初始数据);确保产品池(st);return st}
-let 草稿状态=清理计算缓存(修复非授权系统排柜(读取本地(草稿保存键)||初始状态()));
-let 发布状态=清理计算缓存(修复非授权系统排柜(读取本地(发布保存键)||初始状态()));
-let 状态=发布状态;window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);window.ProductLifecycle?.syncData?.(状态);
+let 草稿状态=清理计算缓存(读取本地(草稿保存键)||初始状态());
+let 发布状态=清理计算缓存(读取本地(发布保存键)||初始状态());
+let 状态=发布状态;
+// 本地草稿不含生命周期字段时，保留底表中已存在的任务事实；不重建 SKU 或排柜。
+if ((!状态.lifecycle || !Array.isArray(状态.lifecycle.tasks) || 状态.lifecycle.tasks.length === 0) && 初始数据?.lifecycle?.tasks?.length) {
+  状态.lifecycle=structuredClone(初始数据.lifecycle);
+  草稿状态.lifecycle=structuredClone(初始数据.lifecycle);
+  发布状态.lifecycle=structuredClone(初始数据.lifecycle);
+}
+window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);window.ProductLifecycle?.syncData?.(状态);
 let 当前={门店:"",页面:"goods",定位SKU:"",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
 let 同步请求中=false;
 const 文=v=>String(v??"").trim();
@@ -61,23 +68,6 @@ if(Array.isArray(patch.productPool))state.productPool=patch.productPool;
 if(patch.lifecycle&&typeof patch.lifecycle==="object")state.lifecycle=JSON.parse(JSON.stringify(patch.lifecycle));
 确保产品池(state);
 return state;
-}
-function 修复非授权系统排柜(st){
- if(!st||!Array.isArray(st.skus))return st;
- const baseline=new Map((初始数据.skus||[]).map(row=>[String(row.id),row]));
- const placementFields=["store","cabinetKey","cabinetLabel","position","displayCols","perCol","faceWidth","customPlacement"];
- for(const row of st.skus){
-  const base=baseline.get(String(row.id));if(!base)continue;
-  const systemMarked=/系统容量纠正|柜段容量不足/.test(String(row.placementStatus||"").trim());
-  const placementChanged=placementFields.some(field=>JSON.stringify(row[field]??null)!==JSON.stringify(base[field]??null));
-  const editEvidence=[...(row.modifiedFields||[]),row.changeNote||""].join("|");
-  const hasUserEdit=/手动|陈列柜段|陈列列数|单列容量|单列占宽|空位|陈列图|调位|移位|扩陈|新品/.test(editEvidence);
-  if(!systemMarked&&(!placementChanged||hasUserEdit))continue;
-  for(const field of placementFields)row[field]=structuredClone(base[field]);
-  if(systemMarked)row.included=structuredClone(base.included);
-  delete row.inStaging;delete row.placementStatus;delete row.rowFull;delete row.skuFull;
- }
- return st;
 }
 function 状态可用(st){return !!(st&&st.meta&&Array.isArray(st.stores)&&st.stores.length&&Array.isArray(st.skus)&&st.skus.length&&Array.isArray(st.cabinets)&&st.cabinets.length)}
 function 读取本地(key){try{const raw=localStorage.getItem(key);if(!raw)return null;const st=应用状态补丁(JSON.parse(raw));if(!状态可用(st)){localStorage.removeItem(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);try{localStorage.removeItem(key)}catch(_){}return null}}
@@ -885,7 +875,7 @@ function 渲染全部(){切换数据源();清空业务快照();建立基准(状�
  const opsViews=new Set(["allocation","cabinets","suggestions","newstore","io"]);if(!isOps&&opsViews.has(当前.页面))当前.页面="store";
  const banner=q("#modeBanner");if(banner)banner.textContent=isOps?"当前为运营模式：可在陈列图调整商品位置、列数、满陈与外储；点击“同步至店员端”后，门店按当前方案执行。":"";
  const 当前版本=window.UNIFIED_CARTON_VERSION||{},当前报告=window.UNIFIED_CARTON_REPORT||{};q("#dataNote").textContent=(状态.meta.version||"10%触发")+"｜底表："+(当前版本.sourceName||状态.meta.source||"当前版")+"｜"+(当前报告.passed===false?"复核失败":"复核通过")+"｜生成："+(状态.meta.generatedAt||当前版本.generatedAt||"");
- const renderers={overview:渲染总览,store:渲染门店,goods:渲染商品,risk:渲染风险,replenish:渲染补货,allocation:渲染排柜,cabinets:渲染柜段,suggestions:渲染建议,map:渲染陈列图,newstore:渲染新增门店,logic:渲染逻辑};
+ const renderers={overview:渲染总览,store:渲染门店,goods:渲染商品,risk:渲染风险,replenish:渲染补货,allocation:渲染排柜,cabinets:渲染柜段,suggestions:渲染建议,displaymap:渲染陈列图,newstore:渲染新增门店,logic:渲染逻辑};
  renderers[当前.页面]?.();
  qa(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===当前.页面));qa(".view").forEach(v=>v.classList.toggle("active",v.id===当前.页面))
 }
@@ -939,7 +929,7 @@ if(q("#allStoreTrialBtn"))q("#allStoreTrialBtn").onclick=()=>试算全店上新(
 if(q("#applyAllStoreSkuBtn"))q("#applyAllStoreSkuBtn").onclick=()=>应用全店上新();
 if(q("#addPoolSkuBtn"))q("#addPoolSkuBtn").onclick=()=>{确保产品池(状态).push(标准产品池对象({name:"新增SKU-请修改",grade:"未评级",category3:"待填写",category4:"待填写",carton:1,daily:0,active:true}));保存();渲染全部();完成提示("产品池新增完成：已添加一条空白SKU，请补全商品资料。")};
 if(q("#importPoolBtn"))q("#importPoolBtn").onclick=()=>导入产品池文本();
-if(q("#deleteDisabledPoolBtn"))q("#deleteDisabledPoolBtn").onclick=()=>{const pool=确保产品池(状态);const before=pool.length;状态.productPool=pool.filter(p=>p.active!==false);const removed=before-状态.productPool.length;保存();渲染全部();完成提示(removed>0?"删除完成：已清理未启用SKU "+removed+" 条。":"删除完成：当前没有未启用SKU可清理。")};
+if(q("#deleteDisabledPoolBtn"))q("#deleteDisabledPoolBtn").onclick=()=>完成提示("为保护历史数据，已禁用删除淘汰SKU。淘汰记录将保留在产品池中。");
 if(q("#loadStoreExampleBtn"))q("#loadStoreExampleBtn").onclick=()=>{const box=q("#newStoreCabinetConfig");if(box){box.value="卧柜,2500mm,3,1988*697*459+360*697*199\n卧柜,2000mm,1,1488*697*459+360*697*199\n冰淇淋柜,1900mm,1,1386*697.5*424+325*697.5*164\n立柜,3m,1,门数=4,层数=6,710*534*250"}完成提示("示例已填入：立柜会按1-5层陈列，第6层仅作为陈列图存储位。")};
 if(q("#trialStoreBtn"))q("#trialStoreBtn").onclick=()=>测算新增门店();
 if(q("#applyStoreBtn"))q("#applyStoreBtn").onclick=()=>追加新增门店();
@@ -947,7 +937,7 @@ if(q("#syncDisplayMapBtn"))q("#syncDisplayMapBtn").onclick=()=>{渲染陈列图(
 if(q("#exportDisplayMapBtn"))q("#exportDisplayMapBtn").onclick=()=>导出陈列图();
 if(q("#syncStoreViewBtn")){q("#syncStoreViewBtn").onclick=e=>请求同步至店员端(e)}
 q("#resetFilterBtn").onclick=()=>{["overviewSearch","storeSearch","goodsSearch","riskSearch","replenishSearch","cabinetSearch","allocationSearch","allocationCabinetSearch","allocationTypeFilter","allocationCabNoFilter","allocationPosFilter","allocationSceneFilter"].forEach(id=>{const el=q("#"+id);if(el)el.value=""});清空新品试算();window.全店上新缓存={};window.新增门店测算缓存=null;渲染全部();完成提示("筛选已重置：搜索条件、新品试算、全店上新方案和新增门店草稿已清空。")};
-q("#removeExcludedBtn").onclick=()=>{const before=状态.skus.length;const beforeCurrent=门店SKU().length;状态.skus=状态.skus.filter(r=>r.included);const removed=before-状态.skus.length;const removedCurrent=beforeCurrent-门店SKU().length;保存();渲染全部();完成提示(removed>0?"删除完成：已删除未纳入SKU "+removed+" 行，其中当前门店 "+removedCurrent+" 行。":"删除完成：当前没有未纳入SKU可删除。")};
+q("#removeExcludedBtn").onclick=()=>完成提示("为保护历史数据，已禁用删除未纳入SKU。请保留记录并通过生命周期任务管理状态。");
 
 q("#exportJsonBtn").onclick=()=>{导出("整箱到店数据测算_当前版.json",JSON.stringify(状态,null,2),"application/json;charset=utf-8");完成提示("导出完成：回传底表JSON已生成，可上传到 GitHub 的 data/source/整箱到店数据测算_当前版.json。")};
 q("#exportCsvBtn").onclick=()=>{const heads=["门店","商品","条码","等级","三级类目","陈列柜","陈列位","列数","单列容量","满陈","箱规","需外储","外储L","风险"];
@@ -1183,7 +1173,7 @@ async function pullCloudData() {
   if (!p || !Array.isArray(p.skus) || !p.skus.length) return cloudNote('云端数据结构异常。', true);
 
   // Pull is intentionally authoritative: never merge this browser's old lifecycle cache back in.
-  const cloudState = 修复非授权系统排柜(structuredClone(p));
+  const cloudState = structuredClone(p);
   确保产品池(cloudState);
   window.ProductLifecycle?.hydrateState?.(cloudState.lifecycle || null, cloudState);
   安全保存本地(草稿保存键, cloudState);
@@ -1202,7 +1192,12 @@ async function pullCloudData() {
 /* --- 保存至云端 --- */
 const cloudSame = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
-function cloudCopyState(st) { return JSON.parse(JSON.stringify(清理交互痕迹(st))); }
+function cloudCopyState(st) {
+  // 云端保存只序列化用户当前的主文档；生命周期状态仅由已完成任务事实校正。
+  // 不改 SKU 行、门店、柜段、陈列位置或图片。
+  const stable = window.ProductLifecycle?.buildPersistenceCopy?.(st) || structuredClone(st);
+  return JSON.parse(JSON.stringify(清理交互痕迹(stable)));
+}
 
 function cloudRevisionConflict() {
   return { code: 'P0001', message: 'CONFLICT: cloud data changed; merge the latest revision first.' };

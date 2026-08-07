@@ -1,5 +1,5 @@
 (async function 启动数据加载(){
-  const DATA_VERSION = "20260807_master4";
+  const DATA_VERSION = "20260807_recovery1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
