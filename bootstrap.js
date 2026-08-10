@@ -8,32 +8,31 @@
     return res.json();
   };
   try {
-    setNote("姝ｅ湪璇诲彇鏈€鏂板簳琛ㄦ暟鎹€?);
+    setNote("正在读取最新底表数据…");
     const [data, report, version] = await Promise.all([
       loadJson("data/app-data.json"),
       loadJson("data/verify-report.json").catch(() => ({})),
       loadJson("data/version.json").catch(() => ({}))
     ]);
     if (!data || !Array.isArray(data.stores) || !Array.isArray(data.skus) || !Array.isArray(data.cabinets)) {
-      throw new Error("app-data.json 缂哄皯闂ㄥ簵銆丼KU鎴栨煖娈垫暟鎹?);
+      throw new Error("app-data.json 缺少门店、SKU或柜段数据");
     }
     window.UNIFIED_CARTON_DATA = data;
     window.UNIFIED_CARTON_REPORT = report || {};
     window.UNIFIED_CARTON_VERSION = version || {};
-    const status = report?.passed === false ? "澶嶆牳澶辫触" : "澶嶆牳閫氳繃";
-    setNote(`${data.meta?.version || "褰撳墠鐗堟湰"}锝滃簳琛細${version?.sourceName || data.meta?.source || "褰撳墠鐗?}锝?{status}锝滅敓鎴愶細${data.meta?.generatedAt || version?.generatedAt || ""}`);
+    const status = report?.passed === false ? "复核失败" : "复核通过";
+    setNote(`${data.meta?.version || "当前版本"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
     const app = document.createElement("script");
     app.src = `app.js?v=${DATA_VERSION}`;
     app.onload = () => window.ProductLifecycle?.init?.();
-    app.onerror = () => setNote("绋嬪簭鍔犺浇澶辫触锛岃鑱旂郴杩愯惀");
+    app.onerror = () => setNote("程序加载失败，请联系运营");
     document.body.appendChild(app);
   } catch (err) {
     console.error(err);
-    setNote("鏁版嵁鍔犺浇澶辫触锛岃妫€鏌?GitHub Actions 澶嶆牳缁撴灉");
+    setNote("数据加载失败，请检查 GitHub Actions 复核结果");
     const main = document.querySelector("main");
     if (main) {
-      main.innerHTML = `<section class="panel load-error"><h2>鏁版嵁鍔犺浇澶辫触</h2><p>灏忕▼搴忔病鏈夎鍙栧埌宸插鏍搁€氳繃鐨勬渶鏂版暟鎹紝璇风‘璁?data/app-data.json 瀛樺湪銆?/p><pre>${String(err.message || err)}</pre></section>`;
+      main.innerHTML = `<section class="panel load-error"><h2>数据加载失败</h2><p>小程序没有读取到已复核通过的最新数据，请确认 data/app-data.json 存在。</p><pre>${String(err.message || err)}</pre></section>`;
     }
   }
 })();
-
