@@ -5,7 +5,7 @@
 #productLifecycleFrame {
   display: block;
   width: 100%;
-  /* 由生命周期页的真实内容高度控制，避免空状态被 900px 最小高度撑出大块空白。 */
+  /* 鐢辩敓鍛藉懆鏈熼〉鐨勭湡瀹炲唴瀹归珮搴︽帶鍒讹紝閬垮厤绌虹姸鎬佽 900px 鏈€灏忛珮搴︽拺鍑哄ぇ鍧楃┖鐧姐€?*/
   min-height: 0;
   height: auto;
   border: 0;
@@ -35,3 +35,4 @@
 @media (max-width: 900px) {
   #productLifecycleFrame { min-height: 1100px; }
 }
+

@@ -3,7 +3,7 @@
 
   const STORAGE_KEY = "frozen_product_lifecycle_management_v2";
   const VERSION = 2;
-  const FORMAL_DATA_ERROR = "正式底表加载失败，请检查 GitHub Actions。";
+  const FORMAL_DATA_ERROR = "姝ｅ紡搴曡〃鍔犺浇澶辫触锛岃妫€鏌?GitHub Actions銆?;
   let dataRef = null;
   let stateRef = null;
   let initialized = false;
@@ -68,8 +68,7 @@
     return state;
   }
 
-  // 生命周期状态只允许嵌套在主文档中，避免运营端与店员端各持一份状态。
-  function readLocalState() { return blankState(); }
+  // 鐢熷懡鍛ㄦ湡鐘舵€佸彧鍏佽宓屽鍦ㄤ富鏂囨。涓紝閬垮厤杩愯惀绔笌搴楀憳绔悇鎸佷竴浠界姸鎬併€?  function readLocalState() { return blankState(); }
 
   function writeState(next) {
     stateRef = normalizeState(clone(next));
@@ -129,7 +128,7 @@
       Object.assign(row, clone(patch.changes || {}));
     } else if (patch.type === "excludeSku") {
       row.included = false;
-      row.lifecycleStatus = "已淘汰";
+      row.lifecycleStatus = "宸叉窐姹?;
       row.lifecycleTaskId = patch.taskId || row.lifecycleTaskId;
     }
   }
@@ -229,7 +228,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       id: `lifecycle_${task.id}_${index}`,
       lifecycleTaskId: task.id,
       lifecycleTaskRowId: row.id || `${task.id}_${index}`,
-      lifecycleStatus: "上新完成",
+      lifecycleStatus: "涓婃柊瀹屾垚",
       store: row.store,
       included: true,
       active: true,
@@ -252,7 +251,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       displayCols: Math.max(1, number(row.displayCols || 1)),
       perCol: Math.max(1, number(row.perCol || 1)),
       faceWidth: Math.max(1, number(row.faceWidth || (number(row.needWidth) / Math.max(1, number(row.displayCols || 1))))),
-      source: "产品生命周期管理"
+      source: "浜у搧鐢熷懡鍛ㄦ湡绠＄悊"
     };
   }
 
@@ -260,9 +259,9 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     const patches = [];
     const rows = Array.isArray(task.rows) ? task.rows : [];
 
-    if (task.type === "上新") {
+    if (task.type === "涓婃柊") {
       rows.forEach((row, index) => {
-        if (row.status === "位置冲突已撤销") return;
+        if (row.status === "浣嶇疆鍐茬獊宸叉挙閿€") return;
         patches.push({
           id: `${task.id}:add:${row.id || index}`,
           type: "addSku",
@@ -272,7 +271,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       });
     }
 
-    if (task.type === "淘汰") {
+    if (task.type === "娣樻卑") {
       rows.forEach((row, index) => {
         patches.push({
           id: `${task.id}:exclude:${row.skuId || index}`,
@@ -288,13 +287,13 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       });
     }
 
-    if (task.type === "恢复") {
+    if (task.type === "鎭㈠") {
       rows.forEach((row, index) => {
         if (row.restoreMethod === "skip") return;
         const changes = {
           included: true,
           active: true,
-          lifecycleStatus: "在售SKU",
+          lifecycleStatus: "鍦ㄥ敭SKU",
           lifecycleTaskId: task.id
         };
         if (row.restoreMethod === "replan") {
@@ -325,7 +324,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   }
 
   function commitCompletedTask(task, nextState) {
-    if (!task || task.status !== "已完成") return false;
+    if (!task || task.status !== "宸插畬鎴?) return false;
     const state = normalizeState(nextState || stateRef || blankState());
     const existing = new Set((state.committedPatches || []).map(item => item.id));
     if (dataRef) applyLifecycleTaskToMaster(dataRef, state, task);
@@ -373,7 +372,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       if (message.type === "plm:resize") {
         const frame = document.getElementById("productLifecycleFrame");
         if (frame) {
-          // 空状态页按真实内容收缩；保留少量安全高度，避免 iframe 出现大块空白.
+          // 绌虹姸鎬侀〉鎸夌湡瀹炲唴瀹规敹缂╋紱淇濈暀灏戦噺瀹夊叏楂樺害锛岄伩鍏?iframe 鍑虹幇澶у潡绌虹櫧.
           const height = Math.max(360, Math.min(30000, number(message.height) + 8));
           frame.style.height = `${height}px`;
         }
@@ -455,7 +454,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   function taskTime(task) {
     const value = task?.completedAt || task?.updatedAt || task?.createdAt || "";
     let time = Date.parse(value);
-    if (!Number.isFinite(time)) time = Date.parse(clean(value).replace(/[年月]/g, "/").replace(/日/g, ""));
+    if (!Number.isFinite(time)) time = Date.parse(clean(value).replace(/[骞存湀]/g, "/").replace(/鏃?g, ""));
     if (!Number.isFinite(time)) {
       const idTime = clean(task?.id).match(/(\d{11,14})/);
       time = idTime ? Number(idTime[1]) : 0;
@@ -465,22 +464,21 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   function latestCompletedTaskFor(product, state = stateRef) {
     let latest = null;
     (state?.tasks || []).forEach((task, index) => {
-      if (task?.status !== "已完成" || !itemsMatch(product, task)) return;
+      if (task?.status !== "宸插畬鎴? || !itemsMatch(product, task)) return;
       const candidate = { task, time: taskTime(task), index };
       if (!latest || candidate.time > latest.time || (candidate.time === latest.time && candidate.index < latest.index)) latest = candidate;
     });
     return latest?.task || null;
   }
   function productStatusForState(product) {
-    if (!product) return "在售SKU";
-    // 任务是状态事实，读取时只推导展示，不得反写产品池、SKU 行或门店排柜。
-    const latestTask = latestCompletedTaskFor(product);
-    if (latestTask?.type === "淘汰") return "淘汰完成";
-    if (latestTask?.type === "上新") return "上新完成";
-    if (latestTask?.type === "恢复") return "在售SKU";
-    if (product.active === false || ["淘汰完成", "已淘汰"].includes(product.lifecycleStatus)) return "淘汰完成";
-    if (product.lifecycleStatus === "上新完成") return "上新完成";
-    return "在售SKU";
+    if (!product) return "鍦ㄥ敭SKU";
+    // 浠诲姟鏄姸鎬佷簨瀹烇紝璇诲彇鏃跺彧鎺ㄥ灞曠ず锛屼笉寰楀弽鍐欎骇鍝佹睜銆丼KU 琛屾垨闂ㄥ簵鎺掓煖銆?    const latestTask = latestCompletedTaskFor(product);
+    if (latestTask?.type === "娣樻卑") return "娣樻卑瀹屾垚";
+    if (latestTask?.type === "涓婃柊") return "涓婃柊瀹屾垚";
+    if (latestTask?.type === "鎭㈠") return "鍦ㄥ敭SKU";
+    if (product.active === false || ["娣樻卑瀹屾垚", "宸叉窐姹?].includes(product.lifecycleStatus)) return "娣樻卑瀹屾垚";
+    if (product.lifecycleStatus === "涓婃柊瀹屾垚") return "涓婃柊瀹屾垚";
+    return "鍦ㄥ敭SKU";
   }
   function rebuildProductCache() {
     productIndex = new Map();
@@ -494,7 +492,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       seen.add(productKey);
       formalCache.push(product);
       for (const value of identityValues(product)) productIndex.set(value, product);
-      if (productStatusForState(product) !== "淘汰完成") {
+      if (productStatusForState(product) !== "娣樻卑瀹屾垚") {
         activeCache.push(product);
         for (const value of identityValues(product)) activeAliasCache.add(value);
       }
@@ -508,52 +506,52 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     return (dataRef?.productPool || []).find(product => itemsMatch(product, item)) || null;
   }
   function promoteCompletedLaunchTask(data, state, task) {
-    if (!task || task.status !== "已完成" || task.type !== "上新") return { product: null, created: false, reason: "任务未完成或不是上新任务" };
+    if (!task || task.status !== "宸插畬鎴? || task.type !== "涓婃柊") return { product: null, created: false, reason: "浠诲姟鏈畬鎴愭垨涓嶆槸涓婃柊浠诲姟" };
     data.productPool = Array.isArray(data.productPool) ? data.productPool : [];
     state.draftProducts = Array.isArray(state.draftProducts) ? state.draftProducts : [];
     let product = data.productPool.find(item => itemsMatch(item, task));
-    if (product) return { product, created: false, reason: "产品已在总池" };
+    if (product) return { product, created: false, reason: "浜у搧宸插湪鎬绘睜" };
     const source = productPoolSource(data, state, task);
     const record = toProductPoolRecord(source, task);
-    if (!record) return { product: null, created: false, reason: "缺少可核对的商品主数据，未自动建池" };
+    if (!record) return { product: null, created: false, reason: "缂哄皯鍙牳瀵圭殑鍟嗗搧涓绘暟鎹紝鏈嚜鍔ㄥ缓姹? };
     record.id = record.id && !String(record.id).startsWith("draft_") ? record.id : `pool_${task.id}`;
     product = {
       ...record,
       active: true,
-      lifecycleStatus: "上新完成",
+      lifecycleStatus: "涓婃柊瀹屾垚",
       lifecycleTaskId: task.id,
       lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
     };
     data.productPool.push(product);
     state.draftProducts = state.draftProducts.filter(item => !itemsMatch(item, task));
-    return { product, created: true, reason: "已从任务对应主数据纳入产品总池" };
+    return { product, created: true, reason: "宸蹭粠浠诲姟瀵瑰簲涓绘暟鎹撼鍏ヤ骇鍝佹€绘睜" };
   }
   function applyLifecycleTaskToMaster(data, state, task) {
-    if (!task || task.status !== "已完成") return null;
+    if (!task || task.status !== "宸插畬鎴?) return null;
     data.productPool = Array.isArray(data.productPool) ? data.productPool : [];
     state.draftProducts = Array.isArray(state.draftProducts) ? state.draftProducts : [];
     let formal = data.productPool.find(product => itemsMatch(product, task));
-    if (task.type === "上新") {
+    if (task.type === "涓婃柊") {
       formal = promoteCompletedLaunchTask(data, state, task).product;
       if (!formal) return null;
       Object.assign(formal, {
         ...canonicalProductFields(formal, task),
         active: true,
-        lifecycleStatus: "上新完成",
+        lifecycleStatus: "涓婃柊瀹屾垚",
         lifecycleTaskId: task.id,
         lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
       });
-    } else if (formal && task.type === "淘汰") {
+    } else if (formal && task.type === "娣樻卑") {
       Object.assign(formal, {
         active: false,
-        lifecycleStatus: "淘汰完成",
+        lifecycleStatus: "娣樻卑瀹屾垚",
         lifecycleTaskId: task.id,
         lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
       });
-    } else if (formal && task.type === "恢复") {
+    } else if (formal && task.type === "鎭㈠") {
       Object.assign(formal, {
         active: true,
-        lifecycleStatus: "在售SKU",
+        lifecycleStatus: "鍦ㄥ敭SKU",
         lifecycleTaskId: task.id,
         lifecycleChangedAt: task.completedAt || task.updatedAt || task.createdAt || ""
       });
@@ -561,12 +559,12 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
     return formal;
   }
   function repairCompletedLaunchTasks() {
-    if (!dataRef) return { ok: false, promoted: [], skipped: [], message: "统一数据尚未加载" };
+    if (!dataRef) return { ok: false, promoted: [], skipped: [], message: "缁熶竴鏁版嵁灏氭湭鍔犺浇" };
     const state = normalizeState(clone(stateRef || blankState()));
     const promoted = [];
     const skipped = [];
     (state.tasks || [])
-      .filter(task => task?.type === "上新" && task?.status === "已完成")
+      .filter(task => task?.type === "涓婃柊" && task?.status === "宸插畬鎴?)
       .sort((a, b) => taskTime(a) - taskTime(b))
       .forEach(task => {
         const before = (dataRef.productPool || []).find(product => itemsMatch(product, task));
@@ -580,13 +578,12 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       writeState(state);
       const frame = document.getElementById("productLifecycleFrame");
       frame?.contentWindow?.postMessage({ type: "plm:products-repaired", promoted }, "*");
-      window.dispatchEvent(new CustomEvent("product-lifecycle:data-committed", { detail: { type: "上新入池修复", promoted } }));
+      window.dispatchEvent(new CustomEvent("product-lifecycle:data-committed", { detail: { type: "涓婃柊鍏ユ睜淇", promoted } }));
     }
-    return { ok: true, promoted, skipped, message: promoted.length ? `已将 ${promoted.length} 个已完成上新SKU纳入产品总池` : "没有可补齐的已完成上新SKU" };
+    return { ok: true, promoted, skipped, message: promoted.length ? `宸插皢 ${promoted.length} 涓凡瀹屾垚涓婃柊SKU绾冲叆浜у搧鎬绘睜` : "娌℃湁鍙ˉ榻愮殑宸插畬鎴愪笂鏂癝KU" };
   }
   function migrateCompletedTasksToMaster(data, state) {
-    // 历史任务只用于读取时推导状态；禁止在加载、拉取或页面刷新时改写业务数据。
-    return data;
+    // 鍘嗗彶浠诲姟鍙敤浜庤鍙栨椂鎺ㄥ鐘舵€侊紱绂佹鍦ㄥ姞杞姐€佹媺鍙栨垨椤甸潰鍒锋柊鏃舵敼鍐欎笟鍔℃暟鎹€?    return data;
   }
   function dedupeLifecycleRows(data) {
     const taskRows = new Set();
@@ -632,8 +629,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
   function repairLifecyclePlacements(data, state) { return []; }
   function reconcileLifecycleData(data, state) {
     if (!data || !state) return data;
-    // 只建立主数据索引：不回放任务、不应用旧补丁、不去重/增删 SKU、不同步字段、不调柜。
-    rebuildProductCache();
+    // 鍙缓绔嬩富鏁版嵁绱㈠紩锛氫笉鍥炴斁浠诲姟銆佷笉搴旂敤鏃цˉ涓併€佷笉鍘婚噸/澧炲垹 SKU銆佷笉鍚屾瀛楁銆佷笉璋冩煖銆?    rebuildProductCache();
     return data;
   }
   function formalProducts() {
@@ -673,8 +669,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
         if (source) moveRows.set(String(row.moveSkuId), { source, row });
       }
     });
-    // 先扣除本次方案会释放、替换、压缩或移位的原排面，再验证新品写入后的柜段容量。
-    (dataRef?.skus || []).filter(row => row.included !== false && productStatus(row) !== "\u6dd8\u6c70\u5b8c\u6210" && !removedIds.has(String(row.id)) && !shrinkRows.has(String(row.id)) && !moveRows.has(String(row.id))).forEach(row => {
+    // 鍏堟墸闄ゆ湰娆℃柟妗堜細閲婃斁銆佹浛鎹€佸帇缂╂垨绉讳綅鐨勫師鎺掗潰锛屽啀楠岃瘉鏂板搧鍐欏叆鍚庣殑鏌滄瀹归噺銆?    (dataRef?.skus || []).filter(row => row.included !== false && productStatus(row) !== "\u6dd8\u6c70\u5b8c\u6210" && !removedIds.has(String(row.id)) && !shrinkRows.has(String(row.id)) && !moveRows.has(String(row.id))).forEach(row => {
       const cabinet = cabinets.get(row.cabinetKey);
       if (cabinet) cabinet.used += rowWidth(row);
     });
@@ -700,14 +695,11 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       cabinet.used += width;
     });
     return { ok: errors.length === 0, errors };
-  }  // 仅用于用户主动“保存至云端”时，将已完成任务这一既有事实写回产品池状态。
-  // 仅可从对应草稿/任务主数据补齐“已完成上新”且缺失的产品池记录；不删除商品，不触碰 SKU 行、门店、柜段、陈列位置、图片或任何经营字段。
-  function buildPersistenceCopy(data) {
+  }  // 浠呯敤浜庣敤鎴蜂富鍔ㄢ€滀繚瀛樿嚦浜戠鈥濇椂锛屽皢宸插畬鎴愪换鍔¤繖涓€鏃㈡湁浜嬪疄鍐欏洖浜у搧姹犵姸鎬併€?  // 浠呭彲浠庡搴旇崏绋?浠诲姟涓绘暟鎹ˉ榻愨€滃凡瀹屾垚涓婃柊鈥濅笖缂哄け鐨勪骇鍝佹睜璁板綍锛涗笉鍒犻櫎鍟嗗搧锛屼笉瑙︾ SKU 琛屻€侀棬搴椼€佹煖娈点€侀檲鍒椾綅缃€佸浘鐗囨垨浠讳綍缁忚惀瀛楁銆?  function buildPersistenceCopy(data) {
     const copy = clone(data || {});
     const persistedState = normalizeState(clone(copy.lifecycle || stateRef || blankState()));
-    // 只在用户明确点击“保存至云端”时补齐历史已完成上新任务；拉取、刷新和读取不会改写原数据。
-    (persistedState.tasks || [])
-      .filter(task => task?.type === "上新" && task?.status === "已完成")
+    // 鍙湪鐢ㄦ埛鏄庣‘鐐瑰嚮鈥滀繚瀛樿嚦浜戠鈥濇椂琛ラ綈鍘嗗彶宸插畬鎴愪笂鏂颁换鍔★紱鎷夊彇銆佸埛鏂板拰璇诲彇涓嶄細鏀瑰啓鍘熸暟鎹€?    (persistedState.tasks || [])
+      .filter(task => task?.type === "涓婃柊" && task?.status === "宸插畬鎴?)
       .sort((a, b) => taskTime(a) - taskTime(b))
       .forEach(task => { promoteCompletedLaunchTask(copy, persistedState, task); });
     copy.lifecycle = clone(persistedState);
@@ -715,12 +707,12 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       const latestTask = latestCompletedTaskFor(product, persistedState);
       if (!latestTask) return;
       const changedAt = latestTask.completedAt || latestTask.updatedAt || latestTask.createdAt || "";
-      if (latestTask.type === "淘汰") {
-        Object.assign(product, { active: false, lifecycleStatus: "淘汰完成", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
-      } else if (latestTask.type === "上新") {
-        Object.assign(product, { active: true, lifecycleStatus: "上新完成", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
-      } else if (latestTask.type === "恢复") {
-        Object.assign(product, { active: true, lifecycleStatus: "在售SKU", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
+      if (latestTask.type === "娣樻卑") {
+        Object.assign(product, { active: false, lifecycleStatus: "娣樻卑瀹屾垚", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
+      } else if (latestTask.type === "涓婃柊") {
+        Object.assign(product, { active: true, lifecycleStatus: "涓婃柊瀹屾垚", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
+      } else if (latestTask.type === "鎭㈠") {
+        Object.assign(product, { active: true, lifecycleStatus: "鍦ㄥ敭SKU", lifecycleTaskId: latestTask.id, lifecycleChangedAt: changedAt });
       }
     });
     return copy;

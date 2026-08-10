@@ -24,28 +24,28 @@
 
   function appState() {
     try {
-      if (typeof 状态 !== 'undefined' && 状态) return 状态;
+      if (typeof 鐘舵€?!== 'undefined' && 鐘舵€? return 鐘舵€?
     } catch (_) {}
     return window.UNIFIED_CARTON_DATA || {};
   }
 
   function appCurrent() {
     try {
-      if (typeof 当前 !== 'undefined' && 当前) return 当前;
+      if (typeof 褰撳墠 !== 'undefined' && 褰撳墠) return 褰撳墠;
     } catch (_) {}
     return {};
   }
 
   function currentStore() {
     try {
-      if (typeof 门店名 === 'function') return 门店名();
+      if (typeof 闂ㄥ簵鍚?=== 'function') return 闂ㄥ簵鍚?);
     } catch (_) {}
     return document.getElementById('storeSelect')?.value || '';
   }
 
   function includedRows(store) {
     try {
-      if (typeof 纳入SKU === 'function') return 纳入SKU(store);
+      if (typeof 绾冲叆SKU === 'function') return 绾冲叆SKU(store);
     } catch (_) {}
     return (appState().skus || []).filter(function (row) {
       return row.store === store && row.included !== false;
@@ -54,7 +54,7 @@
 
   function rowCalc(row) {
     try {
-      if (typeof 计算SKU === 'function') return 计算SKU(row);
+      if (typeof 璁＄畻SKU === 'function') return 璁＄畻SKU(row);
     } catch (_) {}
     const full = Math.max(0, Math.round(number(row.displayCols) * number(row.perCol)));
     const triggerRate = number(appState().params?.triggerRate || 0.1);
@@ -66,20 +66,20 @@
     const vol = number(row.volume) || number(row.length) * number(row.width) * number(row.height) / 1000000;
     const staticVol = external * vol;
     const externalDays = number(row.dailyQty) > 0 ? external / number(row.dailyQty) : 0;
-    const risk = external <= 0 ? '无外储' : externalDays <= 15 ? '低风险' : externalDays <= 45 ? '中风险' : externalDays <= 90 ? '高风险' : '极高风险';
+    const risk = external <= 0 ? '鏃犲鍌? : externalDays <= 15 ? '浣庨闄? : externalDays <= 45 ? '涓闄? : externalDays <= 90 ? '楂橀闄? : '鏋侀珮椋庨櫓';
     return { full, trigger, receivable, inShelf, external, vol, staticVol, risk };
   }
 
   function rowWidth(row) {
     try {
-      if (typeof SKU占用宽度 === 'function') return SKU占用宽度(row);
+      if (typeof SKU鍗犵敤瀹藉害 === 'function') return SKU鍗犵敤瀹藉害(row);
     } catch (_) {}
     return Math.max(0, number(row.displayCols) * number(row.faceWidth));
   }
 
   function cabinetUsage() {
     try {
-      if (typeof 柜段使用 === 'function') return 柜段使用();
+      if (typeof 鏌滄浣跨敤 === 'function') return 鏌滄浣跨敤();
     } catch (_) {}
     const state = appState();
     const map = new Map((state.cabinets || []).map(function (cabinet) {
@@ -99,39 +99,39 @@
 
   function cabinetLabel(row) {
     try {
-      if (typeof 柜名 === 'function') return 柜名(row);
+      if (typeof 鏌滃悕 === 'function') return 鏌滃悕(row);
     } catch (_) {}
     return row.cabinetLabel || '';
   }
 
   function cabinetPosition(row) {
     try {
-      if (typeof 柜位 === 'function') return 柜位(row);
+      if (typeof 鏌滀綅 === 'function') return 鏌滀綅(row);
     } catch (_) {}
     return row.position || '';
   }
 
   function cabinetType(cabinet) {
     try {
-      if (typeof 冰柜类型 === 'function') return 冰柜类型(cabinet);
+      if (typeof 鍐版煖绫诲瀷 === 'function') return 鍐版煖绫诲瀷(cabinet);
     } catch (_) {}
     const value = [cabinet?.kind, cabinet?.label].filter(Boolean).join(' ');
-    if (/冰淇淋|雪糕|冰品/.test(value)) return '冰淇淋柜';
-    if (/立柜/.test(value)) return '立柜';
-    if (/卧柜/.test(value)) return '卧柜';
-    return cabinet?.kind || '其他';
+    if (/鍐版穱娣媩闆硶|鍐板搧/.test(value)) return '鍐版穱娣嬫煖';
+    if (/绔嬫煖/.test(value)) return '绔嬫煖';
+    if (/鍗ф煖/.test(value)) return '鍗ф煖';
+    return cabinet?.kind || '鍏朵粬';
   }
 
   function cabinetNumber(cabinet) {
     try {
-      if (typeof 柜号 === 'function') return 柜号(cabinet);
+      if (typeof 鏌滃彿 === 'function') return 鏌滃彿(cabinet);
     } catch (_) {}
     return cabinet?.label || '';
   }
 
   function selectedSku(card) {
     const meta = text(card.querySelector('.selection-meta'));
-    const barcode = (meta.split(/[｜|]/)[0] || '').trim();
+    const barcode = (meta.split(/[锝渱]/)[0] || '').trim();
     const name = text(card.querySelector('.selection-head strong'));
     const rows = appState().skus || [];
     return rows.find(function (row) { return String(row.barcode || '') === barcode; }) ||
@@ -150,8 +150,8 @@
     const info = document.createElement('div');
     info.className = 'selection-basic-info';
     info.dataset.previewKey = key;
-    info.innerHTML = '<div><span>箱规</span><strong>' + (number(sku.carton) || 0) + ' 件/箱</strong></div>' +
-      '<div><span>单列占宽</span><strong>' + (number(sku.faceWidth) || 0) + ' mm</strong></div>';
+    info.innerHTML = '<div><span>绠辫</span><strong>' + (number(sku.carton) || 0) + ' 浠?绠?/strong></div>' +
+      '<div><span>鍗曞垪鍗犲</span><strong>' + (number(sku.faceWidth) || 0) + ' mm</strong></div>';
     const actions = card.querySelector('.selection-actions');
     if (actions) actions.insertAdjacentElement('afterend', info);
     else card.appendChild(info);
@@ -177,9 +177,9 @@
 
   function installLocateOverride() {
     try {
-      if (typeof 定位到陈列图商品 === 'function') {
-        定位到陈列图商品 = safeLocate;
-        window.定位到陈列图商品 = safeLocate;
+      if (typeof 瀹氫綅鍒伴檲鍒楀浘鍟嗗搧 === 'function') {
+        瀹氫綅鍒伴檲鍒楀浘鍟嗗搧 = safeLocate;
+        window.瀹氫綅鍒伴檲鍒楀浘鍟嗗搧 = safeLocate;
         return true;
       }
     } catch (_) {}
@@ -205,7 +205,7 @@
       if (!empty) {
         empty = document.createElement('div');
         empty.className = 'empty pool-filter-empty';
-        empty.textContent = '没有匹配的商品';
+        empty.textContent = '娌℃湁鍖归厤鐨勫晢鍝?;
         list.appendChild(empty);
       }
       empty.hidden = false;
@@ -238,7 +238,7 @@
       picker.className = 'planogram-category-picker';
       picker.innerHTML = '<button type="button" class="category-picker-toggle" aria-expanded="false"></button>' +
         '<div class="category-picker-menu" hidden>' +
-        '<input type="search" class="category-picker-search" placeholder="搜索四级品类">' +
+        '<input type="search" class="category-picker-search" placeholder="鎼滅储鍥涚骇鍝佺被">' +
         '<div class="category-picker-options"></div></div>';
       select.insertAdjacentElement('afterend', picker);
 
@@ -275,7 +275,7 @@
     const toggle = picker.querySelector('.category-picker-toggle');
     const options = picker.querySelector('.category-picker-options');
     const selected = select.options[select.selectedIndex];
-    toggle.textContent = selected ? selected.textContent : '全部四级品类';
+    toggle.textContent = selected ? selected.textContent : '鍏ㄩ儴鍥涚骇鍝佺被';
     const optionSignature = Array.from(select.options).map(function (option) {
       return option.value + '::' + option.textContent;
     }).join('||') + '##' + select.value;
@@ -312,13 +312,13 @@
     if (hooksInstalled) return true;
     let ready = false;
     try {
-      ready = typeof 渲染陈列图 === 'function' &&
-        typeof 渲染陈列图右侧 === 'function' &&
-        typeof 定位到陈列图商品 === 'function';
+      ready = typeof 娓叉煋闄堝垪鍥?=== 'function' &&
+        typeof 娓叉煋闄堝垪鍥惧彸渚?=== 'function' &&
+        typeof 瀹氫綅鍒伴檲鍒楀浘鍟嗗搧 === 'function';
     } catch (_) {}
     if (!ready) return false;
 
-    const originalRenderSide = 渲染陈列图右侧;
+    const originalRenderSide = 娓叉煋闄堝垪鍥惧彸渚?
     const wrappedRenderSide = function () {
       const oldInput = document.getElementById('displayMapPoolSearch');
       if (oldInput) oldInput.value = '';
@@ -330,10 +330,10 @@
       return result;
     };
     wrappedRenderSide.__stablePlanogramFix = true;
-    渲染陈列图右侧 = wrappedRenderSide;
-    window.渲染陈列图右侧 = wrappedRenderSide;
+    娓叉煋闄堝垪鍥惧彸渚?= wrappedRenderSide;
+    window.娓叉煋闄堝垪鍥惧彸渚?= wrappedRenderSide;
 
-    const originalRenderMap = 渲染陈列图;
+    const originalRenderMap = 娓叉煋闄堝垪鍥?
     const wrappedRenderMap = function () {
       const result = originalRenderMap.apply(this, arguments);
       syncCategoryPicker();
@@ -342,16 +342,16 @@
       return result;
     };
     wrappedRenderMap.__stablePlanogramFix = true;
-    渲染陈列图 = wrappedRenderMap;
-    window.渲染陈列图 = wrappedRenderMap;
+    娓叉煋闄堝垪鍥?= wrappedRenderMap;
+    window.娓叉煋闄堝垪鍥?= wrappedRenderMap;
 
-    定位到陈列图商品 = safeLocate;
-    window.定位到陈列图商品 = safeLocate;
+    瀹氫綅鍒伴檲鍒楀浘鍟嗗搧 = safeLocate;
+    window.瀹氫綅鍒伴檲鍒楀浘鍟嗗搧 = safeLocate;
 
     try {
-      if (typeof 导出陈列图 === 'function') {
-        导出陈列图 = exportExcelPlanogram;
-        window.导出陈列图 = exportExcelPlanogram;
+      if (typeof 瀵煎嚭闄堝垪鍥?=== 'function') {
+        瀵煎嚭闄堝垪鍥?= exportExcelPlanogram;
+        window.瀵煎嚭闄堝垪鍥?= exportExcelPlanogram;
       }
     } catch (_) {}
 
@@ -393,9 +393,9 @@
       script.async = true;
       script.onload = function () {
         if (window.ExcelJS) resolve(window.ExcelJS);
-        else reject(new Error('ExcelJS未正确加载'));
+        else reject(new Error('ExcelJS鏈纭姞杞?));
       };
-      script.onerror = function () { reject(new Error('ExcelJS加载失败')); };
+      script.onerror = function () { reject(new Error('ExcelJS鍔犺浇澶辫触')); };
       document.head.appendChild(script);
     });
   }
@@ -406,7 +406,7 @@
     excelJsPromise = loadScript(EXCELJS_PRIMARY).catch(function () {
       return loadScript(EXCELJS_FALLBACK);
     }).then(function () {
-      if (!window.ExcelJS) throw new Error('Excel组件加载失败');
+      if (!window.ExcelJS) throw new Error('Excel缁勪欢鍔犺浇澶辫触');
       return window.ExcelJS;
     }).catch(function (error) {
       excelJsPromise = null;
@@ -440,9 +440,9 @@
 
   function fillForRow(row, calc) {
     const status = [row.lifecycleStatus, row.status, row.changeNote].filter(Boolean).join(' ');
-    if (/待上新|上新/.test(status)) return fills.launch;
-    if (/待淘汰|淘汰/.test(status)) return fills.retire;
-    if (/恢复/.test(status)) return fills.restore;
+    if (/寰呬笂鏂皘涓婃柊/.test(status)) return fills.launch;
+    if (/寰呮窐姹皘娣樻卑/.test(status)) return fills.retire;
+    if (/鎭㈠/.test(status)) return fills.restore;
     if (row.modifiedFields?.length || row.customPlacement) return fills.changed;
     if (calc.external > 0) return fills.external;
     return fills.normal;
@@ -464,7 +464,7 @@
     const state = appState();
     const store = currentStore();
     const current = appCurrent();
-    const category4 = current.陈列图四级 || document.getElementById('displayMapCategoryFilter')?.value || '';
+    const category4 = current.闄堝垪鍥惧洓绾?|| document.getElementById('displayMapCategoryFilter')?.value || '';
     const allRows = includedRows(store).filter(function (row) { return !row.inStaging; });
     const visibleRows = allRows.filter(function (row) { return !category4 || String(row.category4 || '').trim() === category4; });
     const cabinets = (state.cabinets || []).filter(function (cabinet) { return cabinet.store === store; });
@@ -473,7 +473,7 @@
     }));
     const groups = new Map();
     cabinets.forEach(function (cabinet) {
-      const label = cabinet.label || cabinet.key || '未命名陈列柜';
+      const label = cabinet.label || cabinet.key || '鏈懡鍚嶉檲鍒楁煖';
       if (!groups.has(label)) groups.set(label, []);
       groups.get(label).push(cabinet);
     });
@@ -519,7 +519,7 @@
   }
 
   function createPlanogramSheet(workbook, model) {
-    const sheet = workbook.addWorksheet('陈列图', {
+    const sheet = workbook.addWorksheet('闄堝垪鍥?, {
       views: [{ state: 'frozen', ySplit: 4 }],
       pageSetup: {
         orientation: 'landscape',
@@ -540,7 +540,7 @@
 
     safeMerge(sheet, 1, 1, 1, lastCol);
     const title = sheet.getCell(1, 1);
-    title.value = '冻品门店陈列图';
+    title.value = '鍐诲搧闂ㄥ簵闄堝垪鍥?;
     applyCellStyle(title, fills.title, 'FFFFFFFF', true);
     title.font = { name: 'Microsoft YaHei', size: 18, color: { argb: 'FFFFFFFF' }, bold: true };
     sheet.getRow(1).height = 32;
@@ -548,21 +548,21 @@
     safeMerge(sheet, 2, 1, 2, lastCol);
     const meta = sheet.getCell(2, 1);
     const generated = new Date().toLocaleString('zh-CN', { hour12: false });
-    meta.value = '门店：' + model.store + '　｜　导出时间：' + generated + '　｜　四级品类：' + (model.category4 || '全部') + '　｜　数据版本：' + (model.state.meta?.version || model.state.meta?.source || '当前版');
+    meta.value = '闂ㄥ簵锛? + model.store + '銆€锝溿€€瀵煎嚭鏃堕棿锛? + generated + '銆€锝溿€€鍥涚骇鍝佺被锛? + (model.category4 || '鍏ㄩ儴') + '銆€锝溿€€鏁版嵁鐗堟湰锛? + (model.state.meta?.version || model.state.meta?.source || '褰撳墠鐗?);
     applyCellStyle(meta, 'FFF7FAF8', 'FF33423C', false);
     meta.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
     sheet.getRow(2).height = 24;
 
     safeMerge(sheet, 3, 1, 3, lastCol);
     const note = sheet.getCell(3, 1);
-    note.value = '说明：所有商品块均为可编辑单元格；横向每个基础列约代表50mm陈列宽度。修改Excel不会自动反写小程序。';
+    note.value = '璇存槑锛氭墍鏈夊晢鍝佸潡鍧囦负鍙紪杈戝崟鍏冩牸锛涙í鍚戞瘡涓熀纭€鍒楃害浠ｈ〃50mm闄堝垪瀹藉害銆備慨鏀笶xcel涓嶄細鑷姩鍙嶅啓灏忕▼搴忋€?;
     applyCellStyle(note, 'FFFFFAE8', 'FF6B4B0F', false);
     note.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
     sheet.getRow(3).height = 26;
 
     safeMerge(sheet, 4, 1, 4, lastCol);
     const legend = sheet.getCell(4, 1);
-    legend.value = '颜色：正常陈列=浅绿　外储=浅灰　已修改=浅黄　上新执行中=浅蓝　淘汰执行中=浅橙　恢复中=浅紫　空位=白色';
+    legend.value = '棰滆壊锛氭甯搁檲鍒?娴呯豢銆€澶栧偍=娴呯伆銆€宸蹭慨鏀?娴呴粍銆€涓婃柊鎵ц涓?娴呰摑銆€娣樻卑鎵ц涓?娴呮銆€鎭㈠涓?娴呯传銆€绌轰綅=鐧借壊';
     applyCellStyle(legend, 'FFFFFFFF', 'FF596861', false);
     legend.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
 
@@ -570,7 +570,7 @@
     model.groups.forEach(function (group) {
       safeMerge(sheet, cursorRow, 1, cursorRow, lastCol);
       const cabinetCell = sheet.getCell(cursorRow, 1);
-      cabinetCell.value = group.label + '　｜　' + group.type + '　｜　' + (group.number || '未标柜号') + '　｜　' + group.segments.length + '个位置';
+      cabinetCell.value = group.label + '銆€锝溿€€' + group.type + '銆€锝溿€€' + (group.number || '鏈爣鏌滃彿') + '銆€锝溿€€' + group.segments.length + '涓綅缃?;
       applyCellStyle(cabinetCell, fills.section, 'FF183B2E', true);
       cabinetCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
       sheet.getRow(cursorRow).height = 26;
@@ -581,10 +581,10 @@
         const rowStart = cursorRow;
         const rowEnd = cursorRow + 3;
         for (let row = rowStart; row <= rowEnd; row += 1) sheet.getRow(row).height = 22;
-        writeMergedBlock(sheet, rowStart, rowEnd, 1, 1, segment.position || '未标位置', fills.header, 'FF24332D', true);
-        writeMergedBlock(sheet, rowStart, rowEnd, 2, 2, '容量\n' + format(modelSegment.capacity, 0) + 'mm', fills.header, 'FF24332D', false);
-        writeMergedBlock(sheet, rowStart, rowEnd, 3, 3, '已用\n' + format(modelSegment.used, 0) + 'mm', fills.header, 'FF24332D', false);
-        writeMergedBlock(sheet, rowStart, rowEnd, 4, 4, '余量\n' + format(modelSegment.left, 0) + 'mm', modelSegment.left < 0 ? fills.danger : fills.header, modelSegment.left < 0 ? 'FF9B1C1C' : 'FF24332D', false);
+        writeMergedBlock(sheet, rowStart, rowEnd, 1, 1, segment.position || '鏈爣浣嶇疆', fills.header, 'FF24332D', true);
+        writeMergedBlock(sheet, rowStart, rowEnd, 2, 2, '瀹归噺\n' + format(modelSegment.capacity, 0) + 'mm', fills.header, 'FF24332D', false);
+        writeMergedBlock(sheet, rowStart, rowEnd, 3, 3, '宸茬敤\n' + format(modelSegment.used, 0) + 'mm', fills.header, 'FF24332D', false);
+        writeMergedBlock(sheet, rowStart, rowEnd, 4, 4, '浣欓噺\n' + format(modelSegment.left, 0) + 'mm', modelSegment.left < 0 ? fills.danger : fills.header, modelSegment.left < 0 ? 'FF9B1C1C' : 'FF24332D', false);
 
         let col = 5;
         modelSegment.rows.forEach(function (row) {
@@ -594,11 +594,11 @@
           const carton = Math.max(1, number(row.carton || 1));
           const maxBoxes = Math.max(0, Math.floor(number(calc.full) / carton));
           const value = [
-            row.name || '未命名商品',
-            row.barcode || '无条码',
+            row.name || '鏈懡鍚嶅晢鍝?,
+            row.barcode || '鏃犳潯鐮?,
             [row.category3, row.category4].filter(Boolean).join(' / '),
-            format(row.displayCols, 0) + '列｜单列' + format(row.perCol, 1) + '｜满陈' + format(calc.full, 0),
-            '最多' + maxBoxes + '箱｜占宽' + format(width, 0) + 'mm｜外储' + format(calc.external, 0) + '件'
+            format(row.displayCols, 0) + '鍒楋綔鍗曞垪' + format(row.perCol, 1) + '锝滄弧闄? + format(calc.full, 0),
+            '鏈€澶? + maxBoxes + '绠憋綔鍗犲' + format(width, 0) + 'mm锝滃鍌? + format(calc.external, 0) + '浠?
           ].filter(Boolean).join('\n');
           writeMergedBlock(sheet, rowStart, rowEnd, col, col + span - 1, value, fillForRow(row, calc), 'FF24332D', true);
           col += span;
@@ -606,13 +606,13 @@
 
         if (modelSegment.otherUsed > 0) {
           const span = Math.max(1, Math.round(modelSegment.otherUsed / BASE_WIDTH_MM));
-          writeMergedBlock(sheet, rowStart, rowEnd, col, col + span - 1, '其他筛选外商品占用\n' + format(modelSegment.otherUsed, 0) + 'mm', fills.other, 'FF596660', false);
+          writeMergedBlock(sheet, rowStart, rowEnd, col, col + span - 1, '鍏朵粬绛涢€夊鍟嗗搧鍗犵敤\n' + format(modelSegment.otherUsed, 0) + 'mm', fills.other, 'FF596660', false);
           col += span;
         }
 
         const capacityEnd = 5 + modelSegment.capacityCols - 1;
         if (modelSegment.left > 0 && col <= capacityEnd) {
-          writeMergedBlock(sheet, rowStart, rowEnd, col, capacityEnd, '可用空位\n剩余' + format(modelSegment.left, 0) + 'mm', fills.free, 'FF65736D', false);
+          writeMergedBlock(sheet, rowStart, rowEnd, col, capacityEnd, '鍙敤绌轰綅\n鍓╀綑' + format(modelSegment.left, 0) + 'mm', fills.free, 'FF65736D', false);
           col = capacityEnd + 1;
         }
 
@@ -629,7 +629,7 @@
   }
 
   function createDetailSheet(workbook, model) {
-    const sheet = workbook.addWorksheet('陈列明细', {
+    const sheet = workbook.addWorksheet('闄堝垪鏄庣粏', {
       views: [{ state: 'frozen', ySplit: 1 }],
       pageSetup: {
         orientation: 'landscape',
@@ -640,12 +640,12 @@
       }
     });
     const columns = [
-      ['门店', 20], ['冰柜类型', 12], ['陈列柜', 20], ['柜号', 16], ['层位/分区', 13],
-      ['商品名称', 26], ['条码', 17], ['等级', 8], ['二级类目', 14], ['三级类目', 16], ['四级类目', 16],
-      ['陈列列数', 11], ['单列容量', 11], ['满陈数', 10], ['箱规', 9],
-      ['商品长mm', 11], ['商品宽mm', 11], ['商品高mm', 11], ['单列占宽mm', 12], ['总占宽mm', 12],
-      ['最多可放箱数', 13], ['外储件数', 10], ['外储箱数', 10], ['外储体积L', 11], ['周转风险', 12],
-      ['当前状态', 14], ['修改说明', 28]
+      ['闂ㄥ簵', 20], ['鍐版煖绫诲瀷', 12], ['闄堝垪鏌?, 20], ['鏌滃彿', 16], ['灞備綅/鍒嗗尯', 13],
+      ['鍟嗗搧鍚嶇О', 26], ['鏉＄爜', 17], ['绛夌骇', 8], ['浜岀骇绫荤洰', 14], ['涓夌骇绫荤洰', 16], ['鍥涚骇绫荤洰', 16],
+      ['闄堝垪鍒楁暟', 11], ['鍗曞垪瀹归噺', 11], ['婊￠檲鏁?, 10], ['绠辫', 9],
+      ['鍟嗗搧闀縨m', 11], ['鍟嗗搧瀹絤m', 11], ['鍟嗗搧楂榤m', 11], ['鍗曞垪鍗犲mm', 12], ['鎬诲崰瀹絤m', 12],
+      ['鏈€澶氬彲鏀剧鏁?, 13], ['澶栧偍浠舵暟', 10], ['澶栧偍绠辨暟', 10], ['澶栧偍浣撶НL', 11], ['鍛ㄨ浆椋庨櫓', 12],
+      ['褰撳墠鐘舵€?, 14], ['淇敼璇存槑', 28]
     ];
     sheet.columns = columns.map(function (entry) { return { header: entry[0], key: entry[0], width: entry[1] }; });
     const header = sheet.getRow(1);
@@ -662,33 +662,33 @@
       const carton = Math.max(1, number(row.carton || 1));
       const width = rowWidth(row);
       const values = {
-        '门店': row.store || model.store,
-        '冰柜类型': cabinetType(cabinet),
-        '陈列柜': row.cabinetLabel || cabinet.label || '',
-        '柜号': cabinetNumber(cabinet),
-        '层位/分区': row.position || cabinet.position || '',
-        '商品名称': row.name || '',
-        '条码': row.barcode || '',
-        '等级': row.grade || '',
-        '二级类目': row.category2 || '',
-        '三级类目': row.category3 || '',
-        '四级类目': row.category4 || '',
-        '陈列列数': number(row.displayCols),
-        '单列容量': number(row.perCol),
-        '满陈数': number(calc.full),
-        '箱规': carton,
-        '商品长mm': number(row.length),
-        '商品宽mm': number(row.width),
-        '商品高mm': number(row.height),
-        '单列占宽mm': number(row.faceWidth),
-        '总占宽mm': width,
-        '最多可放箱数': Math.max(0, Math.floor(number(calc.full) / carton)),
-        '外储件数': number(calc.external),
-        '外储箱数': Math.round(number(calc.external) / carton * 100) / 100,
-        '外储体积L': Math.round(number(calc.staticVol) * 100) / 100,
-        '周转风险': calc.risk || '',
-        '当前状态': row.lifecycleStatus || row.status || (row.included === false ? '未纳入' : '正常陈列'),
-        '修改说明': [row.changeNote, ...(row.modifiedFields || [])].filter(Boolean).join('；')
+        '闂ㄥ簵': row.store || model.store,
+        '鍐版煖绫诲瀷': cabinetType(cabinet),
+        '闄堝垪鏌?: row.cabinetLabel || cabinet.label || '',
+        '鏌滃彿': cabinetNumber(cabinet),
+        '灞備綅/鍒嗗尯': row.position || cabinet.position || '',
+        '鍟嗗搧鍚嶇О': row.name || '',
+        '鏉＄爜': row.barcode || '',
+        '绛夌骇': row.grade || '',
+        '浜岀骇绫荤洰': row.category2 || '',
+        '涓夌骇绫荤洰': row.category3 || '',
+        '鍥涚骇绫荤洰': row.category4 || '',
+        '闄堝垪鍒楁暟': number(row.displayCols),
+        '鍗曞垪瀹归噺': number(row.perCol),
+        '婊￠檲鏁?: number(calc.full),
+        '绠辫': carton,
+        '鍟嗗搧闀縨m': number(row.length),
+        '鍟嗗搧瀹絤m': number(row.width),
+        '鍟嗗搧楂榤m': number(row.height),
+        '鍗曞垪鍗犲mm': number(row.faceWidth),
+        '鎬诲崰瀹絤m': width,
+        '鏈€澶氬彲鏀剧鏁?: Math.max(0, Math.floor(number(calc.full) / carton)),
+        '澶栧偍浠舵暟': number(calc.external),
+        '澶栧偍绠辨暟': Math.round(number(calc.external) / carton * 100) / 100,
+        '澶栧偍浣撶НL': Math.round(number(calc.staticVol) * 100) / 100,
+        '鍛ㄨ浆椋庨櫓': calc.risk || '',
+        '褰撳墠鐘舵€?: row.lifecycleStatus || row.status || (row.included === false ? '鏈撼鍏? : '姝ｅ父闄堝垪'),
+        '淇敼璇存槑': [row.changeNote, ...(row.modifiedFields || [])].filter(Boolean).join('锛?)
       };
       const excelRow = sheet.addRow(values);
       excelRow.height = 22;
@@ -701,15 +701,15 @@
     const lastCol = columns.length;
     const lastRow = Math.max(1, sheet.rowCount);
     sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: lastRow, column: lastCol } };
-    sheet.getColumn('条码').numFmt = '@';
-    ['陈列列数', '单列容量', '满陈数', '箱规', '商品长mm', '商品宽mm', '商品高mm', '单列占宽mm', '总占宽mm', '最多可放箱数', '外储件数', '外储箱数', '外储体积L'].forEach(function (name) {
+    sheet.getColumn('鏉＄爜').numFmt = '@';
+    ['闄堝垪鍒楁暟', '鍗曞垪瀹归噺', '婊￠檲鏁?, '绠辫', '鍟嗗搧闀縨m', '鍟嗗搧瀹絤m', '鍟嗗搧楂榤m', '鍗曞垪鍗犲mm', '鎬诲崰瀹絤m', '鏈€澶氬彲鏀剧鏁?, '澶栧偍浠舵暟', '澶栧偍绠辨暟', '澶栧偍浣撶НL'].forEach(function (name) {
       sheet.getColumn(name).numFmt = '0.00';
     });
     return sheet;
   }
 
   function safeFilename(value) {
-    return String(value || '').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_').replace(/^_+|_+$/g, '') || '未命名门店';
+    return String(value || '').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '_').replace(/^_+|_+$/g, '') || '鏈懡鍚嶉棬搴?;
   }
 
   function timestamp() {
@@ -720,8 +720,8 @@
 
   function notify(message) {
     try {
-      if (typeof 完成提示 === 'function') {
-        完成提示(message);
+      if (typeof 瀹屾垚鎻愮ず === 'function') {
+        瀹屾垚鎻愮ず(message);
         return;
       }
     } catch (_) {}
@@ -730,21 +730,21 @@
 
   async function exportExcelPlanogram() {
     const button = document.getElementById('exportDisplayMapBtn');
-    const originalText = button?.textContent || '导出Excel陈列图';
+    const originalText = button?.textContent || '瀵煎嚭Excel闄堝垪鍥?;
     try {
       if (button) {
         button.disabled = true;
-        button.textContent = '正在生成Excel...';
+        button.textContent = '姝ｅ湪鐢熸垚Excel...';
       }
       await ensureExcelJS();
       const model = buildPlanogramModel();
       if (!model.store || !model.visibleRows.length) {
-        alert('当前门店或筛选条件下没有可导出的陈列商品。');
+        alert('褰撳墠闂ㄥ簵鎴栫瓫閫夋潯浠朵笅娌℃湁鍙鍑虹殑闄堝垪鍟嗗搧銆?);
         return;
       }
       const workbook = new window.ExcelJS.Workbook();
-      workbook.creator = '冻品整箱到店统一小程序';
-      workbook.lastModifiedBy = '冻品整箱到店统一小程序';
+      workbook.creator = '鍐诲搧鏁寸鍒板簵缁熶竴灏忕▼搴?;
+      workbook.lastModifiedBy = '鍐诲搧鏁寸鍒板簵缁熶竴灏忕▼搴?;
       workbook.created = new Date();
       workbook.modified = new Date();
       workbook.calcProperties.fullCalcOnLoad = true;
@@ -755,23 +755,23 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = '门店陈列图_' + safeFilename(model.store) + '_' + timestamp() + '.xlsx';
+      link.download = '闂ㄥ簵闄堝垪鍥綺' + safeFilename(model.store) + '_' + timestamp() + '.xlsx';
       document.body.appendChild(link);
       link.click();
       link.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
-      notify('Excel陈列图导出完成，可直接在Excel中手工修改。');
+      notify('Excel闄堝垪鍥惧鍑哄畬鎴愶紝鍙洿鎺ュ湪Excel涓墜宸ヤ慨鏀广€?);
     } catch (error) {
-      console.error('Excel陈列图导出失败', error);
-      if (/ExcelJS|Excel组件|加载失败/.test(String(error?.message || error))) {
-        alert('Excel组件加载失败，请检查网络后重试。');
+      console.error('Excel闄堝垪鍥惧鍑哄け璐?, error);
+      if (/ExcelJS|Excel缁勪欢|鍔犺浇澶辫触/.test(String(error?.message || error))) {
+        alert('Excel缁勪欢鍔犺浇澶辫触锛岃妫€鏌ョ綉缁滃悗閲嶈瘯銆?);
       } else {
-        alert('Excel陈列图导出失败，请重试。');
+        alert('Excel闄堝垪鍥惧鍑哄け璐ワ紝璇烽噸璇曘€?);
       }
     } finally {
       if (button) {
         button.disabled = false;
-        button.textContent = originalText === '导出陈列图图片' ? '导出Excel陈列图' : originalText;
+        button.textContent = originalText === '瀵煎嚭闄堝垪鍥惧浘鐗? ? '瀵煎嚭Excel闄堝垪鍥? : originalText;
       }
     }
   }
@@ -779,8 +779,8 @@
   function bindExportButton() {
     const button = document.getElementById('exportDisplayMapBtn');
     if (!button) return false;
-    button.textContent = '导出Excel陈列图';
-    button.title = '导出可在Excel/WPS中手工修改的陈列图';
+    button.textContent = '瀵煎嚭Excel闄堝垪鍥?;
+    button.title = '瀵煎嚭鍙湪Excel/WPS涓墜宸ヤ慨鏀圭殑闄堝垪鍥?;
     button.onclick = function (event) {
       event.preventDefault();
       event.stopPropagation();
@@ -800,7 +800,7 @@
       }
       if (attempts >= 240) {
         clearInterval(timer);
-        console.error('陈列图增强未能在24秒内完成初始化；已停止重试，不影响主程序继续运行。');
+        console.error('闄堝垪鍥惧寮烘湭鑳藉湪24绉掑唴瀹屾垚鍒濆鍖栵紱宸插仠姝㈤噸璇曪紝涓嶅奖鍝嶄富绋嬪簭缁х画杩愯銆?);
       }
     }, 100);
   }
@@ -808,3 +808,4 @@
   installPoolSearchFix();
   waitForApp();
 })();
+
