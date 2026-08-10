@@ -4,126 +4,127 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
-  <title>冻品整箱到店统一小程序</title>
-  <link rel="stylesheet" href="styles.css?v=20260807_recovery3">
-  <link rel="stylesheet" href="layout-preview.css?v=20260807_recovery3">
-  <link rel="stylesheet" href="layout-preview-v2.css?v=20260807_recovery3">
-  <link rel="stylesheet" href="layout-preview-v3.css?v=20260807_recovery3">
-  <link rel="stylesheet" href="layout-preview-v4.css?v=20260807_recovery3">
+  <title>鍐诲搧鏁寸鍒板簵缁熶竴灏忕▼搴?/title>
+  <link rel="stylesheet" href="styles.css?v=20260810_lifecycle_v4">
+  <link rel="stylesheet" href="layout-preview.css?v=20260810_lifecycle_v4">
+  <link rel="stylesheet" href="layout-preview-v2.css?v=20260810_lifecycle_v4">
+  <link rel="stylesheet" href="layout-preview-v3.css?v=20260810_lifecycle_v4">
+  <link rel="stylesheet" href="layout-preview-v4.css?v=20260810_lifecycle_v4">
 <style id="cloud-panel-inline">.cloud-dialog{width:min(520px,calc(100% - 32px));padding:0;border-radius:16px;overflow:hidden;border:none;box-shadow:0 20px 60px rgba(0,0,0,.25)}.cloud-dialog::backdrop{background:rgba(16,24,40,.45)}.cloud-dialog .dialog-header{padding:20px 24px 14px;margin-bottom:0;border-bottom:1px solid #dce3df;display:flex;justify-content:space-between;align-items:flex-start}.cloud-dialog .dialog-header h2{margin:0;font-size:18px;font-weight:800;color:#1d2522;line-height:1.3}.cloud-close-btn{display:flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;border:1px solid #dce3df;background:#fff;color:#65736d;cursor:pointer;font-size:14px;transition:all .15s}.cloud-close-btn:hover{background:#eef3f1;color:#1d2522;border-color:#9ab6aa}.cloud-eyebrow{display:block;font-size:12px;color:#2563eb;font-weight:700;letter-spacing:.06em;margin-bottom:4px}.cloud-dialog .admin-note{margin:0;padding:10px 24px;background:#eff6ff;color:#1e40af;font-size:13px;line-height:1.5;border-radius:0}.cloud-dialog .admin-note.error{background:#fef2f2;color:#991b1b}.cloud-section{padding:18px 24px;border-bottom:1px solid #dce3df;background:#fff}.cloud-section:last-child{border-bottom:0}.cloud-section h3{font-size:15px;font-weight:800;margin:0 0 6px;color:#1d2522}.cloud-section p{margin:0 0 14px;color:#65736d;font-size:13px;line-height:1.55}.cloud-form{display:grid;gap:12px;margin-bottom:16px}.cloud-field{display:grid;gap:5px;color:#374151;font-size:13px;font-weight:500}.cloud-field span{display:block}.cloud-field input{display:block;width:100%;height:40px;padding:0 12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;color:#1d2522;font-size:14px;transition:border-color .15s,box-shadow .15s}.cloud-field input:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}.cloud-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}.cloud-btn{height:36px;padding:0 14px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#374151;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}.cloud-btn:hover{background:#f9fafb;border-color:#9ca3af}.cloud-btn-primary{height:36px;padding:0 14px;border:1px solid #2563eb;border-radius:8px;background:#2563eb;color:#fff;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}.cloud-btn-primary:hover{background:#1d4ed8;border-color:#1d4ed8}.cloud-btn-danger{height:36px;padding:0 14px;border:1px solid #fca5a5;border-radius:8px;background:#fff;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}.cloud-btn-danger:hover{background:#fef2f2;border-color:#f87171}#cloudBtn:hover{background:#eef3f1;border-color:#9ab6aa}</style>
-<style id="staging-float-override">.staging-zone{position:fixed!important;right:20px!important;bottom:20px!important;z-index:500!important;width:min(360px,calc(100vw - 32px))!important;max-height:min(46vh,440px)!important;overflow:auto!important;margin:0!important;box-shadow:0 16px 36px rgba(92,57,10,.24)!important}.staging-zone.drag-over{box-shadow:0 0 0 4px rgba(15,118,110,.18),0 16px 36px rgba(92,57,10,.24)!important}@media(max-width:1180px){.staging-zone{right:14px!important;bottom:14px!important;width:min(380px,calc(100vw - 28px))!important}}</style>  <link rel="stylesheet" href="product-lifecycle-host.css?v=20260807_recovery3">
+<style id="staging-float-override">.staging-zone{position:fixed!important;right:20px!important;bottom:20px!important;z-index:500!important;width:min(360px,calc(100vw - 32px))!important;max-height:min(46vh,440px)!important;overflow:auto!important;margin:0!important;box-shadow:0 16px 36px rgba(92,57,10,.24)!important}.staging-zone.drag-over{box-shadow:0 0 0 4px rgba(15,118,110,.18),0 16px 36px rgba(92,57,10,.24)!important}@media(max-width:1180px){.staging-zone{right:14px!important;bottom:14px!important;width:min(380px,calc(100vw - 28px))!important}}</style>  <link rel="stylesheet" href="product-lifecycle-host.css?v=20260810_lifecycle_v4">
   <link rel="stylesheet" href="sku-workspace.css?v=20260801_store7">
 </head>
 <body>
   <header class="topbar">
     <div>
-      <h1>冻品整箱到店统一小程序</h1>
-      <p id="dataNote">10%触发 · 门店可执行 · 运营可调试</p>
+      <h1>鍐诲搧鏁寸鍒板簵缁熶竴灏忕▼搴?/h1>
+      <p id="dataNote">10%瑙﹀彂 路 闂ㄥ簵鍙墽琛?路 杩愯惀鍙皟璇?/p>
     </div>
     <div class="top-actions">
-      <select id="storeSelect" aria-label="选择门店"></select>
-      <label class="switch"><input id="opsMode" type="checkbox"><span>运营模式</span></label>
-      <button id="syncStoreViewBtn" class="ops-only sync-btn" type="button">同步并退出到店员端</button>
-      <button id="cloudBtn" type="button">☁ 云端协作</button>
-      <button id="resetFilterBtn" type="button">重置筛选</button>
+      <select id="storeSelect" aria-label="閫夋嫨闂ㄥ簵"></select>
+      <label class="switch"><input id="opsMode" type="checkbox"><span>杩愯惀妯″紡</span></label>
+      <button id="syncStoreViewBtn" class="ops-only sync-btn" type="button">鍚屾骞堕€€鍑哄埌搴楀憳绔?/button>
+      <button id="cloudBtn" type="button">鈽?浜戠鍗忎綔</button>
+      <button id="resetFilterBtn" type="button">閲嶇疆绛涢€?/button>
     </div>
   </header>
-  <nav class="tabs" aria-label="页面切换">
-    <button data-view="overview">总览看板</button>
-    <button data-view="store">门店执行</button>
-    <button class="active" data-view="goods">商品明细</button>
-    <button data-view="risk">周转风险</button>
-    <button data-view="allocation" class="ops-only">排柜调整</button>
-    <button data-view="cabinets" class="ops-only">柜段余量</button>
-    <button data-view="suggestions" class="ops-only">空位建议</button>
-    <button data-view="newstore" class="ops-only">新增门店测算</button>
-    <button data-view="displaymap">陈列图</button>
-    <button data-view="lifecycle" class="ops-only">产品生命周期管理</button>
-    <button data-view="io" class="ops-only">导入导出</button>
-    <button data-view="logic">测算逻辑</button>
+  <nav class="tabs" aria-label="椤甸潰鍒囨崲">
+    <button data-view="overview">鎬昏鐪嬫澘</button>
+    <button data-view="store">闂ㄥ簵鎵ц</button>
+    <button class="active" data-view="goods">鍟嗗搧鏄庣粏</button>
+    <button data-view="risk">鍛ㄨ浆椋庨櫓</button>
+    <button data-view="allocation" class="ops-only">鎺掓煖璋冩暣</button>
+    <button data-view="cabinets" class="ops-only">鏌滄浣欓噺</button>
+    <button data-view="suggestions" class="ops-only">绌轰綅寤鸿</button>
+    <button data-view="newstore" class="ops-only">鏂板闂ㄥ簵娴嬬畻</button>
+    <button data-view="displaymap">闄堝垪鍥?/button>
+    <button data-view="lifecycle" class="ops-only">浜у搧鐢熷懡鍛ㄦ湡绠＄悊</button>
+    <button data-view="io" class="ops-only">瀵煎叆瀵煎嚭</button>
+    <button data-view="logic">娴嬬畻閫昏緫</button>
   </nav>
   <div id="modeBanner" class="mode-banner"></div>
   <main>
     <section id="overview" class="view">
       <div id="metricGrid" class="metric-grid"></div>
-      <section class="panel"><div class="panel-title"><h2>门店外储需求排行</h2><input id="overviewSearch" type="search" placeholder="搜索门店"></div><div id="storeRank" class="table-wrap"></div></section>
+      <section class="panel"><div class="panel-title"><h2>闂ㄥ簵澶栧偍闇€姹傛帓琛?/h2><input id="overviewSearch" type="search" placeholder="鎼滅储闂ㄥ簵"></div><div id="storeRank" class="table-wrap"></div></section>
     </section>
     <section id="store" class="view">
       <div id="storeHeader" class="store-header"></div>
-      <section class="panel"><div class="panel-title"><h2>门店商品执行明细</h2><input id="storeSearch" type="search" placeholder="搜索商品或类目"></div><div id="storeDetail" class="table-wrap"></div></section>
+      <section class="panel"><div class="panel-title"><h2>闂ㄥ簵鍟嗗搧鎵ц鏄庣粏</h2><input id="storeSearch" type="search" placeholder="鎼滅储鍟嗗搧鎴栫被鐩?></div><div id="storeDetail" class="table-wrap"></div></section>
     </section>
-    <section id="goods" class="view active"><aside id="skuInspector" class="sku-inspector" aria-live="polite"></aside><div id="storeGoodsSummary" class="store-goods-summary"></div><section class="panel"><div class="panel-title controls"><h2>全量商品明细</h2><input id="goodsSearch" type="search" placeholder="搜索门店、商品、类目"><select id="levelFilter"><option value="">全部等级</option></select></div><div id="goodsTable" class="table-wrap"></div></section></section>
+    <section id="goods" class="view active"><aside id="skuInspector" class="sku-inspector" aria-live="polite"></aside><div id="storeGoodsSummary" class="store-goods-summary"></div><section class="panel"><div class="panel-title controls"><h2>鍏ㄩ噺鍟嗗搧鏄庣粏</h2><input id="goodsSearch" type="search" placeholder="鎼滅储闂ㄥ簵銆佸晢鍝併€佺被鐩?><select id="levelFilter"><option value="">鍏ㄩ儴绛夌骇</option></select></div><div id="goodsTable" class="table-wrap"></div></section></section>
     <section id="productpool" class="view legacy-hidden" aria-hidden="true"><div id="poolTable"></div></section>
-    <section id="risk" class="view"><section class="panel"><div class="panel-title controls"><h2>外储周转风险</h2><input id="riskSearch" type="search" placeholder="搜索门店、商品、类目"><select id="riskFilter"><option value="">全部风险</option></select></div><div id="riskTable" class="table-wrap"></div></section></section>
+    <section id="risk" class="view"><section class="panel"><div class="panel-title controls"><h2>澶栧偍鍛ㄨ浆椋庨櫓</h2><input id="riskSearch" type="search" placeholder="鎼滅储闂ㄥ簵銆佸晢鍝併€佺被鐩?><select id="riskFilter"><option value="">鍏ㄩ儴椋庨櫓</option></select></div><div id="riskTable" class="table-wrap"></div></section></section>
     <section id="replenish" class="view legacy-hidden" aria-hidden="true"><div id="replenishCards"></div><div id="replenishTable"></div></section>
-    <section id="allocation" class="view"><section class="panel"><div class="panel-title controls"><h2>排柜调整</h2><input id="allocationSearch" type="search" placeholder="搜索商品、条码、类目"><input id="allocationCabinetSearch" type="search" placeholder="搜索陈列柜段"><select id="allocationSceneFilter"><option value="">全部场景</option></select><select id="allocationTypeFilter"><option value="">全部冰柜类型</option></select><select id="allocationCabNoFilter"><option value="">全部陈列柜</option></select><select id="allocationPosFilter"><option value="">全部位置</option></select><button id="removeExcludedBtn" type="button">删除未纳入SKU</button></div><div class="help">筛选方式：商品搜索查商品/条码/类目；陈列柜段搜索查“立柜3m-柜1 第4层”这类位置；右侧下拉可按冰柜类型、陈列柜、具体位置筛选。可改字段：纳入、商品、等级、类目、条码、箱规、日销、体积、陈列柜段、陈列列数、单列容量、单列占宽。修改后门店执行、补货测算、柜段余量和空位建议都会联动。</div><div id="allocationTable" class="table-wrap"></div></section></section>
-    <section id="cabinets" class="view"><section class="panel"><div class="panel-title"><h2>柜段余量</h2><input id="cabinetSearch" type="search" placeholder="搜索柜型、柜号、位置"></div><div id="cabinetTable" class="table-wrap"></div></section></section>
-    <section id="suggestions" class="view"><section class="panel"><div class="panel-title controls"><h2>空位再分配建议</h2><select id="suggestCabinet"></select><button id="manualAddSkuBtn" type="button">手动新增SKU到该柜段</button></div><div class="help">建议不会自动应用。淘汰品释放柜段后，系统会按同柜别、空间不超宽、外储不超754L的条件，给出原位扩陈、移位移入或移位扩陈方案。</div><div class="trial-box"><h3>新品试算区</h3><div class="trial-grid"><label>商品名称<input id="newSkuName" type="text" placeholder="如：新品"></label><label>条码<input id="newSkuBarcode" type="text" placeholder="可不填"></label><label>等级<input id="newSkuGrade" type="text" value="A"></label><label>三级类目<input id="newSkuCategory" type="text" placeholder="如：预制菜"></label><label>长mm<input id="newSkuLength" type="number" min="0" step="1"></label><label>宽mm<input id="newSkuWidth" type="number" min="0" step="1"></label><label>高mm<input id="newSkuHeight" type="number" min="0" step="1"></label><label>体积L<input id="newSkuVolume" type="number" min="0" step="0.01" placeholder="可自动算"></label><label>箱规<input id="newSkuCarton" type="number" min="1" step="1" value="1"></label><label>日销<input id="newSkuDaily" type="number" min="0" step="0.001" value="0"></label><label>陈列列数<input id="newSkuCols" type="number" min="1" step="1" value="1"></label><label>单列容量<input id="newSkuPerCol" type="number" min="0" step="0.1" placeholder="可自动估"></label><button id="trialNewSkuBtn" type="button">试算推荐位置</button><button id="allStoreTrialBtn" type="button">一键测算全店上新</button></div><div id="newSkuPositionSuggestions" class="table-wrap"></div><h3>全店上新方案</h3><div id="allStoreSkuSuggestions" class="table-wrap"></div><div class="toolbar"><button id="applyAllStoreSkuBtn" type="button">应用勾选门店方案</button></div></div><div class="suggestion-full"><h3>快销品扩陈候选</h3><div id="expandSuggestions" class="table-wrap"></div></div></section></section>
+    <section id="allocation" class="view"><section class="panel"><div class="panel-title controls"><h2>鎺掓煖璋冩暣</h2><input id="allocationSearch" type="search" placeholder="鎼滅储鍟嗗搧銆佹潯鐮併€佺被鐩?><input id="allocationCabinetSearch" type="search" placeholder="鎼滅储闄堝垪鏌滄"><select id="allocationSceneFilter"><option value="">鍏ㄩ儴鍦烘櫙</option></select><select id="allocationTypeFilter"><option value="">鍏ㄩ儴鍐版煖绫诲瀷</option></select><select id="allocationCabNoFilter"><option value="">鍏ㄩ儴闄堝垪鏌?/option></select><select id="allocationPosFilter"><option value="">鍏ㄩ儴浣嶇疆</option></select><button id="removeExcludedBtn" type="button">鍒犻櫎鏈撼鍏KU</button></div><div class="help">绛涢€夋柟寮忥細鍟嗗搧鎼滅储鏌ュ晢鍝?鏉＄爜/绫荤洰锛涢檲鍒楁煖娈垫悳绱㈡煡鈥滅珛鏌?m-鏌? 绗?灞傗€濊繖绫讳綅缃紱鍙充晶涓嬫媺鍙寜鍐版煖绫诲瀷銆侀檲鍒楁煖銆佸叿浣撲綅缃瓫閫夈€傚彲鏀瑰瓧娈碉細绾冲叆銆佸晢鍝併€佺瓑绾с€佺被鐩€佹潯鐮併€佺瑙勩€佹棩閿€銆佷綋绉€侀檲鍒楁煖娈点€侀檲鍒楀垪鏁般€佸崟鍒楀閲忋€佸崟鍒楀崰瀹姐€備慨鏀瑰悗闂ㄥ簵鎵ц銆佽ˉ璐ф祴绠椼€佹煖娈典綑閲忓拰绌轰綅寤鸿閮戒細鑱斿姩銆?/div><div id="allocationTable" class="table-wrap"></div></section></section>
+    <section id="cabinets" class="view"><section class="panel"><div class="panel-title"><h2>鏌滄浣欓噺</h2><input id="cabinetSearch" type="search" placeholder="鎼滅储鏌滃瀷銆佹煖鍙枫€佷綅缃?></div><div id="cabinetTable" class="table-wrap"></div></section></section>
+    <section id="suggestions" class="view"><section class="panel"><div class="panel-title controls"><div><h2>鍦ㄥ敭鍟嗗搧绌轰綅寤鸿</h2><p>浠庣敓鍛藉懆鏈熶骇鍝佹睜閫夋嫨涓€涓湪鍞甋KU锛屾寜鎸囧畾闂ㄥ簵鐨勭湡瀹炴煖娈典綑閲忕敓鎴愬彲鎵ц鐨勬帓鏌滃缓璁€?/p></div><div class="suggestion-controls"><label>闂ㄥ簵<select id="suggestStore"></select></label><label>鍦ㄥ敭鍟嗗搧<select id="suggestProduct"></select></label><button id="generateSuggestBtn" type="button">鐢熸垚鎺掓煖寤鸿</button></div></div><div class="help">杩欓噷涓嶅啀鏂板鍟嗗搧锛屼篃涓嶇洿鎺ュ啓鍏ユ帓鏌溿€傜郴缁熷彧璇诲彇鐢熷懡鍛ㄦ湡涓殑鍦ㄥ敭浜у搧銆佸綋鍓嶉棬搴桽KU鍜屾煖娈靛崰鐢紝浼樺厛缁欏嚭涓嶈秴瀹姐€佸悓鏌滃埆銆佸鍌ㄤ笉瓒呬笂闄愮殑鏂规锛涘闇€鎵ц锛岃鐐瑰嚮鈥滃畾浣嶆帓鏌溾€濆悗鍒版帓鏌滄ā鍧楃‘璁ゃ€?/div><div id="suggestSummary" class="metric-grid"></div><div class="suggestion-full"><h3>绮剧粏鍖栨帓鏌滃缓璁?/h3><div id="expandSuggestions" class="table-wrap"><div class="empty">璇烽€夋嫨闂ㄥ簵鍜屽湪鍞晢鍝佸悗鐢熸垚寤鸿銆?/div></div></div></section></section>
 
-    <section id="newstore" class="view"><section class="panel"><div class="panel-title"><h2>新增门店测算</h2></div><div class="help">按实际冰柜录入配置，每行一个冰柜或一组同型号冰柜。格式：冰柜类型, 型号/名称, 数量, 内径尺寸。卧柜/冰淇淋柜尺寸可写“1988*697*459+360*697*199”；立柜可写“门数=4,层数=6,710*534*250”，系统只用第1-5层陈列，第6层为存储位。系统会先生成柜段，再按当前产品池、10%触发、754L外储、四级类目集中、柜段不超宽进行严格测算。</div><div class="trial-box"><h3>门店与冰柜配置</h3><div class="trial-grid"><label>门店名称<input id="newStoreName" type="text" placeholder="如：某某生活馆"></label><label>门店类型<input id="newStoreType" type="text" value="新店"></label><label>外储上限L<input id="newStoreExternalCap" type="number" min="0" step="1" value="754"></label><button id="loadStoreExampleBtn" type="button">填入示例</button><button id="trialStoreBtn" type="button">严格测算新增门店</button><button id="applyStoreBtn" type="button">追加为运营草稿</button></div><textarea id="newStoreCabinetConfig" placeholder="例：
-卧柜,2500,3,1988*697*459+360*697*199
-卧柜,2000,1,1488*697*459+360*697*199
-冰淇淋柜,1900,1,1386*697.5*424+325*697.5*164
-立柜,3m,1,门数=4,层数=6,710*534*250"></textarea></div><div id="newStoreSummary" class="metric-grid"></div><section class="panel"><div class="panel-title"><h2>新增门店柜段预览</h2></div><div id="newStoreCabinetPreview" class="table-wrap"></div></section><section class="panel"><div class="panel-title"><h2>新增门店SKU严格测算</h2></div><div id="newStoreSkuPreview" class="table-wrap"></div></section></section></section>
+    <section id="newstore" class="view"><section class="panel"><div class="panel-title"><h2>鏂板闂ㄥ簵娴嬬畻</h2></div><div class="help">鎸夊疄闄呭啺鏌滃綍鍏ラ厤缃紝姣忚涓€涓啺鏌滄垨涓€缁勫悓鍨嬪彿鍐版煖銆傛牸寮忥細鍐版煖绫诲瀷, 鍨嬪彿/鍚嶇О, 鏁伴噺, 鍐呭緞灏哄銆傚崸鏌?鍐版穱娣嬫煖灏哄鍙啓鈥?988*697*459+360*697*199鈥濓紱绔嬫煖鍙啓鈥滈棬鏁?4,灞傛暟=6,710*534*250鈥濓紝绯荤粺鍙敤绗?-5灞傞檲鍒楋紝绗?灞備负瀛樺偍浣嶃€傜郴缁熶細鍏堢敓鎴愭煖娈碉紝鍐嶆寜褰撳墠浜у搧姹犮€?0%瑙﹀彂銆?54L澶栧偍銆佸洓绾х被鐩泦涓€佹煖娈典笉瓒呭杩涜涓ユ牸娴嬬畻銆?/div><div class="trial-box"><h3>闂ㄥ簵涓庡啺鏌滈厤缃?/h3><div class="trial-grid"><label>闂ㄥ簵鍚嶇О<input id="newStoreName" type="text" placeholder="濡傦細鏌愭煇鐢熸椿棣?></label><label>闂ㄥ簵绫诲瀷<input id="newStoreType" type="text" value="鏂板簵"></label><label>澶栧偍涓婇檺L<input id="newStoreExternalCap" type="number" min="0" step="1" value="754"></label><button id="loadStoreExampleBtn" type="button">濉叆绀轰緥</button><button id="trialStoreBtn" type="button">涓ユ牸娴嬬畻鏂板闂ㄥ簵</button><button id="applyStoreBtn" type="button">杩藉姞涓鸿繍钀ヨ崏绋?/button></div><textarea id="newStoreCabinetConfig" placeholder="渚嬶細
+鍗ф煖,2500,3,1988*697*459+360*697*199
+鍗ф煖,2000,1,1488*697*459+360*697*199
+鍐版穱娣嬫煖,1900,1,1386*697.5*424+325*697.5*164
+绔嬫煖,3m,1,闂ㄦ暟=4,灞傛暟=6,710*534*250"></textarea></div><div id="newStoreSummary" class="metric-grid"></div><section class="panel"><div class="panel-title"><h2>鏂板闂ㄥ簵鏌滄棰勮</h2></div><div id="newStoreCabinetPreview" class="table-wrap"></div></section><section class="panel"><div class="panel-title"><h2>鏂板闂ㄥ簵SKU涓ユ牸娴嬬畻</h2></div><div id="newStoreSkuPreview" class="table-wrap"></div></section></section></section>
     <section id="lifecycle" class="view product-lifecycle-host">
       <iframe
         id="productLifecycleFrame"
-        data-lifecycle-src="product-lifecycle.html?v=20260807_recovery3"
-        title="产品生命周期管理"
+        data-lifecycle-src="product-lifecycle.html?v=20260810_lifecycle_v4"
+        title="浜у搧鐢熷懡鍛ㄦ湡绠＄悊"
         referrerpolicy="same-origin"
       ></iframe>
     </section>
-    <section id="io" class="view"><section class="panel"><div class="panel-title"><h2>导入导出</h2></div><div class="help">双向更新：小程序调整、新增门店或全店上新后，先导出回传底表JSON；你可以把它上传到 GitHub 的 data/source/整箱到店数据测算_当前版.json，系统会自动复核并更新公共网址。CSV用于人工核对，不作为自动发布主入口。</div><div class="toolbar"><button id="exportJsonBtn" type="button">导出回传底表JSON</button><button id="exportCsvBtn" type="button">导出排柜CSV</button><button id="restoreBtn" type="button" class="danger">恢复初始数据</button></div><textarea id="importBox" placeholder="粘贴之前导出的JSON"></textarea><div class="toolbar"><button id="importJsonBtn" type="button">导入方案JSON</button></div></section></section>    <section id="displaymap" class="view"><section class="panel planogram-panel"><div class="panel-title controls"><div><h2>冻品可视化陈列图</h2><p class="planogram-subtitle">以冻品柜段为单位展示；陈列参数修改后，满陈与外储容量会同步重算。</p></div><div class="toolbar"><button id="syncDisplayMapBtn" type="button">同步陈列图</button><button id="exportDisplayMapBtn" type="button">导出陈列图图片</button></div></div><div class="planogram-guide">点击陈列图商品可在右侧查看与修改陈列信息。运营模式下可拖动单个商品；直接拖至可用柜段，或拖到目标商品上互换。若目标容量不足，先移至右侧待选区释放空间后再分配。</div><div class="planogram-controls"><label>四级品类<select id="displayMapCategoryFilter"><option value="">全部四级品类</option></select></label><label>陈列图缩放<select id="displayMapZoom"><option value="80">80%</option><option value="100" selected>100%</option><option value="120">120%</option></select></label><span class="legend-chip base">已陈列商品</span><span class="legend-chip external">外储商品</span><span class="legend-chip changed">已修改</span></div><div class="display-map-layout"><div class="display-map-shell"><div id="displayMapCanvas" class="display-map"></div></div><aside id="displayMapMonitor" class="display-monitor"></aside></div><div id="displayStagingHost" aria-live="polite"></div></section></section>
-    <section id="logic" class="view"><div class="logic-grid"><section class="panel"><h2>核心口径</h2><div id="logicRules" class="logic-text"></div></section><section class="panel"><h2>指标解释</h2><div class="logic-text"><p><strong>触发库存：</strong>满陈数的10%，低于或等于该水位时触发补货。</p><p><strong>最多可补箱数：</strong>同时考虑柜内剩余空间和754L外储上限，告诉门店本次最多能补几箱。</p><p><strong>动态P95峰值：</strong>按动态平均外储体积乘P95折算系数，作为偏保守的高峰容量参考。</p><p><strong>空位建议：</strong>释放柜段后，优先给出同柜别、不会超宽、不会超外储上限的扩陈或移位方案。</p></div></section></div></section>
+    <section id="io" class="view"><section class="panel"><div class="panel-title"><h2>瀵煎叆瀵煎嚭</h2></div><div class="help">鍙屽悜鏇存柊锛氬皬绋嬪簭璋冩暣銆佹柊澧為棬搴楁垨鍏ㄥ簵涓婃柊鍚庯紝鍏堝鍑哄洖浼犲簳琛↗SON锛涗綘鍙互鎶婂畠涓婁紶鍒?GitHub 鐨?data/source/鏁寸鍒板簵鏁版嵁娴嬬畻_褰撳墠鐗?json锛岀郴缁熶細鑷姩澶嶆牳骞舵洿鏂板叕鍏辩綉鍧€銆侰SV鐢ㄤ簬浜哄伐鏍稿锛屼笉浣滀负鑷姩鍙戝竷涓诲叆鍙ｃ€?/div><div class="toolbar"><button id="exportJsonBtn" type="button">瀵煎嚭鍥炰紶搴曡〃JSON</button><button id="exportCsvBtn" type="button">瀵煎嚭鎺掓煖CSV</button><button id="restoreBtn" type="button" class="danger">鎭㈠鍒濆鏁版嵁</button></div><textarea id="importBox" placeholder="绮樿创涔嬪墠瀵煎嚭鐨凧SON"></textarea><div class="toolbar"><button id="importJsonBtn" type="button">瀵煎叆鏂规JSON</button></div></section></section>    <section id="displaymap" class="view"><section class="panel planogram-panel"><div class="panel-title controls"><div><h2>鍐诲搧鍙鍖栭檲鍒楀浘</h2><p class="planogram-subtitle">浠ュ喕鍝佹煖娈典负鍗曚綅灞曠ず锛涢檲鍒楀弬鏁颁慨鏀瑰悗锛屾弧闄堜笌澶栧偍瀹归噺浼氬悓姝ラ噸绠椼€?/p></div><div class="toolbar"><button id="syncDisplayMapBtn" type="button">鍚屾闄堝垪鍥?/button><button id="exportDisplayMapBtn" type="button">瀵煎嚭闄堝垪鍥惧浘鐗?/button></div></div><div class="planogram-guide">鐐瑰嚮闄堝垪鍥惧晢鍝佸彲鍦ㄥ彸渚ф煡鐪嬩笌淇敼闄堝垪淇℃伅銆傝繍钀ユā寮忎笅鍙嫋鍔ㄥ崟涓晢鍝侊紱鐩存帴鎷栬嚦鍙敤鏌滄锛屾垨鎷栧埌鐩爣鍟嗗搧涓婁簰鎹€傝嫢鐩爣瀹归噺涓嶈冻锛屽厛绉昏嚦鍙充晶寰呴€夊尯閲婃斁绌洪棿鍚庡啀鍒嗛厤銆?/div><div class="planogram-controls"><label>鍥涚骇鍝佺被<select id="displayMapCategoryFilter"><option value="">鍏ㄩ儴鍥涚骇鍝佺被</option></select></label><label>闄堝垪鍥剧缉鏀?select id="displayMapZoom"><option value="80">80%</option><option value="100" selected>100%</option><option value="120">120%</option></select></label><span class="legend-chip base">宸查檲鍒楀晢鍝?/span><span class="legend-chip external">澶栧偍鍟嗗搧</span><span class="legend-chip changed">宸蹭慨鏀?/span></div><div class="display-map-layout"><div class="display-map-shell"><div id="displayMapCanvas" class="display-map"></div></div><aside id="displayMapMonitor" class="display-monitor"></aside></div><div id="displayStagingHost" aria-live="polite"></div></section></section>
+    <section id="logic" class="view"><div class="logic-grid"><section class="panel"><h2>鏍稿績鍙ｅ緞</h2><div id="logicRules" class="logic-text"></div></section><section class="panel"><h2>鎸囨爣瑙ｉ噴</h2><div class="logic-text"><p><strong>瑙﹀彂搴撳瓨锛?/strong>婊￠檲鏁扮殑10%锛屼綆浜庢垨绛変簬璇ユ按浣嶆椂瑙﹀彂琛ヨ揣銆?/p><p><strong>鏈€澶氬彲琛ョ鏁帮細</strong>鍚屾椂鑰冭檻鏌滃唴鍓╀綑绌洪棿鍜?54L澶栧偍涓婇檺锛屽憡璇夐棬搴楁湰娆℃渶澶氳兘琛ュ嚑绠便€?/p><p><strong>鍔ㄦ€丳95宄板€硷細</strong>鎸夊姩鎬佸钩鍧囧鍌ㄤ綋绉箻P95鎶樼畻绯绘暟锛屼綔涓哄亸淇濆畧鐨勯珮宄板閲忓弬鑰冦€?/p><p><strong>绌轰綅寤鸿锛?/strong>閲婃斁鏌滄鍚庯紝浼樺厛缁欏嚭鍚屾煖鍒€佷笉浼氳秴瀹姐€佷笉浼氳秴澶栧偍涓婇檺鐨勬墿闄堟垨绉讳綅鏂规銆?/p></div></section></div></section>
   </main>
-  <script src="product-lifecycle-bridge.js?v=20260807_recovery3"></script><script src="lifecycle-host-mode.js?v=20260807_recovery3"></script>
-  <script src="bootstrap.js?v=20260807_recovery3"></script>
-<script src="layout-preview-v5.js?v=20260807_recovery3"></script>
-<script src="store-product-view.js?v=20260807_recovery3"></script>
+  <script src="product-lifecycle-bridge.js?v=20260810_lifecycle_v4"></script><script src="lifecycle-host-mode.js?v=20260810_lifecycle_v4"></script>
+  <script src="bootstrap.js?v=20260810_lifecycle_v4"></script>
+<script src="layout-preview-v5.js?v=20260810_lifecycle_v4"></script>
+<script src="store-product-view.js?v=20260810_lifecycle_v4"></script>
 
 <dialog id="cloudDialog" class="cloud-dialog">
   <div class="dialog-header">
     <div>
-      <span class="cloud-eyebrow">多人协作</span>
-      <h2>云端数据协作</h2>
+      <span class="cloud-eyebrow">澶氫汉鍗忎綔</span>
+      <h2>浜戠鏁版嵁鍗忎綔</h2>
     </div>
-    <button id="closeCloudBtn" class="cloud-close-btn" type="button" aria-label="关闭">&#10005;</button>
+    <button id="closeCloudBtn" class="cloud-close-btn" type="button" aria-label="鍏抽棴">&#10005;</button>
   </div>
-  <div id="cloudAccountStatus" class="admin-note">尚未登录云端协作账号。</div>
+  <div id="cloudAccountStatus" class="admin-note">灏氭湭鐧诲綍浜戠鍗忎綔璐﹀彿銆?/div>
   <section class="cloud-section">
-    <h3>1. 登录或注册</h3>
-    <p>使用白名单内的邮箱注册或登录。注册后需前往邮箱完成验证。</p>
+    <h3>1. 鐧诲綍鎴栨敞鍐?/h3>
+    <p>浣跨敤鐧藉悕鍗曞唴鐨勯偖绠辨敞鍐屾垨鐧诲綍銆傛敞鍐屽悗闇€鍓嶅線閭瀹屾垚楠岃瘉銆?/p>
     <div class="cloud-form">
       <label class="cloud-field">
         <span>Email</span>
         <input id="cloudEmail" type="email" autocomplete="email" placeholder="name@example.com">
       </label>
       <label class="cloud-field">
-        <span>密码</span>
+        <span>瀵嗙爜</span>
         <input id="cloudPassword" type="password" minlength="8" autocomplete="current-password" placeholder="8+ characters">
       </label>
     </div>
     <div class="cloud-actions">
-      <button id="cloudSignInBtn" class="cloud-btn-primary" type="button">登录</button>
-      <button id="cloudSignUpBtn" class="cloud-btn" type="button">注册</button>
-      <button id="cloudResendBtn" class="cloud-btn" type="button">重发验证邮件</button>
-      <button id="cloudSignOutBtn" class="cloud-btn-danger" type="button">退出登录</button>
+      <button id="cloudSignInBtn" class="cloud-btn-primary" type="button">鐧诲綍</button>
+      <button id="cloudSignUpBtn" class="cloud-btn" type="button">娉ㄥ唽</button>
+      <button id="cloudResendBtn" class="cloud-btn" type="button">閲嶅彂楠岃瘉閭欢</button>
+      <button id="cloudSignOutBtn" class="cloud-btn-danger" type="button">閫€鍑虹櫥褰?/button>
     </div>
   </section>
   <section class="cloud-section">
-    <h3>2. 拉取与保存</h3>
-    <p>请先手动拉取最新云端版本，核对后修改，再手动保存。若伙伴已更新导致版本冲突，本次不会写入，请重新拉取后再保存。</p>
+    <h3>2. 鎷夊彇涓庝繚瀛?/h3>
+    <p>璇峰厛鎵嬪姩鎷夊彇鏈€鏂颁簯绔増鏈紝鏍稿鍚庝慨鏀癸紝鍐嶆墜鍔ㄤ繚瀛樸€傝嫢浼欎即宸叉洿鏂板鑷寸増鏈啿绐侊紝鏈涓嶄細鍐欏叆锛岃閲嶆柊鎷夊彇鍚庡啀淇濆瓨銆?/p>
     <div class="cloud-actions">
-      <button id="cloudPullBtn" class="cloud-btn" type="button">拉取云端数据</button>
-      <button id="cloudPushBtn" class="cloud-btn-primary" type="button">保存至云端</button>
+      <button id="cloudPullBtn" class="cloud-btn" type="button">鎷夊彇浜戠鏁版嵁</button>
+      <button id="cloudPushBtn" class="cloud-btn-primary" type="button">淇濆瓨鑷充簯绔?/button>
     </div>
-    <div id="cloudSyncStatus" class="admin-note">等待登录后操作。</div>
+    <div id="cloudSyncStatus" class="admin-note">绛夊緟鐧诲綍鍚庢搷浣溿€?/div>
   </section>
 </dialog>
 
 
 </body>
 </html>
+
 
 
 
