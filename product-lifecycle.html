@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -329,7 +329,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
 <section id="tasks" class="view">
   <div id="taskMetrics" class="metric-grid"></div>
   <section class="panel"><div class="panel-title"><div><h2>变更任务中心</h2><p>任务类型永久保留历史；商品当前状态、任务执行状态和完成进度分别展示。</p></div></div><div id="taskTable" class="table-wrap"></div></section>
-  <section class="panel"><div class="panel-title"><div><h2>任务明细</h2><p>点击任务查看门店级变更前后位置。</p></div></div><div id="taskDetail" class="task-detail"><div class="empty">暂无选中任务。</div></div></section>
+  <section class="panel"><div class="panel-title"><div><h2>任务明细</h2><p>点击任务查看门店级变更前后位置。删除只清理任务记录；已完成任务仅允许删除重复历史，不会删除产品池、门店SKU或排柜数据。</p></div></div><div id="taskDetail" class="task-detail"><div class="empty">暂无选中任务。</div></div></section>
 </section>
 
 <section id="planogram" class="view">
@@ -1259,18 +1259,33 @@ function renderTasks(){
   {name:"任务执行状态",render:t=>taskExecutionTag(t)},
   {name:"完成进度",render:t=>taskProgressHtml(t)},
   {name:"计划日期",render:t=>esc(t.date||"-")},
-  {name:"创建时间",render:t=>esc(t.createdAt)}
+  {name:"创建时间",render:t=>esc(t.createdAt)},
+  {name:"操作",render:t=>`<button class="mini-btn danger" type="button" data-delete-task="${esc(t.id)}">删除记录</button>`}
  ],tasks);
  renderTaskDetail();
 }
 function showTask(id){selectedTaskId=id;renderTaskDetail()}
+function taskSameProduct(a,b){return sameProduct(a,b)||sameProduct({productKey:a?.productKey,productName:a?.productName,barcode:a?.barcode,name:a?.productName},{productKey:b?.productKey,productName:b?.productName,barcode:b?.barcode,name:b?.productName})}
+function deleteTask(id){
+ const index=state.tasks.findIndex(x=>x.id===id);if(index<0)return;
+ const task=state.tasks[index];
+ const terminal=["已完成","已撤销","已撤回"].includes(task.status);
+ const hasCompletedPeer=state.tasks.some((other,i)=>i!==index&&other.status==="已完成"&&other.type===task.type&&taskSameProduct(task,other));
+ if(terminal&&task.status==="已完成"&&!hasCompletedPeer){toast("该已完成任务是此SKU唯一的完成事实，不能删除；请保留产品池与排柜数据。");return}
+ const message=terminal?"确认删除这条任务历史记录吗？产品池、门店SKU、排柜和图片不会被删除。":"确认删除这条未完成任务吗？仅清理任务记录及其未执行的坑位预留，不会删除产品。";
+ if(!window.confirm(message))return;
+ if(!terminal)state.slots=(state.slots||[]).filter(slot=>slot.taskId!==id);
+ state.tasks.splice(index,1);
+ if(selectedTaskId===id)selectedTaskId=state.tasks[0]?.id||null;
+ saveState();renderAll();toast("任务记录已删除，业务数据保持不变");
+}
 function renderTaskDetail(){
  const el=document.getElementById("taskDetail"),t=state.tasks.find(x=>x.id===selectedTaskId)||state.tasks[0];
  if(!t){el.innerHTML='<div class="empty">暂无任务。</div>';return}
  selectedTaskId=t.id;
  const terminal=["已完成","已撤销","已撤回"].includes(t.status);
  const progress=taskProgress(t);
- el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" type="button" data-complete-task="${esc(t.id)}" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button></div></div>`+
+ el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" type="button" data-complete-task="${esc(t.id)}" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button><button class="btn danger" type="button" data-delete-task="${esc(t.id)}">删除记录</button></div></div>`+
  table([
   {name:"门店",cls:"name",render:r=>esc(r.store)},
   {name:"位置",render:r=>`${esc(r.cabinetLabel||"-")} ${esc(r.position||"")}`},
@@ -1390,11 +1405,14 @@ function showMonitor(d){
 }
 window.prefillLaunch=k=>{switchView("launch");document.getElementById("launchProduct").value=k;renderStorePickers();renderProductCards()};
 window.prefillRetire=k=>{switchView("retire");document.getElementById("retireProduct").value=k;renderStorePickers();renderProductCards()};
-window.completeSlot=completeSlot;window.showTask=showTask;window.completeTask=completeTask;window.focusTask=focusTask;
+window.completeSlot=completeSlot;window.showTask=showTask;window.completeTask=completeTask;window.deleteTask=deleteTask;window.focusTask=focusTask;
 
 function bind(){
  document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+ document.getElementById("taskTable").onclick=e=>{const remove=e.target.closest("[data-delete-task]");if(remove){e.stopPropagation();deleteTask(remove.dataset.deleteTask)}};
  document.getElementById("taskDetail").onclick=e=>{
+  const remove=e.target.closest("[data-delete-task]");
+  if(remove){e.stopPropagation();deleteTask(remove.dataset.deleteTask);return}
   const button=e.target.closest("[data-complete-task]");
   if(button&&!button.disabled)completeTask(button.dataset.completeTask);
  };
@@ -1544,3 +1562,4 @@ picker.onchange = async () => { const file = picker.files?.[0]; if (!file || !se
 </script>
 </body>
 </html>
+
