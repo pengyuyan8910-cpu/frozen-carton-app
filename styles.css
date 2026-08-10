@@ -19,7 +19,7 @@ body.ops .switch{border-color:#d69a2d;background:#fff3d5;color:#6d3908}
 body.ops .mode-banner{display:block;background:#7a3f08;color:#fff;border-bottom-color:#5b2d04;box-shadow:inset 0 -1px 0 rgba(255,255,255,.18)}
 body.ops main{background:#fff4dc;border-left:8px solid #7a3f08;min-height:calc(100vh - 150px)}
 body.ops .panel{border-color:#d79527;box-shadow:0 8px 24px rgba(122,63,8,.14)}
-body.ops .topbar:before{content:"杩愯惀宸ヤ綔鍙?;position:absolute;right:28px;bottom:-18px;background:#7a3f08;color:#fff;border-radius:999px;padding:5px 14px;font-weight:900;letter-spacing:0}
+body.ops .topbar:before{content:"运营工作台";position:absolute;right:28px;bottom:-18px;background:#7a3f08;color:#fff;border-radius:999px;padding:5px 14px;font-weight:900;letter-spacing:0}
 .sync-btn{background:#0f5d46!important;color:#fff!important;border-color:#0f5d46!important}
 body.ops .sync-btn{background:#1f2937!important;border-color:#1f2937!important;color:#fff!important}
 .sync-flash{animation:syncFlash 1.2s ease}
@@ -28,7 +28,7 @@ body.ops .sync-btn{background:#1f2937!important;border-color:#1f2937!important;c
 
 .display-map{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start}.map-store-title{grid-column:1/-1;font-size:20px;font-weight:900;margin:0 0 6px}.map-cabinet{background:#fff;border:1px solid var(--line);border-radius:8px;padding:12px;box-shadow:var(--shadow)}.map-cabinet h3{display:flex;justify-content:space-between;gap:8px;margin:0 0 10px}.map-cabinet h3 span{font-size:12px;color:var(--muted)}.map-grid{display:grid;gap:8px}.map-layer{border:1px solid #dde5e1;border-radius:6px;padding:8px;background:#fbfcfb;min-height:54px}.map-layer b{display:block;margin-bottom:6px;color:#34423d}.map-layer.storage-true{background:#f1f1ed;color:#777}.map-item{display:inline-block;margin:3px 4px 3px 0;padding:5px 7px;border-radius:5px;border:1px solid rgba(0,0,0,.08);font-size:12px;line-height:1.35}.map-item.storage{background:#e5e7eb}.map-empty{color:#9ca3af}.map-grid.vertical{grid-template-columns:1fr}.map-grid.chest{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
 
-/* 鍏疯薄鍖栭檲鍒楀浘锛氬晢鍝佸潡鏄剧ず鍒楁暟鍜屾弧闄堜欢鏁帮紝骞舵寜鍗犲鍛堢幇瀹界獎宸紓 */
+/* 具象化陈列图：商品块显示列数和满陈件数，并按占宽呈现宽窄差异 */
 .display-map{grid-template-columns:repeat(auto-fit,minmax(380px,1fr));}
 .map-cabinet{background:linear-gradient(180deg,#ffffff 0%,#f7f9f8 100%);border-color:#cfd9d4;}
 .map-layer{background:linear-gradient(180deg,#fbfcfb 0%,#eef3f0 100%);box-shadow:inset 0 -10px 14px rgba(0,0,0,.04);}
@@ -43,17 +43,17 @@ body.ops .sync-btn{background:#1f2937!important;border-color:#1f2937!important;c
 
 
 .map-layer.monitor-selected{border-color:#0f766e;box-shadow:0 0 0 2px rgba(15,118,110,.16)}
-.staging-zone{position:fixed;right:20px;bottom:20px;z-index:120;width:min(360px,calc(100vw - 32px));max-height:min(46vh,440px);overflow:auto;border:2px dashed #b7791f;background:#fff8e7;border-radius:10px;padding:12px;box-shadow:0 16px 36px rgba(92,57,10,.24);margin:0}.staging-zone:before{content:"鎷栨斁鏆傚瓨鍖?;position:absolute;right:10px;top:-12px;padding:3px 8px;border-radius:999px;background:#7a3f08;color:#fff;font-size:11px;font-weight:800}.staging-zone h3{margin:0 0 5px;font-size:16px;color:#7a3f08}.staging-zone p{margin:0 0 8px;font-size:12px;color:#72552e;line-height:1.55}.staging-zone.drag-over{border-color:#0f766e;background:#ecfdf5;box-shadow:0 0 0 4px rgba(15,118,110,.18),0 16px 36px rgba(92,57,10,.24)}.staging-items{display:flex;flex-wrap:wrap;gap:6px;min-height:42px}.staging-item{border-style:dashed!important;background:#fff3cd!important}.staging-zone .map-empty{display:block;padding:8px 2px}.display-monitor{padding-top:0}@media(max-width:1180px){.staging-zone{right:14px;bottom:14px;width:min(380px,calc(100vw - 28px))}}.map-item.swap-ok{outline:2px solid #2563eb;outline-offset:2px}.map-item.stage-ok{outline:2px dashed #a16207;outline-offset:2px}.map-item.drop-bad{opacity:.58}
+.staging-zone{position:fixed;right:20px;bottom:20px;z-index:120;width:min(360px,calc(100vw - 32px));max-height:min(46vh,440px);overflow:auto;border:2px dashed #b7791f;background:#fff8e7;border-radius:10px;padding:12px;box-shadow:0 16px 36px rgba(92,57,10,.24);margin:0}.staging-zone:before{content:"拖放暂存区";position:absolute;right:10px;top:-12px;padding:3px 8px;border-radius:999px;background:#7a3f08;color:#fff;font-size:11px;font-weight:800}.staging-zone h3{margin:0 0 5px;font-size:16px;color:#7a3f08}.staging-zone p{margin:0 0 8px;font-size:12px;color:#72552e;line-height:1.55}.staging-zone.drag-over{border-color:#0f766e;background:#ecfdf5;box-shadow:0 0 0 4px rgba(15,118,110,.18),0 16px 36px rgba(92,57,10,.24)}.staging-items{display:flex;flex-wrap:wrap;gap:6px;min-height:42px}.staging-item{border-style:dashed!important;background:#fff3cd!important}.staging-zone .map-empty{display:block;padding:8px 2px}.display-monitor{padding-top:0}@media(max-width:1180px){.staging-zone{right:14px;bottom:14px;width:min(380px,calc(100vw - 28px))}}.map-item.swap-ok{outline:2px solid #2563eb;outline-offset:2px}.map-item.stage-ok{outline:2px dashed #a16207;outline-offset:2px}.map-item.drop-bad{opacity:.58}
 
 
-/* 鍐诲搧闄堝垪鍥惧伐浣滃彴锛氫互鍙鍖栭檲鍒椾笌澶栧偍鑱斿姩涓轰腑蹇?*/
+/* 冻品陈列图工作台：以可视化陈列与外储联动为中心 */
 .legacy-hidden{display:none!important}
 .planogram-panel{max-width:none}.planogram-subtitle{margin:4px 0 0;color:var(--muted);font-size:13px;font-weight:500}.planogram-guide{margin:12px 0;padding:11px 13px;border:1px solid #c9d9e8;background:#f4f8fc;border-radius:7px;color:#35516b;line-height:1.55}.planogram-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 0 14px}.planogram-controls label{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:13px}.planogram-controls select{min-width:150px}.legend-chip{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;border:1px solid #d7e0db;background:#f5faf7;color:#315b47}.legend-chip.external{background:#fff3e2;border-color:#f2d19f;color:#9a5b0a}.legend-chip.changed{background:#f2ebff;border-color:#d7c4ff;color:#6b45b3}
 .display-map-layout{grid-template-columns:minmax(0,1fr) 380px}.display-map-shell{min-width:0;overflow:auto;padding:2px}.display-map{min-width:860px;transform-origin:top left;zoom:var(--planogram-scale,1)}.display-monitor{background:#f8faf9;border:1px solid #d6e1db;border-radius:8px;padding:10px;gap:10px}.side-summary{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:7px;border-bottom:1px solid #dfe7e2;padding-bottom:9px}.side-summary b{grid-column:1/-1;font-size:15px}.side-summary div{background:#fff;border:1px solid #e1e9e4;border-radius:6px;padding:7px}.side-summary span{display:block;color:var(--muted);font-size:11px}.side-summary strong{font-size:16px}.ok{color:#087b5c}.bad{color:#c2410c}.selection-card,.side-pool{border:1px solid #d8e3dd;background:#fff;border-radius:7px;padding:10px}.selection-head{display:flex;align-items:center;gap:8px}.selection-head strong{font-size:15px;line-height:1.35}.selection-meta{margin:7px 0;color:var(--muted);font-size:12px}.selection-actions{display:flex;gap:7px;margin-bottom:9px}.selection-actions button,.pool-locate,.danger-mini{padding:5px 8px;font-size:12px}.danger-mini{border-color:#efb2a8;color:#b42318;background:#fff7f5}.selection-editor{display:grid;grid-template-columns:1fr 1fr;gap:7px;border-top:1px dashed #dae4de;border-bottom:1px dashed #dae4de;padding:9px 0}.selection-editor label{display:grid;gap:3px;color:#566760;font-size:11px}.selection-editor label:first-child{grid-column:1/-1}.selection-editor select,.selection-editor input{min-width:0;width:100%;font-size:12px}.frozen-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:9px 0}.frozen-metrics div{padding:5px;background:#f8faf9;border-radius:5px}.frozen-metrics span{display:block;font-size:10px;color:var(--muted)}.frozen-metrics b{font-size:13px}.external-watch{display:flex;flex-wrap:wrap;gap:5px 9px;border-left:3px solid #0f766e;background:#f1f9f5;padding:8px;font-size:12px}.external-watch.bad{border-left-color:#c2410c;background:#fff5eb}.external-watch b{width:100%}.pool-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:7px 0}.pool-tabs button{padding:6px 3px;font-size:11px;white-space:nowrap}.pool-tabs button.active{background:#176a4f;color:#fff;border-color:#176a4f}.pool-search input{width:100%;margin:2px 0 7px}.pool-list{display:grid;gap:5px;max-height:310px;overflow:auto}.pool-item{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:5px;align-items:center;border:1px solid #e1e8e4;border-radius:6px;padding:5px}.pool-item.selected{border-color:#7c5bc7;background:#f7f2ff}.pool-item-main{appearance:none;background:transparent;border:0;text-align:left;padding:1px;min-width:0}.pool-item-main span,.pool-item-main small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pool-item-main span{font-weight:700;font-size:12px}.pool-item-main small{font-size:10px;color:var(--muted);margin-top:2px}.pool-item .tag{font-size:10px;padding:2px 5px}.map-item.map-selected{outline:3px solid #2563eb;outline-offset:2px}.map-item.data-changed{outline:2px solid #8b5cf6;outline-offset:2px}.map-item.map-locate{animation:mapLocate 1.4s ease-in-out 1}@keyframes mapLocate{0%,100%{box-shadow:none}45%{box-shadow:0 0 0 5px rgba(37,99,235,.35)}}
 @media(max-width:1250px){.display-map-layout{grid-template-columns:1fr}.display-monitor{position:static;max-height:none}.side-pool{max-height:none}.pool-list{max-height:240px}}@media(max-width:700px){.side-summary{grid-template-columns:repeat(3,1fr)}.frozen-metrics{grid-template-columns:repeat(2,1fr)}.planogram-controls{align-items:flex-start}.planogram-controls label{display:grid}.display-map{min-width:680px}.pool-tabs{grid-template-columns:repeat(2,1fr)}}
 
 
-/* 闄堝垪鍥惧眰绾т綑閲忕洃鎺т笌鍙充晶鎿嶄綔鏍忎紭鍖?*/
+/* 陈列图层级余量监控与右侧操作栏优化 */
 .display-map-layout{grid-template-columns:minmax(0,1fr) 410px;gap:18px}
 .display-monitor{background:linear-gradient(180deg,#f5f8f7 0%,#edf3f1 100%);border:1px solid #cddbd5;border-radius:12px;padding:12px;gap:12px;box-shadow:0 10px 28px rgba(37,59,48,.08)}
 .map-layer{padding:9px 10px 10px;min-height:86px}
@@ -97,7 +97,7 @@ body.ops .sync-btn{background:#1f2937!important;border-color:#1f2937!important;c
 @media(max-width:1280px){.display-map-layout{grid-template-columns:1fr}.display-monitor{position:static;max-height:none}.pool-list{max-height:250px}}
 @media(max-width:740px){.display-map-layout{gap:12px}.external-summary-grid{grid-template-columns:1fr}.layer-monitor-stats{grid-template-columns:1fr 1fr}.map-layer{min-height:90px}}
 
-/* 闄堝垪鍥惧伐浣滃彴绗簩鐗堬細鏌滄浣欓噺閲囩敤宸︿晶鐙珛灞傚崱锛屽彸渚ф搷浣滄爮鎸夆€滈€変腑鍟嗗搧鈥斿鍌ㄢ€斿晢鍝佸簱鈥濆垎灞?*/
+/* 陈列图工作台第二版：柜段余量采用左侧独立层卡，右侧操作栏按“选中商品—外储—商品库”分层 */
 .display-map-layout{grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
 .display-monitor{position:sticky;top:12px;max-height:calc(100vh - 148px);overflow:auto;background:linear-gradient(180deg,#fbfdff 0%,#f3f7fb 100%);border:1px solid #d6e1ee;border-radius:16px;padding:14px;gap:14px;box-shadow:0 12px 30px rgba(31,63,94,.10)}
 .map-grid.vertical,.map-grid.chest{gap:10px}
@@ -152,11 +152,11 @@ body.ops .sync-btn{background:#1f2937!important;border-color:#1f2937!important;c
 @media(max-width:700px){.map-grid.vertical .map-layer,.map-grid.chest .map-layer{grid-template-columns:1fr;grid-template-rows:auto auto}.map-layer>.layer-monitor,.map-layer>.layer-products{grid-column:1}.map-layer>.layer-monitor{grid-row:1;min-height:0}.map-layer>.layer-products{grid-row:2;min-height:92px}.map-grid.chest{grid-template-columns:1fr}.pool-tabs{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 
 
-/* 鏌滀綋鍗犳弧鐢诲竷锛屼繚璇佸乏渚т綑閲忓崱涓庡彸渚у晢鍝佸尯鍧囨湁鍙绌洪棿 */
+/* 柜体占满画布，保证左侧余量卡与右侧商品区均有可读空间 */
 .display-map{grid-template-columns:1fr!important;min-width:960px}.map-grid.chest{grid-template-columns:repeat(auto-fit,minmax(480px,1fr))}
 
 
-/* ==================== 浜戠鍗忎綔闈㈡澘鏍峰紡 ==================== */
+/* ==================== 云端协作面板样式 ==================== */
 .cloud-dialog{width:min(520px,calc(100% - 32px));padding:0;border-radius:16px;overflow:hidden}
 .cloud-dialog::backdrop{background:rgba(16,24,40,.45)}
 .cloud-dialog .dialog-header{padding:20px 24px 14px;margin-bottom:0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start}
@@ -183,4 +183,3 @@ body.ops .sync-btn{background:#1f2937!important;border-color:#1f2937!important;c
 .cloud-btn-danger{height:36px;padding:0 14px;border:1px solid #fca5a5;border-radius:8px;background:#fff;color:#dc2626;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .cloud-btn-danger:hover{background:#fef2f2;border-color:#f87171}
 #cloudBtn:hover{background:#eef3f1;border-color:#9ab6aa}
-
