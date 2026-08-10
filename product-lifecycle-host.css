@@ -5,7 +5,9 @@
 #productLifecycleFrame {
   display: block;
   width: 100%;
-  min-height: 900px;
+  /* 由生命周期页的真实内容高度控制，避免空状态被 900px 最小高度撑出大块空白。 */
+  min-height: 0;
+  height: auto;
   border: 0;
   border-radius: 16px;
   background: #f4f7f5;
