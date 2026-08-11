@@ -654,10 +654,16 @@ window.应用全店上新=()=>{const ids=qa('input[data-allstore]:checked').map(
 function 陈列图颜色(cat){const colors={"雪糕冰品":"#dbeafe","预制主食":"#dcfce7","预制菜类":"#fef3c7","火锅食材":"#fee2e2","冷冻食材":"#e0e7ff"};return colors[cat]||"#f3f4f6"}
 function 陈列图商品标签(r){const c=计算SKU(r);return 逃(r.name)+' <small>'+格(r.displayCols,0)+'列 / 满陈'+格(c.full,0)+'件</small>'}
 function 陈列图商品样式(r){const w=Math.max(70,Math.min(260,数(SKU占用宽度(r))*0.45));return 'background:'+陈列图颜色(场景分区(r))+';flex:0 0 '+格(w,0)+'px'}
-function 柜段可陈列(c){
-  const status=文(c?.status);
-  return !!c&&!/第6层|存储位/.test(文(c.position))&&!/其他品类预留|预留|存储/.test(status)
-}
+ // 立柜4前4层的“其他品类预留”是历史排柜规则，现已收回给冻品使用。
+ // 只解除这一组明确的历史预留，不改变任何 SKU、门店或柜段原始数据。
+ function 立柜4前四层已收回(c){
+   return !!c&&/^立柜.*柜4$/.test(文(c.label||c.cabinetLabel))&&/^第[1-4]层$/.test(文(c.position))&&/其他品类预留/.test(文(c.status));
+ }
+ function 柜段可陈列(c){
+   const status=文(c?.status),position=文(c?.position);
+   const reclaimed=立柜4前四层已收回(c);
+   return !!c&&!/第6层|存储位/.test(position)&&(reclaimed||!/其他品类预留|预留|存储/.test(status))
+ }
 function 待选SKU(store=门店名()){return 纳入SKU(store).filter(r=>r.inStaging)}
 function 陈列图来源柜段(r){return 状态.cabinets.find(c=>c.key===r?.cabinetKey)}
 function 陈列图基础校验(r,targetKey){
@@ -667,14 +673,18 @@ function 陈列图基础校验(r,targetKey){
   if(!r.inStaging&&targetKey===r.cabinetKey)return {ok:false,reason:"商品已在该柜段"};
   if(r.store!==target.store)return {ok:false,reason:"只能在当前门店内移动"};
   if(!柜段可陈列(target))return {ok:false,reason:"目标为存储位或其他品类预留位"};
-  const sourceType=source?冰柜类型(source):文(r.stagingCabinetType);
-  const sourceIce=source?是否冰品柜段(source):!!r.stagingIce;
-  if(!sourceType)return {ok:false,reason:"待选商品缺少原冰柜类型信息"};
-  if(sourceType!==冰柜类型(target))return {ok:false,reason:"只能移动到同一冰柜类型"};
+  // 柜型不是硬限制：运营明确拖动时，只按真实柜段余量、商品占宽和冻品/冰品属性校验。
+  // 这样可以把有足够连续余量的商品从立柜调整到卧柜（或反向调整），避免“余量够却无法落位”。
+  const sourceType=source?冰柜类型(source):文(r.stagingCabinetType||r.cabinetTypeFilter);
+  const sourceIce=source?是否冰品柜段(source):(r.stagingIce!==undefined?!!r.stagingIce:是否冰品SKU(r));
   if(sourceIce!==是否冰品柜段(target))return {ok:false,reason:"冰品与普通冻品不能混放"};
+  const cols=Math.max(1,数(r.displayCols));
+  const face=数(r.faceWidth);
+  const need=cols*face;
+  if(!(face>0&&need>0))return {ok:false,reason:"商品缺少有效单列占宽，请先补全产品尺寸和单列占宽"};
   const sameType=状态.skus.some(x=>x.id!==r.id&&x.included&&!x.inStaging&&x.store===r.store&&SKU键(x)===SKU键(r)&&冰柜类型(陈列图来源柜段(x))===冰柜类型(target));
-  if(sameType)return {ok:false,reason:"该SKU在同柜型已有陈列位置"};
-  return {ok:true,source,target,need:SKU占用宽度(r)}
+  if(sameType)return {ok:false,reason:"该SKU在目标柜型已有陈列位置"};
+  return {ok:true,source,target,sourceType,targetType:冰柜类型(target),need}
 }
 function 陈列图目标校验(r,targetKey){
   const base=陈列图基础校验(r,targetKey);

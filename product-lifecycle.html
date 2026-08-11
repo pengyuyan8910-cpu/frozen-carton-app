@@ -589,7 +589,7 @@ function renderPool(){
   {name:"生命周期",render:p=>statusTag(productStatus(p))},
   {name:"操作",render:p=>{
    const s=productStatus(p),k=esc(keyOf(p));
-   if(s==="淘汰完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看淘汰记录</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">恢复在售</button></div>`;
+    if(s==="淘汰完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看淘汰记录</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">上架</button></div>`;
    if(s==="上新完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','上新')">查看上新记录</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
    return `<div class="mini-actions"><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
   }}

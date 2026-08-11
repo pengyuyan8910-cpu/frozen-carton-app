@@ -42,7 +42,10 @@
     const frame = document.getElementById("productLifecycleFrame");
     if (!frame || frame.getAttribute("src")) return;
     const source = frame.dataset.lifecycleSrc;
-    if (source) frame.setAttribute("src", source);
+    if (source) {
+      const separator = source.includes("?") ? "&" : "?";
+      frame.setAttribute("src", `${source}${separator}build=20260811_planogram_reclaim_v1`);
+    }
   }
 
   function blankState() {
