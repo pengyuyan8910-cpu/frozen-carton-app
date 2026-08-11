@@ -44,7 +44,7 @@
     const source = frame.dataset.lifecycleSrc;
     if (source) {
       const separator = source.includes("?") ? "&" : "?";
-      frame.setAttribute("src", `${source}${separator}build=20260811_planogram_reclaim_v3`);
+      frame.setAttribute("src", `${source}${separator}build=20260811_planogram_reclaim_v4`);
     }
   }
 
