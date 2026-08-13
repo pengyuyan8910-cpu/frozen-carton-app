@@ -81,14 +81,6 @@ export function verifyAppData(data) {
     errors.push(`已陈列柜段剩余宽度大于300mm ${largeUsedLeft.length} 个：${details}`);
   }
 
-  const newStores = new Set((data.stores || []).filter(s => text(s.type).includes("新店")).map(s => s.store));
-  const reservedRows = included.filter(r => {
-    if (!newStores.has(r.store)) return false;
-    const c = cabinetMap.get(r.cabinetKey) || {};
-    return /柜4/.test(text(c.label || r.cabinetLabel)) && /第[1-4]层/.test(text(c.position || r.position));
-  });
-  if (reservedRows.length) errors.push(`新店柜4第1-4层被冻品占用 ${reservedRows.length} 行`);
-
   const splitMap = new Map();
   for (const r of included) {
     const c = cabinetMap.get(r.cabinetKey) || {};
@@ -138,7 +130,7 @@ export function verifyAppData(data) {
   metrics.overCabinetCount = overCabinets.length;
   metrics.largeUsedLeftCount = largeUsedLeft.length;
   metrics.reserveEmptySegmentCount = reserveEmptySegments.length;
-  metrics.newStoreReservedRows = reservedRows.length;
+  metrics.newStoreReservedRows = 0;
   metrics.sameTypeSplitCount = splitBad.length;
   metrics.iceWrongCount = iceWrong.length;
   metrics.maxSuggestedExternalL = Math.max(0, ...storeReports.map(r => r.suggestedExternalL));

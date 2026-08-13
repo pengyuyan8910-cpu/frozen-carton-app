@@ -927,7 +927,14 @@ function 新店重算用量(pre){
   pre.cabinets=use;
   pre.included=pre.skus.filter(r=>r.included);
   pre.missing=pre.skus.filter(r=>!r.included);
-  pre.validation=严格复核新增门店(pre);
+  if(pre.strictEngine&&pre.enginePlan&&globalThis.StrictAllocationEngine?.recalculatePlan){
+    pre.enginePlan.rows=pre.skus;
+    pre.enginePlan.cabinets=pre.cabinets;
+    globalThis.StrictAllocationEngine.recalculatePlan(pre.enginePlan);
+    pre.validation=globalThis.StrictAllocationEngine.validatePlan(pre.enginePlan,{productPool:产品池有效(),externalCapL:状态.params.externalCapL});
+  }else{
+    pre.validation=严格复核新增门店(pre);
+  }
   return pre;
 }
 function 新店剔除分(r){
@@ -969,9 +976,14 @@ function 新店压缩到可执行(pre){
 }
 const 原预排新增门店_严格版=预排新增门店;
 预排新增门店=function(store,type,cabs){
-  const pre=原预排新增门店_严格版(store,type,cabs);
-  新店压缩到可执行(pre);
-  return pre;
+  const engine=globalThis.StrictAllocationEngine;
+  if(engine?.allocateStore){
+    const plan=engine.allocateStore({store,type,productPool:产品池有效(),cabinets:cabs,params:状态.params,physicalRecords:[]},{maxIterations:12,maxExpansions:180});
+    const rows=plan.rows.map(r=>({...r,store,included:!!r.included,status:r.included?'新增门店严格测算-纳入':'新增门店严格测算-未排入',sourceAdvice:'新增门店严格测算',sourceAction:r.included?'严格测算纳入':`未排入：${r.reason}`,note:r.included?'严格自动排柜生成':r.reason}));
+    const cabinets=plan.cabinets.map(c=>({...c,used:c.usedWidth,left:c.leftWidth,sourceUsed:c.usedWidth,sourceLeft:c.leftWidth,items:rows.filter(r=>r.included&&r.cabinetKey===c.key)}));
+    return {...plan,cabinets,skus:rows,included:rows.filter(r=>r.included),missing:rows.filter(r=>!r.included),strict:true,strictEngine:true,enginePlan:plan,validation:plan.validation};
+  }
+  throw new Error('严格自动排柜引擎尚未加载，未执行旧版兜底排柜。');
 };
 window.改新增门店SKU=(id,k,v)=>{
   const pre=window.新增门店测算缓存;if(!pre)return;
