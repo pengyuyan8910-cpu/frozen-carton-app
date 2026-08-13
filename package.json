@@ -6,7 +6,7 @@
   "scripts": {
     "refresh-data": "node scripts/refresh-data.mjs",
     "verify:data": "node scripts/verify-app-data.mjs",
-    "check": "node --check app.js && node --check bootstrap.js && node --check scripts/refresh-data.mjs && node --check scripts/verify-app-data.mjs && node --check scripts/source-to-app-data.mjs && node --check scripts/app-data-to-workbook.mjs && node --check scripts/generate-new-store-draft.mjs && node --check scripts/strict-allocation-engine.mjs && node --check scripts/test-new-store-engine.mjs",
+    "check": "node --check app.js && node --check bootstrap.js && node --check scripts/refresh-data.mjs && node --check scripts/verify-app-data.mjs && node --check scripts/source-to-app-data.mjs && node --check scripts/app-data-to-workbook.mjs && node --check scripts/generate-new-store-draft.mjs && node --check scripts/strict-allocation-engine.mjs && node --check scripts/strict-allocation-adapter.mjs && node --check scripts/test-new-store-engine.mjs",
     "test:new-store-engine": "node scripts/test-new-store-engine.mjs",
     "generate-new-store-draft": "node scripts/generate-new-store-draft.mjs"
   },

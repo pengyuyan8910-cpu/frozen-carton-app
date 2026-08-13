@@ -1,9 +1,5 @@
 import fs from "node:fs";
-import {
-  allocateStore,
-  planSignature,
-  validatePlan
-} from "./strict-allocation-engine.mjs";
+import { runStrictAllocation, planSignature } from "./strict-allocation-adapter.mjs";
 
 const root = new URL("..", import.meta.url);
 const data = JSON.parse(fs.readFileSync(new URL("data/app-data.json", root), "utf8"));
@@ -35,7 +31,7 @@ function sku(id, overrides = {}) {
 }
 
 function run(store, productPool, cabinets, optimization = { maxIterations: 4, maxExpansions: 180 }, physicalRecords = []) {
-  return allocateStore({ store, productPool, cabinets, params, physicalRecords, optimization });
+  return runStrictAllocation({ store, productPool, cabinets, params, physicalRecords }, optimization);
 }
 
 function result(name, ok, detail = {}) {
@@ -86,7 +82,7 @@ function case5WidthInsufficient() {
 function case6ExternalCapFailure() {
   const store = "CASE6";
   const plan = run(store, [sku(61, { carton: 1000, volume: 2 })], [cabinet(store, "卧柜1", "分区1", 100, 697, 460, "卧柜")]);
-  return result("CASE 6 external cap explicit failure", plan.validation.errors.some(error => error.includes("754L")) && plan.status === "review_required", { status: plan.status, suggestedExternalL: plan.summary.suggestedExternalL, errors: plan.validation.errors });
+  return result("CASE 6 external cap explicit failure", plan.validation.errors.some(error => error.includes("754L")) && plan.status === "failed", { status: plan.status, suggestedExternalL: plan.summary.suggestedExternalL, errors: plan.validation.errors });
 }
 
 function case7Conservation() {
@@ -119,6 +115,23 @@ function case10Cabinet4Normal() {
   const plan = run(store, [sku(101, { length: 100, width: 200 })], cabs);
   const row = plan.rows[0];
   return result("CASE 10 cabinet4 normal", row.included && row.cabinetLabel.includes("柜4") && plan.summary.overWidthCount === 0, { cabinet: row.cabinetLabel, status: cabs[1].status });
+}
+
+function case11Cabinet3And4SameEligibility() {
+  const store = "CASE11";
+  const product = sku(111, { length: 100, width: 200 });
+  const cabinet3 = cabinet(store, "立柜3m-柜3", "第1层", 710, 534, 250, "立柜", "正常");
+  const cabinet4 = cabinet(store, "立柜3m-柜4", "第1层", 710, 534, 250, "立柜", "其他品类预留");
+  const only3 = run(store, [product], [cabinet3], { maxIterations: 0, maxExpansions: 0 });
+  const only4 = run(store, [product], [cabinet4], { maxIterations: 0, maxExpansions: 0 });
+  const both = run(store, [product], [cabinet3, cabinet4], { maxIterations: 0, maxExpansions: 0 });
+  const sameResult = [only3, only4].every(plan => plan.status === "passed" && plan.summary.placedSkuCount === 1 && plan.summary.directCartonSkuCount === 1 && plan.validation.ok);
+  const stableTieBreak = both.rows[0]?.included && both.rows[0]?.cabinetLabel === "立柜3m-柜3";
+  return result("CASE 11 cabinet3 and cabinet4 same eligibility", sameResult && stableTieBreak, {
+    only3: { status: only3.status, cabinet: only3.rows[0]?.cabinetLabel },
+    only4: { status: only4.status, cabinet: only4.rows[0]?.cabinetLabel },
+    both: { status: both.status, cabinet: both.rows[0]?.cabinetLabel }
+  });
 }
 
 function sourceIntegrityCases() {
@@ -159,22 +172,44 @@ function allStoreRegression() {
       structuralOk: plan.validation.structuralOk,
       summary: plan.summary,
       errors: plan.validation.errors,
-      warnings: plan.validation.warnings
+      warnings: plan.validation.warnings,
+      hardRulesOk: plan.validation.hardRulesOk,
+      evidence: plan.status === "failed" ? plan.evidence : null
     };
   });
+  const failedStores = rows.filter(row => row.status === "failed").map(row => ({ store: row.store, suggestedExternalL: row.summary.suggestedExternalL, overLimitL: Math.max(0, row.summary.suggestedExternalL - params.externalCapL), errors: row.errors }));
+  const overLimitStores = rows.filter(row => row.summary.suggestedExternalL > params.externalCapL).map(row => ({ store: row.store, suggestedExternalL: row.summary.suggestedExternalL, overLimitL: row.summary.suggestedExternalL - params.externalCapL, errors: row.errors }));
+  const legalUnplacedStores = rows.filter(row => row.summary.unplacedSkuCount > 0 && row.status === "review_required").map(row => ({ store: row.store, placedSkuCount: row.summary.placedSkuCount, unplacedSkuCount: row.summary.unplacedSkuCount, suggestedExternalL: row.summary.suggestedExternalL, reason: "仅存在有明确原因的合法未排入SKU" }));
+  const classifications = rows.map(row => ({
+    store: row.store,
+    status: row.status,
+    placedSkuCount: row.summary.placedSkuCount,
+    unplacedSkuCount: row.summary.unplacedSkuCount,
+    suggestedExternalL: row.summary.suggestedExternalL,
+    classification: row.status === "failed" ? (row.summary.suggestedExternalL > params.externalCapL ? "B: 建议外储 >754L" : "D: 其他硬错误") : row.summary.unplacedSkuCount > 0 ? "A: 仅合法未排入SKU" : "C: 其他软复核项/无"
+  }));
   return {
     storeCount: rows.length,
     passed: rows.filter(row => row.status === "passed").length,
     review_required: rows.filter(row => row.status === "review_required").length,
     failed: rows.filter(row => row.status === "failed").length,
     blocked: 0,
+    failedStores,
+    overLimitStores,
+    legalUnplacedStores,
+    classifications,
     rows,
     noBlocked: true
   };
 }
 
-const cases = [case1DeterministicHanxian(), case2NoForceLargeSku(), case3IceIsolation(), case4Layer6StorageOnly(), case5WidthInsufficient(), case6ExternalCapFailure(), case7Conservation(), case8RetiredExcluded(), case9CategoryConcentration(), case10Cabinet4Normal(), ...sourceIntegrityCases()];
+const cases = [case1DeterministicHanxian(), case2NoForceLargeSku(), case3IceIsolation(), case4Layer6StorageOnly(), case5WidthInsufficient(), case6ExternalCapFailure(), case7Conservation(), case8RetiredExcluded(), case9CategoryConcentration(), case10Cabinet4Normal(), case11Cabinet3And4SameEligibility(), ...sourceIntegrityCases()];
 const hanxian = hanxianRegression();
 const regression30 = allStoreRegression();
-const pass = cases.every(item => item.ok) && hanxian.ok && regression30.noBlocked;
+const validStatuses = new Set(["passed", "review_required", "failed"]);
+const pass = cases.every(item => item.ok)
+  && hanxian.ok
+  && regression30.storeCount === 30
+  && regression30.noBlocked
+  && regression30.rows.every(row => validStatuses.has(row.status));
 console.log(JSON.stringify({ pass, cases, hanxian, regression30 }, null, 2));

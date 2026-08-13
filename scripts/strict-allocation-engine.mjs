@@ -661,6 +661,20 @@ function physicalFit(row, cabinet) {
   return orientation.faceWidth > 0 && orientation.depth <= cabinet.depth + EPSILON && orientation.height <= cabinet.height + EPSILON && orientation.perCol > 0;
 }
 
+function expansionOptions(plan, row) {
+  const options = new Map();
+  for (const cabinet of plan.cabinets) {
+    if (!legalCabinetFor(row, cabinet)) continue;
+    for (const orientation of orientationOptions(row, cabinet)) {
+      if (!orientation || cabinet.leftWidth + EPSILON < orientation.faceWidth) continue;
+      const candidate = { cabinetKey: cabinet.key, additionalWidth: round(orientation.faceWidth) };
+      const existing = options.get(cabinet.key);
+      if (!existing || candidate.additionalWidth < existing.additionalWidth) options.set(cabinet.key, candidate);
+    }
+  }
+  return [...options.values()].sort((a, b) => a.additionalWidth - b.additionalWidth || stableCompare(a.cabinetKey, b.cabinetKey));
+}
+
 export function validatePlan(plan, { productPool, externalCapL = plan.params.externalCapL } = {}) {
   const active = activeProductPool(productPool || plan.rows);
   const activeKeys = new Set(active.map(row => row.skuKey));
@@ -716,8 +730,10 @@ export function validatePlan(plan, { productPool, externalCapL = plan.params.ext
   const conservationOk = activeKeys.size === seen.size && [...activeKeys].every(key => seen.has(key));
   const structuralErrors = errors.filter(error => !error.includes("建议外储超过754L"));
   const structuralOk = structuralErrors.length === 0;
+  const hardRulesOk = errors.length === 0;
   return {
-    ok: errors.length === 0,
+    ok: hardRulesOk,
+    hardRulesOk,
     structuralOk,
     conservationOk,
     errors,
@@ -728,9 +744,9 @@ export function validatePlan(plan, { productPool, externalCapL = plan.params.ext
 }
 
 function statusFor(validation) {
-  if (validation.structuralOk && validation.ok && validation.summary.unplacedSkuCount === 0) return "passed";
-  if (validation.structuralOk) return "review_required";
-  return "failed";
+  if (!validation.ok) return "failed";
+  if (validation.summary.unplacedSkuCount > 0) return "review_required";
+  return "passed";
 }
 
 export function allocateStore(options) {
@@ -738,17 +754,44 @@ export function allocateStore(options) {
   const optimized = improvePlan(base, options.optimization || {});
   optimized.validation = validatePlan(optimized, { productPool: options.productPool, externalCapL: optimized.params.externalCapL });
   optimized.status = statusFor(optimized.validation);
+  const evidenceRows = optimized.rows.filter(row => row.included && row.metrics?.externalUnits > 0).sort((a, b) => b.metrics.staticExternalL - a.metrics.staticExternalL || stableCompare(a.skuKey, b.skuKey)).slice(0, 10);
+  const oneMoreColumn = evidenceRows.map(row => {
+    const next = simulateExpansion(optimized, row);
+    const before = optimized.summary.suggestedExternalL;
+    const after = next?.summary.suggestedExternalL ?? before;
+    const options = expansionOptions(optimized, row);
+    return {
+      skuKey: row.skuKey,
+      name: row.name,
+      currentDisplayCols: row.displayCols,
+      currentExternalUnits: row.metrics?.externalUnits || 0,
+      currentExternalL: row.metrics?.staticExternalL || 0,
+      additionalWidth: row.faceWidth,
+      reduceSuggestedExternalL: Math.max(0, before - after),
+      hasLegalExpansionCabinet: options.length > 0,
+      legalExpansionCabinets: options.map(item => item.cabinetKey)
+    };
+  }).sort((a, b) => b.reduceSuggestedExternalL - a.reduceSuggestedExternalL || b.currentExternalL - a.currentExternalL || stableCompare(a.skuKey, b.skuKey));
   optimized.evidence = {
     minimumSuggestedExternalLFound: optimized.summary.suggestedExternalL,
     excessOverCapL: Math.max(0, optimized.summary.suggestedExternalL - optimized.params.externalCapL),
-    topExternalContributors: optimized.rows.filter(row => row.included && row.metrics?.externalUnits > 0).sort((a, b) => b.metrics.staticExternalL - a.metrics.staticExternalL || stableCompare(a.skuKey, b.skuKey)).slice(0, 10).map(row => ({ skuKey: row.skuKey, name: row.name, externalUnits: row.metrics.externalUnits, staticExternalL: row.metrics.staticExternalL })),
-    oneMoreColumn: optimized.rows.filter(row => row.included).map(row => {
-      const next = simulateExpansion(optimized, row);
-      const before = optimized.summary.suggestedExternalL;
-      const after = next?.summary.suggestedExternalL ?? before;
-      return { skuKey: row.skuKey, name: row.name, reduceSuggestedExternalL: Math.max(0, before - after) };
-    }).sort((a, b) => b.reduceSuggestedExternalL - a.reduceSuggestedExternalL || stableCompare(a.skuKey, b.skuKey)).slice(0, 10),
-    remainingUsableWidth: optimized.cabinets.filter(cabinet => cabinet.saleEligible && cabinet.leftWidth > EPSILON).map(cabinet => ({ cabinetKey: cabinet.key, leftWidth: cabinet.leftWidth }))
+    topExternalContributors: evidenceRows.map(row => {
+      const detail = oneMoreColumn.find(item => item.skuKey === row.skuKey);
+      return {
+        skuKey: row.skuKey,
+        name: row.name,
+        currentDisplayCols: detail?.currentDisplayCols || row.displayCols,
+        currentExternalUnits: row.metrics.externalUnits,
+        currentExternalL: row.metrics.staticExternalL,
+        additionalWidth: detail?.additionalWidth || row.faceWidth,
+        reduceSuggestedExternalL: detail?.reduceSuggestedExternalL || 0,
+        hasLegalExpansionCabinet: detail?.hasLegalExpansionCabinet || false,
+        legalExpansionCabinets: detail?.legalExpansionCabinets || []
+      };
+    }),
+    oneMoreColumn: oneMoreColumn.slice(0, 10),
+    remainingUsableWidth: optimized.cabinets.filter(cabinet => cabinet.saleEligible && cabinet.leftWidth > EPSILON).map(cabinet => ({ cabinetKey: cabinet.key, leftWidth: cabinet.leftWidth })),
+    maximumContinuousRemainingWidth: Math.max(0, ...optimized.cabinets.filter(cabinet => cabinet.saleEligible).map(cabinet => cabinet.leftWidth))
   };
   return optimized;
 }

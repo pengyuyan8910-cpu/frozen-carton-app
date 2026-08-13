@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { allocateStore } from "./strict-allocation-engine.mjs";
+import { runStrictAllocation } from "./strict-allocation-adapter.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const appDataPath = path.join(root, "data", "app-data.json");
@@ -73,7 +73,7 @@ function main() {
   if (path.extname(configPath).toLowerCase() !== ".json") throw new Error("当前正式引擎CLI只接受已确认的JSON柜体配置，不执行Excel读写。");
   const base = readJson(appDataPath);
   const config = readJson(configPath);
-  const plan = allocateStore({
+  const plan = runStrictAllocation({
     store: text(config.name),
     type: text(config.type) || "新店",
     productPool: base.productPool,
