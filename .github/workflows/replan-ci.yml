@@ -11,6 +11,7 @@ on:
       - "scripts/xlsx-lite.mjs"
       - "scripts/test-*-replan*.mjs"
       - ".github/workflows/replan-ci.yml"
+      - ".github/workflows/update-data.yml"
   workflow_dispatch:
 
 permissions:
