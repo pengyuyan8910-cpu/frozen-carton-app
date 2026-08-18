@@ -16,13 +16,21 @@ const appDataPath = path.join(root, "data", "app-data.json");
 const reportPath = path.join(root, "data", "verify-report.json");
 const versionPath = path.join(root, "data", "version.json");
 
-// 标准底表重新转换时会统一清洗“非外储归属”的双陈列行；它们不得重复计入门店外储。
 async function readLegacyData() {
   try { return JSON.parse(fs.readFileSync(appDataPath, "utf8").replace(/^\uFEFF/, "")); } catch (_) { return {}; }
 }
 function acceptedBaselineParts() {
   if (!fs.existsSync(baselineDir)) return [];
   return fs.readdirSync(baselineDir).filter(name => /^accepted67\.part\d+\.txt$/.test(name)).sort();
+}
+function enforceSingleExternalOwner(data) {
+  for (const row of data?.skus || []) {
+    if (row.externalOwner !== false) continue;
+    row.externalCountOverride = 0;
+    row.staticExternalOverride = 0;
+    row.avgExternalOverride = 0;
+  }
+  return data;
 }
 function addSourceErrors(report, data) {
   const errors = Array.isArray(data.meta?.sourceErrors) ? data.meta.sourceErrors : [];
@@ -50,6 +58,7 @@ async function main() {
   } else {
     data = await sourceToAppData(fromProgram ? inboxJson : sourceXlsx, oldData);
   }
+  enforceSingleExternalOwner(data);
 
   let report = addSourceErrors(verifyAppData(data), data);
   if (!report.passed) {
@@ -70,7 +79,7 @@ async function main() {
   } else if (fromProgram) {
     const tempWorkbook = path.join(sourceDir, ".程序回传底表待复核.xlsx");
     await writeAppDataWorkbook(data, tempWorkbook);
-    const roundTripData = await sourceToAppData(tempWorkbook, data);
+    const roundTripData = enforceSingleExternalOwner(await sourceToAppData(tempWorkbook, data));
     const roundTripReport = addSourceErrors(verifyAppData(roundTripData), roundTripData);
     if (!roundTripReport.passed) {
       fs.unlinkSync(tempWorkbook);
