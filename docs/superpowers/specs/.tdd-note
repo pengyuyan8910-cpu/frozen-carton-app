@@ -1,0 +1,1 @@
+当前分支在 replan-idempotency.mjs 尚不存在时，test-replan-idempotency.mjs 应失败；实现后必须转绿。
