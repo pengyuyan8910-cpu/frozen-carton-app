@@ -16,6 +16,7 @@ const appDataPath = path.join(root, "data", "app-data.json");
 const reportPath = path.join(root, "data", "verify-report.json");
 const versionPath = path.join(root, "data", "version.json");
 
+// 标准底表重新转换时会统一清洗“非外储归属”的双陈列行；它们不得重复计入门店外储。
 async function readLegacyData() {
   try { return JSON.parse(fs.readFileSync(appDataPath, "utf8").replace(/^\uFEFF/, "")); } catch (_) { return {}; }
 }
