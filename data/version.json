@@ -1,9 +1,9 @@
 {
   "sourceName": "整箱到店数据测算_当前版.xlsx",
   "sourcePath": "data/source/整箱到店数据测算_当前版.xlsx",
-  "sourceMode": "67SKU确认版基准迁移",
-  "generatedAt": "2026-08-18T07:19:49.033Z",
-  "appVersion": "10%触发-67SKU确认版",
+  "sourceMode": "标准Excel底表复核",
+  "generatedAt": "2026-08-18T07:24:09.685Z",
+  "appVersion": "10%触发-当前版-自动同步",
   "verifyPassed": true,
   "verifyErrorCount": 0,
   "verifyWarningCount": 0

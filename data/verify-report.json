@@ -1,8 +1,8 @@
 {
   "passed": true,
-  "generatedAt": "2026-08-18T07:19:48.429Z",
+  "generatedAt": "2026-08-18T07:24:09.685Z",
   "source": "整箱到店数据测算_当前版.xlsx",
-  "version": "10%触发-67SKU确认版",
+  "version": "10%触发-当前版-自动同步",
   "errors": [],
   "warnings": [],
   "metrics": {
@@ -130,9 +130,9 @@
         "includedSku": 67,
         "directSku": 42,
         "externalSku": 25,
-        "dynamicAvgL": 243.9,
-        "dynamicP95L": 335.3,
-        "suggestedExternalL": 402.3
+        "dynamicAvgL": 231.4,
+        "dynamicP95L": 318.1,
+        "suggestedExternalL": 381.7
       },
       {
         "store": "郎溪东城国际生活馆",
@@ -184,9 +184,9 @@
         "includedSku": 67,
         "directSku": 21,
         "externalSku": 46,
-        "dynamicAvgL": 427.2,
-        "dynamicP95L": 515.3,
-        "suggestedExternalL": 618.4
+        "dynamicAvgL": 399.1,
+        "dynamicP95L": 481.4,
+        "suggestedExternalL": 577.7
       },
       {
         "store": "铜陵北斗星城生活馆",
