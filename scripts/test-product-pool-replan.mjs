@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {normalizeActiveProductPool,replanAllStores,buildAppDraftPatch,applyAppStatePatch,buildReferencePlacements} from './product-pool-replan-core.mjs';
+import {normalizeActiveProductPool,replanAllStores,buildReferencePlacements} from './product-pool-replan-core.mjs';
+import {buildCompactAppDraftPatch as buildAppDraftPatch,applyReplanPatch as applyAppStatePatch,replanSelectedStores} from './product-pool-replan-ops.mjs';
 
 const products=[
  {barcode:'1',name:'在售水饺',lifecycleStatus:'在售SKU',grade:'A',rank:1,category3:'主食',category4:'水饺',length:100,width:100,height:50,volume:.5,carton:10,dailyQty:1},
@@ -68,7 +69,7 @@ assert.ok(current.stores.some(s=>s.store==='店B'));
    {id:'b-old',store:'店B',included:true,barcode:'1',name:'在售水饺',cabinetKey:'b1',cabinetLabel:'立柜3m-柜1',position:'第1层',displayCols:1,perCol:5,faceWidth:100,note:'店B原方案'},
   ],
  };
- const onlyA=replanAllStores(twoStore,products,{stores:['店A']});
+ const onlyA=replanSelectedStores(twoStore,products,['店A']);
  assert.deepEqual(onlyA.plans.map(p=>p.store),['店A'],'指定门店重排只应运行被选中的门店');
  const untouchedB=onlyA.draft.skus.find(r=>r.id==='b-old');
  assert.ok(untouchedB,'未选择的门店SKU必须完整保留在草稿');
