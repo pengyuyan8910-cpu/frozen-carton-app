@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {prepareReplanSource} from './product-pool-replan-ops.mjs';
+import {prepareReplanSource} from './replan-baseline.mjs';
 
 const base={
   meta:{source:'formal',generatedAt:'g',version:'v'},
