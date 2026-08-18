@@ -1,5 +1,5 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260818_one_click_replan_v2";
+  const DATA_VERSION = "20260818_one_click_replan_v3";
   const REVIEW_MARKER = "frozen_carton_open_replan_review_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
@@ -24,7 +24,7 @@
     const status = report?.passed === false ? "复核失败" : "复核通过";
     setNote(`${data.meta?.version || "当前版本"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
 
-    // 人工复核入口必须在 app.js 初始化前切到运营草稿，避免先加载发布状态再切换。
+    // 复核会话标记由产品池重排模块在 app.js 初始化完成后恢复运营模式。
     try {
       if (sessionStorage.getItem(REVIEW_MARKER) === "1") {
         const ops = document.getElementById("opsMode");
