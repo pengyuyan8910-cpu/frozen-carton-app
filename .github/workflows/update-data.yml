@@ -38,7 +38,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A data/source data/inbox data/app-data.json data/verify-report.json data/version.json
+          git add -A data/source data/inbox data/baseline data/app-data.json data/verify-report.json data/version.json
           if git diff --cached --quiet; then
             echo "没有新的数据变更需要提交"
           else
