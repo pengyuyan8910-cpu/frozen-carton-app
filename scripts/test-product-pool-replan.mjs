@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {normalizeActiveProductPool,replanAllStores,buildReferencePlacements} from './product-pool-replan-core.mjs';
 import {buildCompactAppDraftPatch as buildAppDraftPatch,applyReplanPatch as applyAppStatePatch,replanSelectedStores} from './product-pool-replan-ops.mjs';
 
@@ -91,6 +92,17 @@ assert.ok(current.stores.some(s=>s.store==='店B'));
  assert.equal(compact.newSkus.length,0,'大草稿不应把已有2000行SKU重新写入newSkus');
  assert.equal(compact.skus.length,10,'只应记录真正发生陈列变化的10行');
  assert.ok(JSON.stringify(compact).length<50000,'增量草稿应远小于localStorage常见配额');
+}
+
+{
+ const live=JSON.parse(fs.readFileSync(new URL('../data/app-data.json',import.meta.url),'utf8'));
+ const liveProducts=Array.isArray(live.productPool)&&live.productPool.length?live.productPool:normalizeActiveProductPool(live.skus||[]);
+ const liveResult=replanAllStores(live,liveProducts,{preserveExisting:true,externalCapL:754});
+ const livePatch=buildAppDraftPatch(live,liveResult.draft,live.lifecycle||null);
+ const bytes=Buffer.byteLength(JSON.stringify(livePatch),'utf8');
+ assert.ok(liveResult.plans.length>=1,'真实底表必须能生成门店重排计划');
+ assert.ok(bytes<4*1024*1024,`真实门店增量草稿仍过大：${Math.ceil(bytes/1024)}KB`);
+ console.log(`live replan compact patch: ${liveResult.plans.length} stores, ${Math.ceil(bytes/1024)}KB`);
 }
 
 console.log('product pool replan tests passed');
