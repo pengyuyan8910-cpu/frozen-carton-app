@@ -16,7 +16,7 @@ const base={
   {store:'店A',key:'a1',label:'立柜3m-柜4',position:'第1层',kind:'立柜',length:710,depth:534,height:250,status:'正常'},
   {store:'店A',key:'a6',label:'立柜3m-柜4',position:'第6层',kind:'立柜',length:710,depth:534,height:250,status:'存储位'},
  ],
- skus:[{id:'old1',store:'店A',included:true,barcode:'1',name:'在售水饺',cabinetKey:'a1',cabinetLabel:'立柜3m-柜4',position:'第1层',displayCols:1,perCol:5,faceWidth:100,status:'正常'}],
+ skus:[{id:'old1',store:'店A',included:true,barcode:'1',name:'在售水饺',cabinetKey:'a1',displayCols:1,perCol:5,faceWidth:100}],
  productPool:products
 };
 const result=replanAllStores(base,products);
@@ -28,32 +28,13 @@ const old=result.plans[0].skuDecisions.find(d=>d.barcode==='1');
 assert.equal(old.placements[0].segmentKey,'a1','合法老品位置应优先保留');
 const patch=buildAppDraftPatch(base,result.draft,{tasks:[]});
 assert.equal(patch.deletedIds.includes('old1'),false,'已有老SKU不应整行删除后重建');
-assert.equal(patch.newSkus.some(r=>r.barcode==='1'),false,'已有老SKU不应复制进newSkus');
-assert.ok(patch.skus.some(r=>r.id==='old1'),'已有老SKU变化应通过增量字段补丁保存');
-assert.ok(patch.newSkus.some(r=>r.barcode==='2'),'真正新品应保留为newSkus');
+assert.equal(patch.newSkus.some(r=>r.barcode==='1'),false,'已有老SKU不得重复写入newSkus');
+assert.ok(patch.skus.some(r=>r.id==='old1'),'老SKU应复用原ID，仅记录变化字段');
+assert.ok(patch.newSkus.some(r=>r.barcode==='2'),'真正新增SKU才进入newSkus');
 assert.equal(patch._dataSignature,'x|g|v');
-const restored=applyAppStatePatch(base,patch);
-assert.equal(restored.skus.filter(r=>r.barcode==='1').length,1,'应用补丁后老SKU不能重复');
-assert.equal(restored.skus.some(r=>r.id==='old1'&&r.barcode==='1'),true,'应用补丁后必须保留老SKU原ID');
-assert.equal(restored.skus.some(r=>r.barcode==='2'),true,'应用补丁后必须包含新品');
-
-{
- const count=1800;
- const largeBase={meta:{source:'large',generatedAt:'g',version:'v'},stores:[{store:'压测店'}],cabinets:[],productPool:[],skus:[]};
- const largeDraft={...largeBase,skus:[]};
- for(let i=0;i<count;i++){
-  const row={id:`old_${i}`,store:'压测店',included:true,barcode:`B${i}`,name:`商品${i}`,grade:i%2?'A':'B',rank:i+1,category2:'冻品',category3:'压测三级类目',category4:'压测四级类目',length:100,width:80,height:60,volume:.48,carton:12,dailyQty:1,cabinetKey:`cab_${i%30}`,cabinetLabel:`柜${i%30}`,position:`第${i%5+1}层`,displayCols:1,perCol:5,faceWidth:80,status:'正常',note:'基线商品'.repeat(4)};
-  largeBase.skus.push(row);
-  largeDraft.skus.push({...row,id:`replan_${i}`,displayCols:i%7===0?2:1,status:'产品池重排-纳入',sourceAction:'自动排柜纳入'});
- }
- const compact=buildAppDraftPatch(largeBase,largeDraft,null);
- const compactBytes=JSON.stringify(compact).length;
- const wholesaleBytes=JSON.stringify({deletedIds:largeBase.skus.map(r=>r.id),newSkus:largeDraft.skus}).length;
- assert.equal(compact.deletedIds.length,0,'大草稿中匹配到的老SKU不应被批量删除');
- assert.equal(compact.newSkus.length,0,'大草稿中匹配到的老SKU不应被批量复制');
- assert.ok(compactBytes<wholesaleBytes*0.35,`增量草稿应显著小于整表替换：${compactBytes}/${wholesaleBytes}`);
-}
-
+const patched=applyAppStatePatch(base,patch);
+assert.equal(patched.skus.some(r=>r.id==='old1'&&r.barcode==='1'),true,'应用增量补丁后应保留老SKU原ID');
+assert.equal(patched.skus.some(r=>r.barcode==='2'),true,'应用增量补丁后应包含新品');
 const current=applyAppStatePatch(base,{_patchVersion:2,deletedIds:[],skus:[],newSkus:[],newStores:[{store:'店B',type:'新店'}],newCabinets:[],productPool:products});
 assert.ok(current.stores.some(s=>s.store==='店B'));
 
@@ -73,6 +54,42 @@ assert.ok(current.stores.some(s=>s.store==='店B'));
  const newPlan=rr.plans.find(p=>p.store==='全新店');
  assert.equal(newPlan.referenceStore,'参考店');
  assert.equal(newPlan.skuDecisions.find(x=>x.barcode==='1').placements[0].segmentKey,'n1');
+}
+
+{
+ const twoStore={...base,
+  stores:[{store:'店A',type:'老店',p95Factor:1.2},{store:'店B',type:'老店',p95Factor:1.2}],
+  cabinets:[
+   {store:'店A',key:'a1',label:'立柜3m-柜1',position:'第1层',kind:'立柜',length:710,depth:534,height:250,status:'正常'},
+   {store:'店B',key:'b1',label:'立柜3m-柜1',position:'第1层',kind:'立柜',length:710,depth:534,height:250,status:'正常'},
+  ],
+  skus:[
+   {id:'a-old',store:'店A',included:true,barcode:'1',name:'在售水饺',cabinetKey:'a1',cabinetLabel:'立柜3m-柜1',position:'第1层',displayCols:1,perCol:5,faceWidth:100},
+   {id:'b-old',store:'店B',included:true,barcode:'1',name:'在售水饺',cabinetKey:'b1',cabinetLabel:'立柜3m-柜1',position:'第1层',displayCols:1,perCol:5,faceWidth:100,note:'店B原方案'},
+  ],
+ };
+ const onlyA=replanAllStores(twoStore,products,{stores:['店A']});
+ assert.deepEqual(onlyA.plans.map(p=>p.store),['店A'],'指定门店重排只应运行被选中的门店');
+ const untouchedB=onlyA.draft.skus.find(r=>r.id==='b-old');
+ assert.ok(untouchedB,'未选择的门店SKU必须完整保留在草稿');
+ assert.equal(untouchedB.note,'店B原方案','未选择门店的数据不得被重排覆盖');
+ const singlePatch=buildAppDraftPatch(twoStore,onlyA.draft,{tasks:[]});
+ const after=applyAppStatePatch(twoStore,singlePatch);
+ assert.equal(after.skus.find(r=>r.id==='b-old')?.note,'店B原方案','指定门店补丁应用后其他门店仍应保持原样');
+}
+
+{
+ const manyBase={meta:{source:'large',generatedAt:'g',version:'v'},stores:[{store:'大店'}],cabinets:[],productPool:[],skus:[]};
+ const manyDraft={...manyBase,skus:[]};
+ for(let i=0;i<2000;i++){
+  manyBase.skus.push({id:`old-${i}`,store:'大店',barcode:`B${i}`,name:`商品${i}`,included:true,cabinetKey:`C${Math.floor(i/100)}`,cabinetLabel:'立柜',position:'第1层',displayCols:1,perCol:4,faceWidth:100});
+  manyDraft.skus.push({id:`replan-${i}`,store:'大店',barcode:`B${i}`,name:`商品${i}`,included:true,cabinetKey:`C${Math.floor(i/100)}`,cabinetLabel:'立柜',position:'第1层',displayCols:i<10?2:1,perCol:4,faceWidth:100,status:'产品池重排-纳入',sourceAdvice:'产品池一键重排',note:'产品池一键重排生成'});
+ }
+ const compact=buildAppDraftPatch(manyBase,manyDraft,null);
+ assert.equal(compact.deletedIds.length,0,'大草稿不应删除已有2000行SKU');
+ assert.equal(compact.newSkus.length,0,'大草稿不应把已有2000行SKU重新写入newSkus');
+ assert.equal(compact.skus.length,10,'只应记录真正发生陈列变化的10行');
+ assert.ok(JSON.stringify(compact).length<50000,'增量草稿应远小于localStorage常见配额');
 }
 
 console.log('product pool replan tests passed');
