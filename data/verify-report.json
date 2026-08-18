@@ -1,8 +1,8 @@
 {
   "passed": true,
-  "generatedAt": "2026-08-18T09:39:13.020Z",
-  "source": "整箱到店数据测算_最新产品池_20260817.xlsx",
-  "version": "10%触发-最新67SKU-长宽占宽-严格重排",
+  "generatedAt": "2026-08-18T11:44:09.587Z",
+  "source": "整箱到店数据测算_当前版.xlsx",
+  "version": "10%触发-当前版-自动同步",
   "errors": [],
   "warnings": [
     "已记录大剩余柜段 5 个：合肥包河万达生活馆-立柜3m-柜3-第4层（剩余410mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；淮北上城国际生活馆-立柜3m-柜3-第4层（剩余475mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；淮北上城国际生活馆-立柜3m-柜4-第1层（剩余410mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；无为鼓楼小区生活馆-立柜7.5m-柜6-第5层（剩余350mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；芜湖中御公馆生活馆mini-立柜3m-柜3-第4层（剩余450mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）"
@@ -258,7 +258,7 @@
         "directSku": 60,
         "externalSku": 7,
         "dynamicAvgL": 88.6,
-        "dynamicP95L": 118.6,
+        "dynamicP95L": 118.7,
         "suggestedExternalL": 143
       },
       {
@@ -277,7 +277,7 @@
         "externalSku": 15,
         "dynamicAvgL": 91.2,
         "dynamicP95L": 135,
-        "suggestedExternalL": 162
+        "suggestedExternalL": 163
       },
       {
         "store": "淮北大华步行街生活馆",
@@ -303,7 +303,7 @@
         "directSku": 51,
         "externalSku": 16,
         "dynamicAvgL": 80.8,
-        "dynamicP95L": 119.5,
+        "dynamicP95L": 119.6,
         "suggestedExternalL": 144
       },
       {
@@ -312,7 +312,7 @@
         "directSku": 49,
         "externalSku": 18,
         "dynamicAvgL": 101.4,
-        "dynamicP95L": 139.5,
+        "dynamicP95L": 139.6,
         "suggestedExternalL": 168
       },
       {
@@ -321,7 +321,7 @@
         "directSku": 18,
         "externalSku": 38,
         "dynamicAvgL": 512.8,
-        "dynamicP95L": 621.8,
+        "dynamicP95L": 621.9,
         "suggestedExternalL": 747
       },
       {
@@ -358,7 +358,7 @@
         "externalSku": 39,
         "dynamicAvgL": 497.1,
         "dynamicP95L": 610,
-        "suggestedExternalL": 733
+        "suggestedExternalL": 732
       },
       {
         "store": "宿州国购广场生活馆",
@@ -375,7 +375,7 @@
         "directSku": 23,
         "externalSku": 35,
         "dynamicAvgL": 497.4,
-        "dynamicP95L": 617.6,
+        "dynamicP95L": 617.7,
         "suggestedExternalL": 742
       },
       {
@@ -420,7 +420,7 @@
         "directSku": 11,
         "externalSku": 38,
         "dynamicAvgL": 499.8,
-        "dynamicP95L": 616.2,
+        "dynamicP95L": 616.3,
         "suggestedExternalL": 740
       },
       {
@@ -448,7 +448,7 @@
         "externalSku": 34,
         "dynamicAvgL": 481.6,
         "dynamicP95L": 601.7,
-        "suggestedExternalL": 722
+        "suggestedExternalL": 723
       },
       {
         "store": "芜湖阳光之城生活馆",
@@ -492,7 +492,7 @@
         "directSku": 12,
         "externalSku": 37,
         "dynamicAvgL": 484.5,
-        "dynamicP95L": 599.4,
+        "dynamicP95L": 599.5,
         "suggestedExternalL": 720
       },
       {
