@@ -23,6 +23,9 @@ function acceptedBaselineParts() {
   if (!fs.existsSync(baselineDir)) return [];
   return fs.readdirSync(baselineDir).filter(name => /^accepted67\.part\d+\.txt$/.test(name)).sort();
 }
+function isAcceptedBaselineAlreadyFormal(data) {
+  return data?.meta?.baselineVersion === "67SKU确认版-20260817" || data?.meta?.version === "10%触发-67SKU确认版";
+}
 function enforceSingleExternalOwner(data) {
   for (const row of data?.skus || []) {
     if (row.externalOwner !== false) continue;
@@ -31,6 +34,12 @@ function enforceSingleExternalOwner(data) {
     row.avgExternalOverride = 0;
   }
   return data;
+}
+function removeStaleBaselineParts(parts) {
+  for (const name of parts) {
+    const file = path.join(baselineDir, name);
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+  }
 }
 function addSourceErrors(report, data) {
   const errors = Array.isArray(data.meta?.sourceErrors) ? data.meta.sourceErrors : [];
@@ -47,7 +56,9 @@ async function main() {
   const fromProgram = fs.existsSync(inboxJson);
   const oldData = await readLegacyData();
   const parts = !fromProgram ? acceptedBaselineParts() : [];
-  const migrateAccepted = parts.length === 6;
+  const acceptedAlreadyFormal = isAcceptedBaselineAlreadyFormal(oldData);
+  const migrateAccepted = parts.length === 6 && !acceptedAlreadyFormal;
+  if (acceptedAlreadyFormal && parts.length) removeStaleBaselineParts(parts);
   if (!fromProgram && !migrateAccepted && !fs.existsSync(sourceXlsx)) throw new Error("未找到标准底表。请上传 data/source/整箱到店数据测算_当前版.xlsx。");
 
   let data;
@@ -73,7 +84,7 @@ async function main() {
     await writeAppDataWorkbook(data, tempWorkbook);
     fs.copyFileSync(tempWorkbook, sourceXlsx);
     fs.unlinkSync(tempWorkbook);
-    for (const name of parts) fs.unlinkSync(path.join(baselineDir, name));
+    removeStaleBaselineParts(parts);
     data.meta.source = "整箱到店数据测算_当前版.xlsx";
     data.meta.version = "10%触发-67SKU确认版";
   } else if (fromProgram) {
@@ -96,7 +107,7 @@ async function main() {
 
   const version = {
     sourceName: path.basename(sourceXlsx), sourcePath: "data/source/整箱到店数据测算_当前版.xlsx",
-    sourceMode: migrateAccepted ? "67SKU确认版基准迁移" : (fromProgram ? "小程序回传并自动回写Excel" : "手工Excel底表上传"),
+    sourceMode: migrateAccepted ? "67SKU确认版基准迁移" : (fromProgram ? "小程序回传并自动回写Excel" : "标准Excel底表复核"),
     generatedAt: new Date().toISOString(), appVersion: data.meta?.version || "10%触发-当前版",
     verifyPassed: true, verifyErrorCount: 0, verifyWarningCount: report.warnings.length
   };
