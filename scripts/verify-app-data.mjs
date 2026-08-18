@@ -63,7 +63,15 @@ export function verifyAppData(data) {
     const left = num(c.length) - box.used;
     // 宽度数据有小数换算误差；超过1mm才视为实际无法陈列。
     if (left < -1) overCabinets.push({ store: c.store, cabinet: c.label, position: c.position, length: num(c.length), used: box.used, over: -left });
-    if (box.used > 0 && !isIceCabinet(c) && left > 300) largeUsedLeft.push({ store: c.store, cabinet: c.label, position: c.position, left });
+    if (box.used > 0 && !isIceCabinet(c) && left > 300) {
+      largeUsedLeft.push({
+        store: c.store,
+        cabinet: c.label,
+        position: c.position,
+        left,
+        reason: text(c.largeRemainderReason)
+      });
+    }
     if (box.used === 0) reserveEmptySegments.push({ store: c.store, cabinet: c.label, position: c.position, length: num(c.length) });
   }
   if (overCabinets.length) {
@@ -73,12 +81,21 @@ export function verifyAppData(data) {
       .join("；");
     errors.push(`柜段超宽 ${overCabinets.length} 个：${details}`);
   }
-  if (largeUsedLeft.length) {
-    const details = largeUsedLeft
+  const unresolvedLargeUsedLeft = largeUsedLeft.filter(r => !r.reason);
+  const documentedLargeUsedLeft = largeUsedLeft.filter(r => r.reason);
+  if (unresolvedLargeUsedLeft.length) {
+    const details = unresolvedLargeUsedLeft
       .slice(0, 10)
       .map(r => `${r.store}-${r.cabinet}-${r.position}（剩余${r.left}mm）`)
       .join("；");
-    errors.push(`已陈列柜段剩余宽度大于300mm ${largeUsedLeft.length} 个：${details}`);
+    errors.push(`已陈列柜段剩余宽度大于300mm且未记录原因 ${unresolvedLargeUsedLeft.length} 个：${details}`);
+  }
+  if (documentedLargeUsedLeft.length) {
+    const details = documentedLargeUsedLeft
+      .slice(0, 10)
+      .map(r => `${r.store}-${r.cabinet}-${r.position}（剩余${r.left}mm；${r.reason}）`)
+      .join("；");
+    warnings.push(`已记录大剩余柜段 ${documentedLargeUsedLeft.length} 个：${details}`);
   }
 
   const splitMap = new Map();

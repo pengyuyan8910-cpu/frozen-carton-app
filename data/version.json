@@ -1,10 +1,10 @@
 {
-  "sourceName": "整箱到店数据测算_当前版.xlsx",
+  "sourceName": "整箱到店数据测算_最新产品池_20260817.xlsx",
   "sourcePath": "data/source/整箱到店数据测算_当前版.xlsx",
   "sourceMode": "手工Excel底表上传",
-  "generatedAt": "2026-07-27T10:53:36.727Z",
-  "appVersion": "10%触发-当前版-自动同步",
+  "generatedAt": "2026-08-18T17:34:10+08:00",
+  "appVersion": "10%触发-最新67SKU-长宽占宽-严格重排",
   "verifyPassed": true,
   "verifyErrorCount": 0,
-  "verifyWarningCount": 0
+  "verifyWarningCount": 1
 }

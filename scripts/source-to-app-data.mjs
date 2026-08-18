@@ -16,6 +16,40 @@ const first = (row, names, fallback = "") => {
 };
 const skuKey = r => text(r?.barcode || r?.["条码"] || r?.name || r?.["商品名称"]);
 const cabinetKey = (store, label, pos) => `${text(store)}__${text(label)}__${text(pos)}`;
+const validPhysical = cabinet => num(cabinet?.depth) > 0 && num(cabinet?.height) > 0;
+function cabinetPhysicalFallback(label, kind, oldCabinet = {}) {
+  if (validPhysical(oldCabinet)) return oldCabinet;
+  if (/立柜/.test(`${text(kind)}${text(label)}`)) return { depth: 534, height: 250, physicalSource: "app-default-vertical-cabinet" };
+  return {};
+}
+
+export function horizontalFaceWidth(record = {}) {
+  const length = num(record.length);
+  const width = num(record.width);
+  const sourceFace = num(record.faceWidth);
+  if (!(length > 0 && width > 0)) return 0;
+  if (Math.abs(sourceFace - length) < 0.0001) return length;
+  if (Math.abs(sourceFace - width) < 0.0001) return width;
+  return Math.min(length, width);
+}
+
+function normalizeHorizontalFaceData(data) {
+  const skus = (data.skus || []).map(row => {
+    const faceWidth = horizontalFaceWidth(row);
+    if (!(faceWidth > 0)) return row;
+    const displayCols = Math.max(0, num(row.displayCols));
+    const placements = Array.isArray(row.placements)
+      ? row.placements.map(placement => ({ ...placement, width: faceWidth, faceWidth }))
+      : row.placements;
+    return {
+      ...row,
+      faceWidth,
+      placements,
+      sourceCapacityNote: `占宽=${round(displayCols * faceWidth, 0)}mm；单列容量=${num(row.perCol)}`
+    };
+  });
+  return { ...data, skus };
+}
 
 function sheetRows(workbook, name) {
   const sheet = workbook.Sheets[name];
@@ -38,7 +72,7 @@ function normalizeExistingJson(raw, sourceName) {
   if (!data || !Array.isArray(data.stores) || !Array.isArray(data.skus) || !Array.isArray(data.cabinets)) {
     throw new Error("JSON 数据不是小程序数据结构，缺少 stores/skus/cabinets");
   }
-  return reconcileStoreSummaries({
+  return reconcileStoreSummaries(normalizeHorizontalFaceData({
     ...data,
     meta: {
       ...(data.meta || {}),
@@ -49,7 +83,7 @@ function normalizeExistingJson(raw, sourceName) {
     productPool: Array.isArray(data.productPool) && data.productPool.length
       ? data.productPool
       : buildProductPoolFromSkus(data.skus)
-  });
+  }));
 }
 
 function calcSkuForSummary(r, data) {
@@ -126,15 +160,7 @@ function buildProductPoolFromSkus(skus) {
   return [...map.values()];
 }
 
-export async function sourceToAppData(sourcePath, oldData = {}) {
-  const sourceName = path.basename(sourcePath);
-  if (/\.json$/i.test(sourcePath)) {
-    const raw = JSON.parse(fs.readFileSync(sourcePath, "utf8").replace(/^\uFEFF/, ""));
-    return normalizeExistingJson(raw, sourceName);
-  }
-
-  const raw = await readWorkbook(sourcePath);
-  const sheets = raw.sheets || {};
+export function sourceSheetsToAppData(sheets, oldData = {}, sourceName = "workbook-sheets") {
   const productRows = sheets["71SKU有效池明细"] || sheets["74SKU标准化日销"] || [];
   const productMap = new Map();
   for (const r of productRows) {
@@ -169,13 +195,27 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
   }).filter(r => r.store);
 
   const oldCabMap = new Map((oldData.cabinets || []).map(c => [c.key, c]));
+  const oldCabModelMap = new Map();
+  const oldCabTypeMap = new Map();
+  for (const cabinet of oldData.cabinets || []) {
+    if (!validPhysical(cabinet)) continue;
+    oldCabModelMap.set(`${text(cabinet.store)}__${text(cabinet.label)}`, cabinet);
+    const typeKey = `${text(cabinet.store)}__${text(cabinet.kind || cabinet.type)}`;
+    if (!oldCabTypeMap.has(typeKey)) oldCabTypeMap.set(typeKey, cabinet);
+  }
   const cabinetRows = sheets["10%触发_柜段余量"] || [];
   const cabinets = cabinetRows.map((r, i) => {
     const label = text(first(r, ["陈列柜", "优化后陈列柜"]));
     const position = text(first(r, ["具体位置", "优化后具体位置"]));
     const key = cabinetKey(first(r, ["门店"]), label, position);
-    const oldCab = oldCabMap.get(key) || {};
-    const kind = text(first(r, ["冰柜类型", "原冰柜类型"], oldCab.kind));
+    const exactOldCab = oldCabMap.get(key) || {};
+    const kind = text(first(r, ["冰柜类型", "原冰柜类型"], exactOldCab.kind));
+    const oldCab = exactOldCab.depth > 0 && exactOldCab.height > 0
+      ? exactOldCab
+      : oldCabModelMap.get(`${text(first(r, ["门店"]))}__${label}`)
+        || oldCabTypeMap.get(`${text(first(r, ["门店"]))}__${kind}`)
+        || {};
+    const physical = cabinetPhysicalFallback(label, kind, oldCab);
     return {
       id: `cab_${i + 1}`,
       store: text(first(r, ["门店"])),
@@ -187,8 +227,8 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
       kind,
       type: kind,
       length: num(first(r, ["总宽度mm", "总宽度毫米"])),
-      depth: num(first(r, ["深度mm"], oldCab.depth)),
-      height: num(first(r, ["高度mm"], oldCab.height)),
+      depth: num(first(r, ["深度mm"], physical.depth)),
+      height: num(first(r, ["高度mm"], physical.height)),
       sourceUsed: num(first(r, ["已用宽度mm", "已用宽度毫米"])),
       sourceLeft: num(first(r, ["剩余宽度mm", "剩余宽度毫米"])),
       sceneGroup: text(first(r, ["场景分区"])),
@@ -212,7 +252,14 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
     const avgVol = externalOwner ? num(first(r, ["动态平均外储L", "动态平均外储体积L"])) : 0;
     const displayCols = Math.max(0, num(first(r, ["陈列列数", "列数"])));
     const perCol = num(first(r, ["单列容量"]));
-    const faceWidth = num(first(r, ["单列占宽mm", "单列占宽毫米", "占宽mm"]));
+    const faceWidth = horizontalFaceWidth({
+      length: num(first(r, ["单品长毫米"], first(p, ["单品长毫米", "长"]))),
+      width: num(first(r, ["单品宽毫米"], first(p, ["单品宽毫米", "宽"]))),
+      faceWidth: num(first(r, ["单列占宽mm", "单列占宽毫米", "占宽mm"]))
+    });
+    const placements = Array.isArray(r.placements)
+      ? r.placements.map(placement => ({ ...placement, width: faceWidth, faceWidth }))
+      : [];
     return {
       id: `sku_${i + 1}`,
       store: text(first(r, ["门店"])),
@@ -242,7 +289,7 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
       displayCols,
       perCol,
       faceWidth,
-      placements: [],
+      placements,
       customPlacement: false,
       currentStock: "",
       planCartons: 1,
@@ -348,5 +395,17 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
     rules: sheets["测算规则说明"] || [],
     externalRows: sheets["10%触发_外储明细"] || []
   });
+}
+
+export async function sourceToAppData(sourcePath, oldData = {}) {
+  const sourceName = path.basename(sourcePath);
+  if (/\.json$/i.test(sourcePath)) {
+    const raw = JSON.parse(fs.readFileSync(sourcePath, "utf8").replace(/^\uFEFF/, ""));
+    if (raw?.sheets && typeof raw.sheets === "object") return sourceSheetsToAppData(raw.sheets, oldData, sourceName);
+    return normalizeExistingJson(raw, sourceName);
+  }
+
+  const raw = await readWorkbook(sourcePath);
+  return sourceSheetsToAppData(raw.sheets || {}, oldData, sourceName);
 }
 
