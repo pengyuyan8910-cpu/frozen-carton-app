@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {prepareReplanSource} from './replan-baseline.mjs';
+import {normalizeActiveProductPool,replanAllStores} from './product-pool-replan-core.mjs';
 
 const base={
   meta:{source:'formal',generatedAt:'g',version:'v'},
@@ -40,5 +41,15 @@ const ui=fs.readFileSync(new URL('./product-pool-replan-ui.mjs',import.meta.url)
 assert.equal(ui.includes("ops.dispatchEvent(new Event('change'"),false,'人工复核不得再次触发运营开关 change/密码流程');
 assert.ok(ui.includes("ops.checked=true"),'人工复核必须直接恢复已授权的运营会话');
 assert.ok(ui.includes("document.body.classList.add('ops')"),'人工复核必须恢复运营模式页面样式');
+
+{
+  const live=JSON.parse(fs.readFileSync(new URL('../data/app-data.json',import.meta.url),'utf8'));
+  const livePool=Array.isArray(live.productPool)&&live.productPool.length?live.productPool:normalizeActiveProductPool(live.skus||[]);
+  const clean=prepareReplanSource(live,live,null);
+  const result=replanAllStores(clean,livePool,{preserveExisting:true,externalCapL:754});
+  const failed=result.plans.filter(p=>p.status==='failed');
+  assert.equal(failed.length,0,`正式底表基准下不应出现硬规则失败门店：${failed.map(p=>p.store).join('、')}`);
+  console.log(`formal baseline hard failures: ${failed.length}/${result.plans.length}`);
+}
 
 console.log('replan baseline and review mode tests passed');
