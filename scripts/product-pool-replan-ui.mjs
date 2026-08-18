@@ -1,6 +1,7 @@
 import { DRAFT_STORAGE_KEY, normalizeActiveProductPool, replanAllStores } from './product-pool-replan-core.mjs';
 import { applyReplanPatch, buildCompactAppDraftPatch, replanSelectedStores } from './product-pool-replan-ops.mjs';
 import { prepareReplanSource } from './replan-baseline.mjs';
+import { prepareBusinessOptimizedSeed } from './replan-business-optimizer.mjs';
 import { downloadProductPool, downloadFormalWorkbook } from './replan-workbook.mjs';
 
 const REVIEW_MARKER='frozen_carton_open_replan_review_v1';
@@ -63,7 +64,7 @@ function injectPanel(){
   panel.style.marginTop='18px';
   panel.innerHTML=`
     <div class="panel-title"><div><h2>产品池重排</h2><p>统一处理产品池变化和新增门店。立柜柜1-4第1-5层均参与冻品排柜，第6层为存储位。</p></div></div>
-    <div class="help">流程：完成上新/淘汰 → 导出当前产品池 → 全部门店或指定门店重新排柜 → 人工复核 → 导出最新版底表。已有门店始终以正式方案作为重排基准，避免旧草稿重复叠加；尚未发布的新增门店会继续保留。</div>
+    <div class="help">流程：完成上新/淘汰 → 导出当前产品池 → 全部门店或指定门店重新排柜 → 人工复核 → 导出最新版底表。已有门店始终以正式方案作为重排基准；新店先按SKU覆盖优先、冰品物理容量、余量扩陈和外储优化生成业务种子，再由同一严格排柜引擎复核。</div>
     <div class="toolbar" style="padding:16px 20px;gap:10px;flex-wrap:wrap;align-items:center">
       <button id="exportCurrentProductPoolBtn" type="button">导出当前产品池</button>
       <button id="runProductPoolReplanBtn" type="button">全部门店重新排柜</button>
@@ -116,14 +117,23 @@ function saveReplanResult(result,label,targetStore=''){
   setStatus(`${prefix}：${label}｜${result.plans.length}家门店｜通过${passed}｜需复核${review}｜硬规则失败${failed}｜未纳入SKU记录（跨门店累计）${unplaced}｜增量草稿约${sizeKb}KB${errorPreview}。草稿尚未影响店员端正式方案。`,result.validation.ok?'ok':'error');
 }
 
+function prepareSelectedSeed(data,pool,store){
+  const optimized=prepareBusinessOptimizedSeed(data,pool,{formalBase:base});
+  const selected=text(store);
+  const untouched=(data.skus||[]).filter(r=>text(r.store)!==selected).map(clone);
+  const selectedRows=(optimized.skus||[]).filter(r=>text(r.store)===selected).map(clone);
+  return {...optimized,skus:[...untouched,...selectedRows]};
+}
+
 function runReplan(){
   try{
     const current=currentData();
     const data=prepareReplanSource(base,current,null);
     const pool=activeProducts();
     if(!pool.length)throw new Error('最新有效产品池为空');
-    setStatus(`正在按 ${pool.length} 个有效SKU对全部门店生成严格排柜草稿…`);
-    const result=replanAllStores(data,pool,{preserveExisting:true,externalCapL:754});
+    setStatus(`正在按 ${pool.length} 个有效SKU对全部门店生成“覆盖优先+外储优化”严格排柜草稿…`);
+    const optimized=prepareBusinessOptimizedSeed(data,pool,{formalBase:base});
+    const result=replanAllStores(optimized,pool,{preserveExisting:true,externalCapL:754});
     saveReplanResult(result,'全部门店','');
   }catch(err){console.error(err);setStatus(`生成排柜草稿失败：${err.message||err}`,'error')}
 }
@@ -138,7 +148,8 @@ function runSelectedStoreReplan(){
     const pool=activeProducts();
     if(!pool.length)throw new Error('最新有效产品池为空');
     setStatus(`正在按 ${pool.length} 个有效SKU重排：${store}…`);
-    const result=replanSelectedStores(data,pool,[store],{preserveExisting:true,externalCapL:754});
+    const optimized=prepareSelectedSeed(data,pool,store);
+    const result=replanSelectedStores(optimized,pool,[store],{preserveExisting:true,externalCapL:754});
     saveReplanResult(result,`指定门店：${store}`,store);
   }catch(err){console.error(err);setStatus(`指定门店重排失败：${err.message||err}`,'error')}
 }
@@ -162,8 +173,6 @@ function restoreReviewView(){
   }catch(_){/* no-op */}
   if(!open)return;
 
-  // 该标记只会由已经进入运营端的“人工复核”按钮写入。
-  // app.js 初始化会强制回到店员端，因此这里直接恢复已授权的运营会话，不能再次触发 change/密码流程。
   const ops=document.getElementById('opsMode');
   if(ops&&!ops.checked)ops.checked=true;
   document.body.classList.add('ops');
