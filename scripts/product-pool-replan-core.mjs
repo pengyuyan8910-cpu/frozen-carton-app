@@ -41,18 +41,74 @@ export function applyAppStatePatch(base,patch){
 }
 
 export function buildPreferredPlacements(data,store,pool){
-  const activeKeys=new Set(pool.map(productKey));
+  const productMap=new Map(pool.map(p=>[productKey(p),p]));
   const seenType=new Set();
   const preferences=[];
   const cabinetMap=new Map((data.cabinets||[]).filter(c=>text(c.store)===text(store)).map(c=>[text(c.key),c]));
   for(const row of (data.skus||[]).filter(r=>text(r.store)===text(store)&&r.included!==false)){
-    const key=productKey(row); if(!activeKeys.has(key))continue;
+    const key=productKey(row), product=productMap.get(key); if(!product)continue;
+    const dimensionsChanged=['length','width','height'].some(field=>num(row[field])>0&&num(product[field])>0&&Math.abs(num(row[field])-num(product[field]))>0.5);
+    if(dimensionsChanged)continue;
     const cab=cabinetMap.get(text(row.cabinetKey)); if(!cab)continue;
     const type=text(cab.kind||cab.type||row.cabinetTypeFilter);
     const uniqueness=`${key}|${type}`; if(seenType.has(uniqueness))continue; seenType.add(uniqueness);
-    preferences.push({skuKey:key,segmentKey:text(row.cabinetKey),cabinetType:type,displayCols:Math.max(1,Math.floor(num(row.displayCols)||1))});
+    const displayCols=Math.max(1,Math.floor(num(row.displayCols)||1));
+    const faceWidth=num(row.faceWidth);
+    preferences.push({skuKey:key,segmentKey:text(row.cabinetKey),cabinetType:type,displayCols,faceWidth,perCol:num(row.perCol),widthUsed:num(row.widthUsed)||num(row.sourceWidthUsed)||displayCols*faceWidth,verifiedDimensions:{length:num(row.length),width:num(row.width),height:num(row.height)}});
   }
   return preferences;
+}
+
+function cabinetType(c){
+  const raw=[c?.kind,c?.type,c?.label].map(text).join('|');
+  if(/冰淇淋|冰品/.test(raw))return '冰淇淋柜';
+  if(/立柜/.test(raw))return '立柜';
+  return '卧柜';
+}
+function cabinetShape(c){
+  return [cabinetType(c),Math.round(num(c.length)*10)/10,Math.round(num(c.depth)*10)/10,Math.round(num(c.height)*10)/10,text(c.position)].join('|');
+}
+function referencePlacementCandidate(data,referenceStore,targetStore,pool){
+  const targetGroups=new Map();
+  for(const c of (data.cabinets||[]).filter(x=>text(x.store)===text(targetStore))){
+    const k=cabinetShape(c); if(!targetGroups.has(k))targetGroups.set(k,[]); targetGroups.get(k).push(c);
+  }
+  for(const rows of targetGroups.values())rows.sort((a,b)=>text(a.label).localeCompare(text(b.label),'zh-CN')||text(a.key).localeCompare(text(b.key),'zh-CN'));
+  const sourceCabinets=new Map((data.cabinets||[]).filter(x=>text(x.store)===text(referenceStore)).map(c=>[text(c.key),c]));
+  const activeKeys=new Set(pool.map(productKey));
+  const sourceRows=(data.skus||[]).filter(r=>text(r.store)===text(referenceStore)&&r.included!==false&&activeKeys.has(productKey(r)));
+  if(!sourceRows.length)return null;
+  const usedByShape=new Map();
+  for(const r of sourceRows){const c=sourceCabinets.get(text(r.cabinetKey));if(!c)continue;const shape=cabinetShape(c);if(!usedByShape.has(shape))usedByShape.set(shape,new Map());usedByShape.get(shape).set(text(c.key),c)}
+  const map=new Map();
+  for(const [shape,usedMap] of usedByShape){
+    const src=[...usedMap.values()].sort((a,b)=>text(a.label).localeCompare(text(b.label),'zh-CN')||text(a.key).localeCompare(text(b.key),'zh-CN'));
+    const dst=targetGroups.get(shape)||[];
+    if(dst.length<src.length)return null;
+    src.forEach((c,i)=>map.set(text(c.key),dst[i]));
+  }
+  const seenType=new Set(),preferences=[];
+  for(const row of sourceRows){
+    const target=map.get(text(row.cabinetKey));if(!target)continue;
+    const key=productKey(row),product=pool.find(p=>productKey(p)===key);if(!product)continue;
+    const dimensionsChanged=['length','width','height'].some(field=>num(row[field])>0&&num(product[field])>0&&Math.abs(num(row[field])-num(product[field]))>0.5);
+    if(dimensionsChanged)continue;
+    const type=cabinetType(target),uniqueness=`${key}|${type}`;if(seenType.has(uniqueness))continue;seenType.add(uniqueness);
+    const displayCols=Math.max(1,Math.floor(num(row.displayCols)||1)),faceWidth=num(row.faceWidth);
+    preferences.push({skuKey:key,segmentKey:text(target.key),cabinetType:type,displayCols,faceWidth,perCol:num(row.perCol),widthUsed:num(row.widthUsed)||num(row.sourceWidthUsed)||displayCols*faceWidth,referenceStore,verifiedReference:true});
+  }
+  if(!preferences.length)return null;
+  const storeMeta=(data.stores||[]).find(s=>text(s.store)===text(referenceStore))||{};
+  return {referenceStore,preferences,covered:new Set(preferences.map(p=>p.skuKey)).size,suggestedExternalL:num(storeMeta.suggestedExternalL)||999999};
+}
+export function buildReferencePlacements(data,targetStore,pool){
+  const candidates=[];
+  for(const store of storeNames(data)){
+    if(text(store)===text(targetStore))continue;
+    const row=referencePlacementCandidate(data,store,targetStore,pool);if(row)candidates.push(row);
+  }
+  candidates.sort((a,b)=>b.covered-a.covered||a.suggestedExternalL-b.suggestedExternalL||a.referenceStore.localeCompare(b.referenceStore,'zh-CN'));
+  return candidates[0]||{referenceStore:'',preferences:[],covered:0,suggestedExternalL:0};
 }
 
 function storeNames(data){
@@ -87,12 +143,19 @@ export function replanAllStores(data,products,options={}){
     const config=(data.stores||[]).find(s=>text(s.store)===store)||{store,type:'门店'};
     const cabinets=(data.cabinets||[]).filter(c=>text(c.store)===store);
     if(!cabinets.length){errors.push(`${store}：没有可用冰柜配置`);continue}
-    const preferredPlacements=options.preserveExisting===false?[]:buildPreferredPlacements(data,store,pool);
+    let preferredPlacements=options.preserveExisting===false?[]:buildPreferredPlacements(data,store,pool);
+    let referenceStore='';
+    if(!preferredPlacements.length && options.useReferenceStore!==false){
+      const reference=buildReferencePlacements(data,store,pool);
+      preferredPlacements=reference.preferences;
+      referenceStore=reference.referenceStore;
+    }
     const plan=allocateStore({
       store,type:config.type,storeConfig:config,stores:data.stores||[],productPool:pool,cabinets,
       params:{...(data.params||{}),externalCapL:num(options.externalCapL)||num(data.params?.externalCapL)||754},
       p95Factor:config.p95Factor||data.params?.p95Factor,physicalRecords:data.physicalRecords||[],preferredPlacements,
     });
+    if(referenceStore)plan.referenceStore=referenceStore;
     plans.push(plan);
   }
   const draft=buildReplanDraft(data,pool,plans);
@@ -114,12 +177,12 @@ export function buildReplanDraft(sourceData,pool,plans){
   }
   const plannedStores=new Set(stores.map(s=>s.store));
   for(const s of sourceData.stores||[])if(!plannedStores.has(text(s.store)))stores.push(clone(s));
-  const cabinets=(sourceData.cabinets||[]).map(c=>plannedCabinets.has(text(c.key))?{...clone(c),sourceUsed:plannedCabinets.get(text(c.key)).sourceUsed??plannedCabinets.get(text(c.key)).used,sourceLeft:plannedCabinets.get(text(c.key)).sourceLeft??plannedCabinets.get(text(c.key)).left,status:plannedCabinets.get(text(c.key)).status||c.status}:clone(c));
+  const cabinets=(sourceData.cabinets||[]).map(c=>plannedCabinets.has(text(c.key))?{...clone(c),sourceUsed:plannedCabinets.get(text(c.key)).used,sourceLeft:plannedCabinets.get(text(c.key)).left,status:plannedCabinets.get(text(c.key)).status||c.status}:clone(c));
   return {
     ...clone(sourceData),
     stores,skus,cabinets,productPool:clone(pool),excluded,
     meta:{...(sourceData.meta||{}),version:'产品池一键重排草稿',generatedAt:new Date().toLocaleString('zh-CN',{hour12:false})},
-    replanMeta:{generatedAt:new Date().toISOString(),engine:'unified-strict-v1',poolCount:pool.length,storeCount:plans.length}
+    replanMeta:{generatedAt:new Date().toISOString(),engine:'unified-strict-v2',poolCount:pool.length,storeCount:plans.length}
   };
 }
 
