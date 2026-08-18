@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {sameEffectivePool,buildFormalReuseResult} from './replan-idempotency.mjs';
+const formal={meta:{source:'accepted-67'},params:{externalCapL:754},productPool:[{barcode:'A',name:'A',active:true,length:100,width:80,height:50,carton:10},{barcode:'B',name:'B',active:true,length:120,width:90,height:60,carton:12}],stores:[{store:'宁国津河西路生活馆',skuCount:2,directSku:1,externalSku:1,staticExternalL:402.8,dynamicAvgExternalL:201.4,dynamicP95L:286.5,suggestedExternalL:343.7},{store:'其他店',skuCount:1,directSku:1,externalSku:0,suggestedExternalL:0}],cabinets:[{store:'宁国津河西路生活馆',key:'n1'},{store:'其他店',key:'o1'}],skus:[{id:'n-a',store:'宁国津河西路生活馆',barcode:'A',cabinetKey:'n1',displayCols:2},{id:'n-b',store:'宁国津河西路生活馆',barcode:'B',cabinetKey:'n1',displayCols:1},{id:'o-a',store:'其他店',barcode:'A',cabinetKey:'o1',displayCols:1}],excluded:[{store:'其他店',barcode:'B',reason:'容量限制'}]};
+assert.equal(sameEffectivePool(formal,[{...formal.productPool[1]},{...formal.productPool[0]}]),true);
+assert.equal(sameEffectivePool(formal,[{barcode:'A',name:'A'},{barcode:'B',name:'B'}]),true,'生命周期侧暂缺尺寸时不能误判为产品池变化');
+assert.equal(sameEffectivePool(formal,[{...formal.productPool[0],length:130},{...formal.productPool[1]}]),false,'明确尺寸变化必须进入增量重排');
+assert.equal(sameEffectivePool(formal,[...formal.productPool,{barcode:'C',name:'C'}]),false);
+const working=structuredClone(formal);working.skus.find(r=>r.id==='n-a').displayCols=9;working.stores.find(s=>s.store==='宁国津河西路生活馆').suggestedExternalL=1442;working.skus.find(r=>r.id==='o-a').displayCols=7;
+const one=buildFormalReuseResult(formal,working,formal.productPool,['宁国津河西路生活馆']);
+assert.equal(one.reusedFormal,true);assert.equal(one.plans[0].summary.placedSkuCount,2);assert.equal(one.plans[0].summary.suggestedExternalL,343.7);assert.equal(one.draft.skus.find(r=>r.id==='n-a').displayCols,2);assert.equal(one.draft.skus.find(r=>r.id==='o-a').displayCols,7);
+const all=buildFormalReuseResult(formal,working,formal.productPool,null);assert.equal(all.reusedFormal,true);assert.equal(all.draft.skus.find(r=>r.id==='o-a').displayCols,1);
+const newStore=structuredClone(formal);newStore.stores.push({store:'新店C'});newStore.cabinets.push({store:'新店C',key:'c1'});assert.equal(buildFormalReuseResult(formal,newStore,formal.productPool,null),null);
+console.log('replan idempotency tests passed');
