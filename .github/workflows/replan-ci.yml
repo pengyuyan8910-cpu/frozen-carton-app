@@ -1,0 +1,35 @@
+name: 产品池重排回归测试
+
+on:
+  pull_request:
+    paths:
+      - "bootstrap.js"
+      - "package.json"
+      - "scripts/strict-allocation-*.mjs"
+      - "scripts/product-pool-replan-*.mjs"
+      - "scripts/replan-workbook.mjs"
+      - "scripts/xlsx-lite.mjs"
+      - "scripts/test-*-replan*.mjs"
+      - ".github/workflows/replan-ci.yml"
+      - ".github/workflows/update-data.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replan-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取仓库
+        uses: actions/checkout@v4
+      - name: 准备 Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 安装依赖
+        run: npm install
+      - name: 语法检查
+        run: npm run check
+      - name: 产品池重排回归测试
+        run: npm run test:replan

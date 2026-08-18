@@ -1,13 +1,16 @@
-﻿name: 更新底表并发布小程序数据
+name: 更新底表并发布小程序数据
 
 on:
   push:
+    branches:
+      - master
     paths:
       - "data/source/*.xlsx"
       - "data/inbox/*.json"
-      - "scripts/**"
-      - "package.json"
-      - ".github/workflows/update-data.yml"
+      - "scripts/refresh-data.mjs"
+      - "scripts/source-to-app-data.mjs"
+      - "scripts/verify-app-data.mjs"
+      - "scripts/app-data-to-workbook.mjs"
   workflow_dispatch:
 
 permissions:

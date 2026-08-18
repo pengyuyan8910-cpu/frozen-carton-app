@@ -1,5 +1,6 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260811_planogram_reclaim_v5";
+  const DATA_VERSION = "20260818_one_click_replan_v1";
+  const REVIEW_MARKER = "frozen_carton_open_replan_review_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
@@ -22,9 +23,25 @@
     window.UNIFIED_CARTON_VERSION = version || {};
     const status = report?.passed === false ? "复核失败" : "复核通过";
     setNote(`${data.meta?.version || "当前版本"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
+
+    // 人工复核入口必须在 app.js 初始化前切到运营草稿，避免先加载发布状态再切换。
+    try {
+      if (sessionStorage.getItem(REVIEW_MARKER) === "1") {
+        const ops = document.getElementById("opsMode");
+        if (ops) ops.checked = true;
+      }
+    } catch (_) {}
+
     const app = document.createElement("script");
     app.src = `app.js?v=${DATA_VERSION}`;
-    app.onload = () => window.ProductLifecycle?.init?.();
+    app.onload = async () => {
+      window.ProductLifecycle?.init?.();
+      try {
+        await import(`./scripts/product-pool-replan-ui.mjs?v=${DATA_VERSION}`);
+      } catch (replanError) {
+        console.error("产品池重排模块加载失败", replanError);
+      }
+    };
     app.onerror = () => setNote("程序加载失败，请联系运营");
     document.body.appendChild(app);
   } catch (err) {
