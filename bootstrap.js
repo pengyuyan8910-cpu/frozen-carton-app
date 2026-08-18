@@ -1,5 +1,5 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260818_one_click_replan_v3";
+  const DATA_VERSION = "20260818_one_click_replan_v4";
   const REVIEW_MARKER = "frozen_carton_open_replan_review_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
