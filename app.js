@@ -6,6 +6,10 @@ const 数据签名=[初始数据?.meta?.source,初始数据?.meta?.generatedAt,�
 const 运营模式密码="5871";
 function 清理计算缓存(state){const next=structuredClone(state);for(const r of next.skus||[]){delete r.widthOverride;delete r._baseIncluded;delete r._baseCabinetKey;delete r._baseDisplayCols;delete r._baseFaceWidth;delete r._baseWidth}delete next._baselineReady;return next}
 function 清理交互痕迹(state){const next=清理计算缓存(state);for(const r of next.skus||[]){delete r.selected;delete r.modifiedFields;delete r.changeNote}delete next._dataSignature;return next}
+const 文=v=>String(v??"").trim();
+const 数=v=>{if(typeof v==="number")return Number.isFinite(v)?v:0;
+const n=Number(String(v??"").replace(/,/g,"").replace(/[^\d.-]/g,""));
+return Number.isFinite(n)?n:0};
 
 function 产品键(r){return String(r?.barcode??"").trim()||String(r?.name??"").trim()}
 function 生成产品池(skus=初始数据.skus||[]){const map=new Map();for(const r of skus){const key=产品键(r);if(!key||map.has(key))continue;map.set(key,{id:"pool_"+key,active:true,name:r.name,barcode:r.barcode,grade:r.grade,rank:r.rank,category2:r.category2,category3:r.category3,category4:r.category4,length:r.length,width:r.width,height:r.height,volume:r.volume,carton:r.carton,dailyQty:r.dailyQty,dailySales:r.dailySales,moq:r.moq,moqDays:r.moqDays})}return [...map.values()]}
@@ -28,10 +32,6 @@ if ((!状态.lifecycle || !Array.isArray(状态.lifecycle.tasks) || 状态.lifec
 window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);window.ProductLifecycle?.syncData?.(状态);
 let 当前={门店:"",页面:"goods",定位SKU:"",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
 let 同步请求中=false;
-const 文=v=>String(v??"").trim();
-const 数=v=>{if(typeof v==="number")return Number.isFinite(v)?v:0;
-const n=Number(String(v??"").replace(/,/g,"").replace(/[^\d.-]/g,""));
-return Number.isFinite(n)?n:0};
 const 格=(v,d=1)=>{const n=数(v);
 return Number.isFinite(n)?n.toFixed(d).replace(/\.0$/,""):"0"};
 const q=s=>document.querySelector(s);
