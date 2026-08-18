@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import { allocateStore } from './strict-allocation-engine.mjs';
+const baseSku=(name,grade='B')=>({name,barcode:name,grade,rank:1,category2:'冻品',category3:'测试',category4:'测试组',length:100,width:100,height:100,volume:1,carton:5,dailyQty:1,lifecycleStatus:'在售SKU'});
+const c=(label,position,kind='立柜',length=710,depth=534,height=250,status='')=>({store:'测试店',key:`测试店__${label}__${position}`,label,position,kind,length,depth,height,status});
+const cabinets=[c('立柜3m-柜4','第1层'),c('立柜3m-柜4','第6层'),c('冰淇淋柜1900-柜1','分区1','冰淇淋柜',600,500,300),c('卧柜2000-柜1','分区1','卧柜',1000,600,400)];
+const sku=baseSku('普通A','A');
+let plan=allocateStore({store:'测试店',productPool:[sku],cabinets,params:{externalCapL:754},preferredPlacements:[{skuKey:'普通A',segmentKey:cabinets[0].key,displayCols:2}]});
+assert.equal(plan.skuDecisions[0].included,true);
+assert.equal(plan.skuDecisions[0].placements[0].segmentKey,cabinets[0].key,'柜4第1层应正常参与排柜并优先保留合法老位置');
+assert.equal(plan.skuDecisions[0].placements[0].displayCols>=2,true,'合法老品列数应作为优先起点');
+assert.equal(plan.skuDecisions[0].placements.some(p=>p.segmentKey===cabinets[1].key),false,'立柜第6层不得参与销售陈列');
+const ice={...baseSku('雪糕B','B'),category3:'雪糕',category4:'雪糕冰淇淋',sceneGroup:'雪糕冰品'};
+plan=allocateStore({store:'测试店',productPool:[ice],cabinets,preferredPlacements:[{skuKey:'雪糕B',segmentKey:cabinets[3].key,displayCols:1}]});
+assert.equal(plan.skuDecisions[0].placements.every(p=>p.cabinetType==='冰淇淋柜'),true,'冰品非法老位置应回退到冰淇淋柜');
+assert.equal(plan.validation.errors.length,0,plan.validation.errors.join('\n'));
+console.log('strict replan engine tests passed');
