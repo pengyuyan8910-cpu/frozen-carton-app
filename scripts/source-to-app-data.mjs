@@ -216,6 +216,14 @@ export function sourceSheetsToAppData(sheets, oldData = {}, sourceName = "workbo
         || oldCabTypeMap.get(`${text(first(r, ["门店"]))}__${kind}`)
         || {};
     const physical = cabinetPhysicalFallback(label, kind, oldCab);
+    const sourceUsed = num(first(r, ["已用宽度mm", "已用宽度毫米"]));
+    const sourceLeft = num(first(r, ["剩余宽度mm", "剩余宽度毫米"]));
+    const explicitRemainderReason = text(first(r, ["大剩余原因", "大余量原因", "largeRemainderReason"], oldCab.largeRemainderReason));
+    const largeRemainderReason = explicitRemainderReason || (
+      sourceUsed > 0 && sourceLeft > 300 && !/冰淇淋|雪糕|冰品/.test(`${kind}${label}`)
+        ? "底表未提供大剩余原因，保留空位待人工复核"
+        : ""
+    );
     return {
       id: `cab_${i + 1}`,
       store: text(first(r, ["门店"])),
@@ -229,12 +237,13 @@ export function sourceSheetsToAppData(sheets, oldData = {}, sourceName = "workbo
       length: num(first(r, ["总宽度mm", "总宽度毫米"])),
       depth: num(first(r, ["深度mm"], physical.depth)),
       height: num(first(r, ["高度mm"], physical.height)),
-      sourceUsed: num(first(r, ["已用宽度mm", "已用宽度毫米"])),
-      sourceLeft: num(first(r, ["剩余宽度mm", "剩余宽度毫米"])),
+      sourceUsed,
+      sourceLeft,
       sceneGroup: text(first(r, ["场景分区"])),
       categoryMix: text(first(r, ["三级类目集中组", "四级类目集中组"])),
       itemSummary: text(first(r, ["占用品明细"])),
-      status: text(first(r, ["状态"]))
+      status: text(first(r, ["状态"])),
+      largeRemainderReason
     };
   }).filter(r => r.store && r.key);
   const cabinetMap = new Map(cabinets.map(c => [c.key, c]));
