@@ -20,8 +20,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: frozen-carton-data-refresh
-  cancel-in-progress: true
+  group: frozen-carton-master-writes
+  cancel-in-progress: false
 
 jobs:
   refresh-data:
@@ -49,5 +49,7 @@ jobs:
             echo "没有新的数据变更需要提交"
           else
             git commit -m "chore: 自动更新小程序与标准Excel底表"
-            git push
+            git fetch origin master
+            git rebase origin/master
+            git push origin HEAD:master
           fi
