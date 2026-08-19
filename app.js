@@ -720,11 +720,11 @@ function 柜段可陈列(c){
 }
 function 待选SKU(store=门店名()){return 纳入SKU(store).filter(r=>r.inStaging)}
 function 陈列图来源柜段(r){return 状态.cabinets.find(c=>c.key===r?.cabinetKey)}
-function 陈列图基础校验(r,targetKey){
+function 陈列图基础校验(r,targetKey,allowSameCabinet=false){
   const source=陈列图来源柜段(r);
   const target=柜段使用().find(c=>c.key===targetKey);
   if(!r||!target)return {ok:false,reason:"未找到商品或目标柜段"};
-  if(!r.inStaging&&targetKey===r.cabinetKey)return {ok:false,reason:"商品已在该柜段"};
+  if(!allowSameCabinet&&!r.inStaging&&targetKey===r.cabinetKey)return {ok:false,reason:"商品已在该柜段"};
   if(r.store!==target.store)return {ok:false,reason:"只能在当前门店内移动"};
   if(!柜段可陈列(target))return {ok:false,reason:"目标为存储位或其他品类预留位"};
   const sourceType=source?冰柜类型(source):文(r.stagingCabinetType);
@@ -745,11 +745,12 @@ function 陈列图目标校验(r,targetKey){
 }
 function 陈列图互换校验(r,occupant){
   const targetKey=occupant?.cabinetKey;
-  const first=陈列图基础校验(r,targetKey);
+  const sameCabinet=!!r&&!!occupant&&r.cabinetKey===occupant.cabinetKey;
+  const first=陈列图基础校验(r,targetKey,sameCabinet);
   const source=陈列图来源柜段(r);
   const target=陈列图来源柜段(occupant);
   if(!first.ok||!source||!target||occupant.inStaging)return {ok:false,reason:first.reason||"无法定位互换柜段"};
-  const back=陈列图基础校验(occupant,source.key);
+  const back=陈列图基础校验(occupant,source.key,sameCabinet);
   if(!back.ok)return {ok:false,reason:"被替换商品无法回到原位置："+back.reason};
   const usage=new Map(柜段使用().map(c=>[c.key,c]));
   const sourceAfter=数(usage.get(source.key)?.left)+SKU占用宽度(r);
