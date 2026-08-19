@@ -1,5 +1,5 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260819_new_store_strict_v6";
+  const DATA_VERSION = "20260819_layout_recalc_v1";
   const REVIEW_MARKER = "frozen_carton_open_replan_review_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
@@ -46,3 +46,4 @@
     if (main) main.innerHTML = `<section class="panel load-error"><h2>数据加载失败</h2><p>小程序没有读取到已复核通过的最新数据，请确认 data/app-data.json 存在。</p><pre>${String(err.message || err)}</pre></section>`;
   }
 })();
+
