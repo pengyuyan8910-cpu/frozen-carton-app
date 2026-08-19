@@ -1125,8 +1125,8 @@ let docRevision = 0;
 let cloudBaseData = null;
 let cloudSdkPromise = null;
 const CLOUD_SDK_SOURCES = [
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
-  'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
+  'https://unpkg.com/@supabase/supabase-js@2',
 ];
 const CLOUD_SDK_TIMEOUT_MS = 10000;
 function loadCloudSdk() {
