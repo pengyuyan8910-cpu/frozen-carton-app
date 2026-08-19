@@ -233,10 +233,9 @@ function 校验SKU排柜变更(r,k,v){
  const nextCabinetKey=k==="cabinetKey"?String(v):r.cabinetKey;
  const cabinet=状态.cabinets.find(c=>c.key===nextCabinetKey);
  if(!cabinet){alert("未找到目标柜段，修改未保存。");return false}
- if(k==="cabinetKey"&&r.inStaging){
-  const targetPhysical=物理柜标识(cabinet);
-  const samePhysical=状态.skus.some(row=>row!==r&&row.included&&!row.inStaging&&row.store===r.store&&SKU键(row)===SKU键(r)&&物理柜标识(陈列图来源柜段(row))===targetPhysical);
-  if(samePhysical){alert("修改未保存：该SKU已在同一物理柜中，不能新增到该柜的其他分区。");return false}
+if(k==="cabinetKey"&&r.inStaging){
+  const sameSegment=同SKU同柜段已有模块(r,nextCabinetKey);
+  if(sameSegment){alert("修改未保存：该SKU已在同一物理柜段中，不能再次新增到该柜段。");return false}
  }
  const nextCols=k==="displayCols"?Math.max(0,数(v)):Math.max(0,数(r.displayCols));
  const nextLayout=(k==="cabinetKey"||k==="faceOrientation")?目标柜型参数(r,cabinet,k==="faceOrientation"?v:陈列面方向值(r),k==="faceOrientation"):null;
@@ -745,7 +744,12 @@ function 柜段可陈列(c){
 }
 function 待选SKU(store=门店名()){return 纳入SKU(store).filter(r=>r.inStaging)}
 function 陈列图来源柜段(r){return 状态.cabinets.find(c=>c.key===r?.cabinetKey)}
-function 物理柜标识(c){return 文(c?.physicalCabinetKey||c?.cabinetGroupKey||c?.label||c?.cabinetLabel||c?.key)}
+function 同SKU同柜段已有模块(r,targetKey){
+ const helper=window.DisplayModuleState?.sameStoreSkuCabinetSegment;
+ if(helper)return helper(状态,r,targetKey,{keyOf:x=>产品主键(x)||SKU键(x)});
+ const key=产品主键(r)||SKU键(r);
+ return 状态.skus.some(x=>x.id!==r?.id&&x.included!==false&&!x.inStaging&&x.store===r?.store&&x.cabinetKey===targetKey&&(产品主键(x)||SKU键(x))===key);
+}
 function 陈列图基础校验(r,targetKey,allowSameCabinet=false){
   const source=陈列图来源柜段(r);
   const target=柜段使用().find(c=>c.key===targetKey);
@@ -757,13 +761,7 @@ function 陈列图基础校验(r,targetKey,allowSameCabinet=false){
   const sourceIce=source?是否冰品柜段(source):!!r.stagingIce;
   if(!sourceType)return {ok:false,reason:"待选商品缺少原冰柜类型信息"};
   if(sourceIce!==是否冰品柜段(target))return {ok:false,reason:"冰品与普通冻品不能混放"};
-  const targetPhysical=物理柜标识(target);
-  const samePhysicalModule=r.inStaging&&状态.skus.some(x=>{
-    if(x.id===r.id||!x.included||x.inStaging||x.store!==r.store||SKU键(x)!==SKU键(r))return false;
-    const existing=陈列图来源柜段(x);
-    return 物理柜标识(existing)===targetPhysical;
-  });
-  if(samePhysicalModule)return {ok:false,reason:"该SKU已在同一物理柜中，不能新增到该柜的其他分区"};
+  if(r.inStaging&&同SKU同柜段已有模块(r,targetKey))return {ok:false,reason:"该SKU已在同一物理柜段中，不能再次新增到该柜段"};
   const layout=目标柜型参数(r,target,陈列面方向值(r));
   if(!layout)return {ok:false,reason:"该商品的长宽高没有一种水平摆法能放入目标柜段"};
   return {ok:true,source,target,layout,need:数(r.displayCols)*layout.faceWidth}
@@ -888,7 +886,7 @@ function 分身SKU到陈列图(id){
   const nextSource=状态.skus.find(x=>x.id===source.id),clone=状态.skus.find(x=>x.id===result.row.id);
   同步同SKU满陈(nextSource);标记变更(nextSource,"分身陈列","同商品新增待选模块");标记变更(clone,"分身陈列","同商品新增待选模块");
   当前.陈列图选中SKU=clone.id;保存();渲染全部();
-  完成提示("已新增同SKU模块，已放入待选区。请手动迁移到目标柜段；同一物理柜内已有该SKU时不能再次放入。");
+  完成提示("已新增同SKU模块，已放入待选区。请手动迁移到目标柜段；同一物理柜段内已有该SKU时不能再次放入。");
 }
 function 删除陈列模块(id){
   if(!当前是否运营()){alert("删除陈列模块需要先进入运营模式。");return}

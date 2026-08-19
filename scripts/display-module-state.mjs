@@ -21,6 +21,20 @@ export function sameStoreSkuModules(state, row, { keyOf } = {}) {
   ));
 }
 
+export function sameStoreSkuCabinetSegment(state, row, targetKey, { keyOf } = {}) {
+  if (!state || !row || !text(targetKey)) return false;
+  const key = productKey(row, keyOf);
+  if (!key) return false;
+  return (state.skus || []).some((candidate) => (
+    candidate.id !== row.id &&
+    candidate.store === row.store &&
+    candidate.included !== false &&
+    !candidate.inStaging &&
+    candidate.cabinetKey === targetKey &&
+    productKey(candidate, keyOf) === key
+  ));
+}
+
 function orderValue(row) {
   const value = Number(row?.planogramOrder);
   return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import {
   clonePlanogramModule,
   deletePlanogramModule,
+  sameStoreSkuCabinetSegment,
 } from "./display-module-state.mjs";
+
 
 const baseState = {
   productPool: [{ id: "pool-1", barcode: "690000000001", active: true }],
@@ -54,6 +56,46 @@ assert.equal(cloned.row.stagingFrom.key, "甲店-卧柜-1");
 assert.equal(cloned.row.placementCloneOf, "sku-chest");
 assert.equal(cloned.row.placements.length, 0);
 assert.deepEqual(cloned.state.productPool, baseState.productPool);
+
+const segmentState = {
+  skus: [
+    {
+      id: "sku-segment-1",
+      store: "甲店",
+      barcode: "690000000002",
+      included: true,
+      inStaging: false,
+      cabinetKey: "甲店__卧柜2505-柜1__分区1",
+    },
+    {
+      id: "sku-segment-2",
+      store: "甲店",
+      barcode: "690000000003",
+      included: true,
+      inStaging: false,
+      cabinetKey: "甲店__卧柜2505-柜1__分区2",
+    },
+    {
+      id: "sku-staged",
+      store: "甲店",
+      barcode: "690000000002",
+      included: true,
+      inStaging: true,
+      cabinetKey: "",
+    },
+  ],
+};
+
+assert.equal(
+  sameStoreSkuCabinetSegment(segmentState, segmentState.skus[2], "甲店__卧柜2505-柜1__分区1"),
+  true,
+  "同SKU进入已有分区1应被禁止",
+);
+assert.equal(
+  sameStoreSkuCabinetSegment(segmentState, segmentState.skus[2], "甲店__卧柜2505-柜1__分区2"),
+  false,
+  "同一台柜子的分区2属于不同柜段，应允许进入",
+);
 
 const deleted = deletePlanogramModule(cloned.state, { id: "sku-upright" });
 assert.equal(deleted.ok, true);
