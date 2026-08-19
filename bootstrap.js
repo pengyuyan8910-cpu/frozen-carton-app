@@ -1,5 +1,5 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_strict_replan_v2";
+  const DATA_VERSION = "20260820_module_actions_v1";
   const REVIEW_MARKER = "frozen_carton_open_replan_review_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
@@ -21,6 +21,7 @@
     window.UNIFIED_CARTON_DATA = data;
     window.UNIFIED_CARTON_REPORT = report || {};
     window.UNIFIED_CARTON_VERSION = version || {};
+    window.DisplayModuleState = await import(`./scripts/display-module-state.mjs?v=${DATA_VERSION}`);
     await import(`./scripts/strict-allocation-adapter.mjs?v=${DATA_VERSION}`);
     const status = report?.passed === false ? "复核失败" : "复核通过";
     setNote(`${data.meta?.version || "当前版本"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
