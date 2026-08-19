@@ -10,6 +10,8 @@ on:
       - "data/inbox/*.json"
       - "scripts/refresh-data.mjs"
       - "scripts/source-to-app-data.mjs"
+      - "scripts/source-to-app-data-preserve-face.mjs"
+      - "scripts/accepted-baseline-loader.mjs"
       - "scripts/verify-app-data.mjs"
       - "scripts/app-data-to-workbook.mjs"
   workflow_dispatch:
@@ -26,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 拉取仓库
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: 准备 Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: 安装依赖

@@ -1,11 +1,16 @@
 name: 新增门店严格排柜草稿
 on:
   push:
+    branches:
+      - master
     paths:
       - 'data/new-store/*.xlsx'
       - 'data/new-store/*.json'
+      - 'data/source/*.xlsx'
       - 'scripts/generate-new-store-draft.mjs'
+      - 'scripts/strict-allocation-engine.mjs'
       - 'scripts/source-to-app-data.mjs'
+      - 'scripts/source-to-app-data-preserve-face.mjs'
       - 'scripts/app-data-to-workbook.mjs'
       - 'package.json'
       - '.github/workflows/generate-new-store-draft.yml'
@@ -19,10 +24,10 @@ jobs:
   generate-draft:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 2
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 20
       - run: npm install
@@ -30,17 +35,18 @@ jobs:
         id: config
         shell: bash
         run: |
+          file=""
           if [ "${{ github.event_name }}" = "push" ]; then
             file=$(git -c core.quotePath=false diff --name-only --diff-filter=AM "${{ github.event.before }}" "${{ github.sha }}" -- 'data/new-store/*.xlsx' 'data/new-store/*.json' | grep -v -E 'README|模板' | head -n 1 || true)
-            if [ -z "$file" ]; then
-              echo "run=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          else
-            if [ -f 'data/new-store/新增门店配置.xlsx' ]; then
+          fi
+          if [ -z "$file" ]; then
+            if [ -f 'data/new-store/新增门店配置.json' ]; then
+              file='data/new-store/新增门店配置.json'
+            elif [ -f 'data/new-store/新增门店配置.xlsx' ]; then
               file='data/new-store/新增门店配置.xlsx'
             else
-              file='data/new-store/新增门店配置.json'
+              echo "run=false" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
           fi
           echo "run=true" >> "$GITHUB_OUTPUT"
@@ -49,7 +55,7 @@ jobs:
         if: steps.config.outputs.run == 'true'
         env:
           NEW_STORE_CONFIG_PATH: ${{ steps.config.outputs.path }}
-        run: node scripts/generate-new-store-draft.mjs
+        run: npm run generate-new-store-draft
       - name: 提交草稿结果
         if: steps.config.outputs.run == 'true'
         run: |

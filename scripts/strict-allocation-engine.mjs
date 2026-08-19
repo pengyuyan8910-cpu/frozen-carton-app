@@ -11,7 +11,7 @@ const sceneRank=s=>({'雪糕冰品':0,'预制主食':1,'预制菜类':2,'火锅�
 const isIceSku=s=>s?.isIceCream===true||s?.iceOnly===true||scene(s)==='雪糕冰品';
 const cabinetType=c=>/冰淇淋|冰品/.test([c?.kind,c?.type,c?.label].map(text).join('|'))?'冰淇淋柜':/立柜/.test([c?.kind,c?.type,c?.label].map(text).join('|'))?'立柜':'卧柜';
 const isStorage=c=>/存储/.test([c?.status,c?.sourceStatus].map(text).join('|'))||(cabinetType(c)==='立柜'&&/第\s*6\s*层|第6层/.test(text(c?.position)));
-const isSales=c=>{if(!c||isStorage(c))return false;const reserved=/预留/.test([c?.status,c?.sourceStatus].map(text).join('|'));if(reserved&&!/柜4/.test(text(c?.label)))return false;return num(c.length)>0&&num(c.depth)>0&&num(c.height)>0};
+const isSales=c=>{if(!c||isStorage(c))return false;const reserved=/预留/.test([c?.status,c?.sourceStatus].map(text).join('|'));if(reserved)return false;return num(c.length)>0&&num(c.depth)>0&&num(c.height)>0};
 const volumeL=s=>num(s?.volume)||(num(s?.length)*num(s?.width)*num(s?.height)/1e6);
 function orientations(s,c){const L=num(s.length),W=num(s.width),H=num(s.height),D=num(c.depth),CH=num(c.height);if(!(L&&W&&H&&D&&CH)||H>CH+EPS)return[];return[[L,W,'length-face'],[W,L,'width-face']].map(([face,depth,o])=>{if(depth>D+EPS)return null;const depthCount=Math.floor(D/depth+EPS),stackCount=cabinetType(c)==='立柜'?1:Math.floor(CH/H+EPS);if(depthCount<1||stackCount<1)return null;return{orientation:o,faceWidth:face,orientedDepth:depth,orientedHeight:H,depthCount,stackCount,perCol:depthCount*stackCount}}).filter(Boolean).sort((a,b)=>b.perCol-a.perCol||a.faceWidth-b.faceWidth)}
 function eligible(s,c){return isSales(c)&&(isIceSku(s)?cabinetType(c)==='冰淇淋柜':cabinetType(c)!=='冰淇淋柜')}

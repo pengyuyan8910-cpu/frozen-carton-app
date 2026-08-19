@@ -3,14 +3,21 @@ name: 产品池重排回归测试
 on:
   pull_request:
     paths:
+      - "app.js"
+      - "index.html"
       - "bootstrap.js"
       - "package.json"
       - "scripts/strict-allocation-*.mjs"
+      - "scripts/generate-new-store-draft.mjs"
+      - "scripts/source-to-app-data*.mjs"
       - "scripts/product-pool-replan-*.mjs"
       - "scripts/replan-workbook.mjs"
       - "scripts/xlsx-lite.mjs"
+      - "scripts/test-new-store-routing.mjs"
+      - "scripts/test-workflow-coverage.mjs"
       - "scripts/test-*-replan*.mjs"
       - ".github/workflows/replan-ci.yml"
+      - ".github/workflows/generate-new-store-draft.yml"
       - ".github/workflows/update-data.yml"
   workflow_dispatch:
 
@@ -22,14 +29,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 拉取仓库
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: 准备 Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: 安装依赖
         run: npm install
       - name: 语法检查
         run: npm run check
+      - name: 新增门店统一严格引擎回归测试
+        run: npm run test:new-store-routing
+      - name: 正式32店底表转换复核
+        run: npm run refresh-data
+      - name: 新增门店真实草稿集成验证
+        env:
+          NEW_STORE_CONFIG_PATH: data/new-store/新增门店配置.json
+        run: npm run generate-new-store-draft
+      - name: Workflow依赖覆盖测试
+        run: npm run test:workflow
       - name: 产品池重排回归测试
         run: npm run test:replan
