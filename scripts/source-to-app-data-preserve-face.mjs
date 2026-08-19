@@ -4,6 +4,7 @@ import {sourceToAppData as sourceToAppDataBase} from './source-to-app-data.mjs';
 const text=v=>String(v??'').trim();
 const num=v=>{const n=Number(String(v??'').replace(/,/g,'').replace(/[^\d.-]/g,''));return Number.isFinite(n)?n:0};
 const keyOf=(store,barcode,name,cabinet,position)=>[text(store),text(barcode)||text(name),text(cabinet),text(position)].join('__');
+const productKey=row=>text(row?.barcode)||text(row?.name);
 
 export function applyWorkbookFaceWidths(data, rows=[]){
   const map=new Map();
@@ -25,6 +26,34 @@ export function applyWorkbookFaceWidths(data, rows=[]){
   return data;
 }
 
+function activePoolKeys(data){
+  return new Set((data?.productPool||[]).filter(p=>p?.active!==false).map(productKey).filter(Boolean));
+}
+function samePool(a,b){
+  const x=activePoolKeys(a),y=activePoolKeys(b);
+  if(!x.size||x.size!==y.size)return false;
+  for(const k of x)if(!y.has(k))return false;
+  return true;
+}
+const clone=v=>v==null?v:JSON.parse(JSON.stringify(v));
+
+export function preserveFormalStoresWhenOnlyAddingStores(incoming,formal){
+  if(!formal?.stores?.length||!samePool(incoming,formal))return incoming;
+  const formalNames=new Set((formal.stores||[]).map(s=>text(s.store)).filter(Boolean));
+  const incomingNames=new Set((incoming.stores||[]).map(s=>text(s.store)).filter(Boolean));
+  const newNames=[...incomingNames].filter(name=>!formalNames.has(name));
+  if(!newNames.length)return incoming;
+  // 仅“产品池不变 + 新增门店”时锁定原正式门店。老店不接受此次Excel中的意外漂移。
+  const isNew=row=>newNames.includes(text(row?.store));
+  const merged={...incoming};
+  merged.stores=[...(formal.stores||[]).map(clone),...(incoming.stores||[]).filter(isNew).map(clone)];
+  merged.cabinets=[...(formal.cabinets||[]).map(clone),...(incoming.cabinets||[]).filter(isNew).map(clone)];
+  merged.skus=[...(formal.skus||[]).map(clone),...(incoming.skus||[]).filter(isNew).map(clone)];
+  merged.excluded=[...(formal.excluded||[]).map(clone),...(incoming.excluded||[]).filter(isNew).map(clone)];
+  merged.meta={...(incoming.meta||{}),incrementalStoreImport:true,preservedFormalStoreCount:formalNames.size,addedStores:newNames};
+  return merged;
+}
+
 async function workbookSkuRows(sourcePath){
   if(!/\.xlsx$/i.test(sourcePath)) return [];
   const xlsxModule=await import('xlsx');
@@ -35,10 +64,11 @@ async function workbookSkuRows(sourcePath){
 }
 
 export async function sourceToAppData(sourcePath, oldData={}){
-  const data=await sourceToAppDataBase(sourcePath,oldData);
+  let data=await sourceToAppDataBase(sourcePath,oldData);
   if(!/\.xlsx$/i.test(sourcePath)) return data;
   const rows=await workbookSkuRows(sourcePath);
-  return applyWorkbookFaceWidths(data,rows);
+  data=applyWorkbookFaceWidths(data,rows);
+  return preserveFormalStoresWhenOnlyAddingStores(data,oldData);
 }
 
-export default {sourceToAppData,applyWorkbookFaceWidths};
+export default {sourceToAppData,applyWorkbookFaceWidths,preserveFormalStoresWhenOnlyAddingStores};
