@@ -1124,6 +1124,7 @@ let cloudClient = null;
 let docRevision = 0;
 let cloudBaseData = null;
 const CLOUD_SESSION_KEY = 'frozen_carton_cloud_session_v1';
+const CLOUD_REQUEST_TIMEOUT_MS = 10000;
 
 function cloudReadSession() {
   try {
@@ -1155,8 +1156,12 @@ async function cloudRestRequest(path, options = {}) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(body);
   }
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timeout = controller ? setTimeout(() => controller.abort(), CLOUD_REQUEST_TIMEOUT_MS) : null;
   try {
-    const response = await fetch(`${SUPABASE_URL}${path}`, { ...options, headers, body });
+    const request = { ...options, headers, body };
+    if (controller) request.signal = controller.signal;
+    const response = await fetch(`${SUPABASE_URL}${path}`, request);
     const text = await response.text();
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
@@ -1165,7 +1170,9 @@ async function cloudRestRequest(path, options = {}) {
     }
     return { data, error: null };
   } catch (error) {
-    return { data: null, error: { message: error?.message || 'Failed to fetch' } };
+    return { data: null, error: { code: error?.name === 'AbortError' ? 'CLOUD_TIMEOUT' : 'FETCH_FAILED', message: error?.name === 'AbortError' ? 'Cloud request timeout' : (error?.message || 'Failed to fetch') } };
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 
@@ -1231,7 +1238,14 @@ async function withCloudSdk(action) {
     cloudNote(message, true);
     return null;
   }
-  return action();
+  try {
+    return await action();
+  } catch (error) {
+    const message = translateCloudError(error?.message || 'Failed to fetch');
+    cloudAccountNote(message, true);
+    cloudNote(message, true);
+    return null;
+  }
 }
 
 function ensureCloudClient() {
@@ -1245,6 +1259,8 @@ function ensureCloudClient() {
 function cloudNote(msg, isError) {
   const el = document.getElementById('cloudSyncStatus');
   if (el) { el.textContent = msg; el.className = 'admin-note' + (isError ? ' error' : ''); }
+  const account = document.getElementById('cloudAccountStatus');
+  if (isError && msg && account?.textContent?.includes('正在连接云端服务')) cloudAccountNote(msg, true);
 }
 function cloudAccountNote(msg, isError) {
   const el = document.getElementById('cloudAccountStatus');
@@ -1263,6 +1279,7 @@ function translateCloudError(msg) {
     'User not found': '用户不存在，请检查邮箱或注册新账号。',
     'JWT expired': '登录已过期，请重新登录。',
     'Failed to fetch': '无法连接云端服务，请检查网络后重试。',
+    'Cloud request timeout': '云端请求超时，请检查网络后重试。',
     'column carton_documents.revision does not exist': '数据库配置异常，请刷新页面后重试。',
     'CONFLICT:': '数据版本冲突，系统将自动合并。',
   };
