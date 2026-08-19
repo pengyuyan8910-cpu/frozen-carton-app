@@ -69,4 +69,25 @@ const refused = deletePlanogramModule(baseState, { id: "sku-chest" });
 assert.equal(refused.ok, false);
 assert.match(refused.reason, /唯一陈列模块/);
 
+const orderState = {
+  skus: [
+    { id: "order-a", store: "甲店", included: true, cabinetKey: "甲店-卧柜-1", planogramOrder: 0 },
+    { id: "order-b", store: "甲店", included: true, cabinetKey: "甲店-卧柜-1", planogramOrder: 1 },
+    { id: "order-c", store: "甲店", included: true, cabinetKey: "甲店-卧柜-1", planogramOrder: 2 },
+    { id: "order-other", store: "甲店", included: true, cabinetKey: "甲店-卧柜-2", planogramOrder: 0 },
+  ],
+};
+
+const moved = (await import("./display-module-state.mjs")).movePlanogramModule?.(orderState, {
+  sourceId: "order-a",
+  targetId: "order-c",
+});
+assert.equal(typeof moved, "object", "同柜任意移动函数必须存在");
+assert.equal(moved.ok, true);
+assert.deepEqual(
+  moved.state.skus.filter((row) => row.cabinetKey === "甲店-卧柜-1").sort((a, b) => a.planogramOrder - b.planogramOrder).map((row) => row.id),
+  ["order-b", "order-a", "order-c"],
+);
+assert.equal(moved.state.skus.find((row) => row.id === "order-other").planogramOrder, 0);
+
 console.log("display module state tests passed");

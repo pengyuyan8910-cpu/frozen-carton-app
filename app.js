@@ -724,6 +724,16 @@ function 交换同柜陈列顺序(r,occupant){
   const rIndex=ordered.indexOf(r),oIndex=ordered.indexOf(occupant);if(rIndex<0||oIndex<0)return false;
   const order=ordered[rIndex].planogramOrder;ordered[rIndex].planogramOrder=ordered[oIndex].planogramOrder;ordered[oIndex].planogramOrder=order;return true;
 }
+function 移动同柜陈列位置(r,occupant){
+  const helper=window.DisplayModuleState?.movePlanogramModule;
+  if(!helper)return false;
+  const result=helper(状态,{sourceId:r?.id,targetId:occupant?.id});
+  if(!result.ok)return false;
+  状态.skus=result.state.skus;
+  标记变更(状态.skus.find(x=>x.id===r.id),"同柜陈列顺序","陈列图同柜任意移动");
+  标记变更(状态.skus.find(x=>x.id===occupant.id),"同柜陈列顺序","陈列图同柜任意移动");
+  return true;
+}
 function 柜段可陈列(c){
   const status=文(c?.status);
   return !!c&&!/第6层|存储位/.test(文(c.position))&&!/其他品类预留|预留|存储/.test(status)
@@ -770,9 +780,13 @@ function 陈列图互换校验(r,occupant){
   return {ok:true,source,target,layout:first.layout,occupantLayout:back.layout,need:first.need}
 }
 function 陈列图落位策略(r,targetKey,targetSkuId=""){
+  const occupant=状态.skus.find(x=>x.id===targetSkuId);
+  if(r&&occupant&&!r.inStaging&&!occupant.inStaging&&r.cabinetKey===targetKey&&occupant.cabinetKey===targetKey){
+    const source=陈列图来源柜段(r),target=陈列图来源柜段(occupant);
+    if(source&&target)return {ok:true,mode:"reorder",occupant,source,target};
+  }
   const direct=陈列图目标校验(r,targetKey);
   if(direct.ok)return {ok:true,mode:"move",...direct};
-  const occupant=状态.skus.find(x=>x.id===targetSkuId);
   if(!occupant||occupant.cabinetKey!==targetKey)return {ok:false,mode:"blocked",reason:direct.reason+"；请先把目标柜段中需移出的商品拖入待选区。"};
   const swap=陈列图互换校验(r,occupant);
   if(swap.ok)return {ok:true,mode:"swap",occupant,...swap};
@@ -785,7 +799,7 @@ function 陈列图落位策略(r,targetKey,targetSkuId=""){
 function 清除陈列图拖放样式(){
   qa(".map-layer.drop-ok,.map-layer.drop-bad").forEach(x=>x.classList.remove("drop-ok","drop-bad"));
   qa(".monitor-card.drag-ok,.monitor-card.drag-bad").forEach(x=>x.classList.remove("drag-ok","drag-bad"));
-  qa(".map-item.swap-ok,.map-item.stage-ok,.map-item.drop-bad").forEach(x=>x.classList.remove("swap-ok","stage-ok","drop-bad"));
+  qa(".map-item.swap-ok,.map-item.reorder-ok,.map-item.stage-ok,.map-item.drop-bad").forEach(x=>x.classList.remove("swap-ok","reorder-ok","stage-ok","drop-bad"));
 }
 function 标示陈列图可放位置(r){
   清除陈列图拖放样式();
@@ -802,7 +816,7 @@ function 标示陈列图可放位置(r){
     const occupant=状态.skus.find(x=>x.id===card.dataset.skuId);
     if(!occupant||occupant.id===r.id||occupant.inStaging)return;
     const plan=陈列图落位策略(r,occupant.cabinetKey,occupant.id);
-    card.classList.add(plan.ok?(plan.mode==="swap"?"swap-ok":plan.mode==="stage"?"stage-ok":"drop-ok"):"drop-bad");
+    card.classList.add(plan.ok?(plan.mode==="reorder"?"reorder-ok":plan.mode==="swap"?"swap-ok":plan.mode==="stage"?"stage-ok":"drop-ok"):"drop-bad");
   });
 }
 function 清除待选标记(r){delete r.inStaging;delete r.stagingCabinetType;delete r.stagingIce;delete r.stagingFrom}
@@ -837,11 +851,12 @@ function 执行陈列图互换(r,occupant,source,target){
 function 处理陈列图拖放(skuId,targetKey,targetSkuId=""){
   const r=状态.skus.find(x=>x.id===skuId);const plan=陈列图落位策略(r,targetKey,targetSkuId);
   if(!plan.ok){alert("无法移动："+plan.reason);return}
+  if(plan.mode==="reorder"&&!移动同柜陈列位置(r,plan.occupant)){alert("无法移动：同柜位置更新失败，请刷新后重试");return}
   if(plan.mode==="move"&&!放入陈列柜段(r,plan.target)){alert("无法移动：目标柜段没有可行的长宽摆法");return}
   if(plan.mode==="swap"&&!执行陈列图互换(r,plan.occupant,plan.source,plan.target)){alert("无法互换：目标柜段没有可行的长宽摆法");return}
   if(plan.mode==="stage"){移至待选区(plan.occupant.id,"陈列图替换：进入待选区");if(!放入陈列柜段(r,plan.target)){alert("无法移动：目标柜段没有可行的长宽摆法");return}}
   当前.陈列图选中柜段=targetKey;保存();渲染全部();
-  const text=plan.mode==="move"?"移动完成":plan.mode==="swap"?"直接互换完成":"替换完成：原商品已进入待选区";
+  const text=plan.mode==="reorder"?"已移动到目标商品前面":plan.mode==="move"?"移动完成":plan.mode==="swap"?"直接互换完成":"替换完成：原商品已进入待选区";
   完成提示(text+"。柜段余量和排柜位置已联动；待选区商品需重新分配后才能同步到店员端。")
 }
 function 同SKU陈列模块(r){

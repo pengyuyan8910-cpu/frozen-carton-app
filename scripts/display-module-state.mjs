@@ -21,6 +21,47 @@ export function sameStoreSkuModules(state, row, { keyOf } = {}) {
   ));
 }
 
+function orderValue(row) {
+  const value = Number(row?.planogramOrder);
+  return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+}
+
+function orderedCabinetRows(rows) {
+  return rows.map((row, index) => ({ row, index }))
+    .sort((a, b) => orderValue(a.row) - orderValue(b.row) || a.index - b.index)
+    .map(({ row }) => row);
+}
+
+export function movePlanogramModule(state, { sourceId, targetId } = {}) {
+  const source = (state?.skus || []).find((row) => row.id === sourceId);
+  const target = (state?.skus || []).find((row) => row.id === targetId);
+  if (!source || !target) return { ok: false, reason: "未找到要移动的陈列模块" };
+  if (source.id === target.id) return { ok: false, reason: "不能移动到商品自身位置" };
+  if (source.included === false || target.included === false || source.inStaging || target.inStaging) {
+    return { ok: false, reason: "待选区商品不能执行同柜位置移动" };
+  }
+  if (!source.cabinetKey || source.store !== target.store || source.cabinetKey !== target.cabinetKey) {
+    return { ok: false, reason: "只能移动同一门店同一柜段内的商品位置" };
+  }
+
+  const next = structuredClone(state);
+  const rows = orderedCabinetRows((next.skus || []).filter((row) => (
+    row.store === source.store &&
+    row.included !== false &&
+    !row.inStaging &&
+    row.cabinetKey === source.cabinetKey
+  )));
+  const sourceRow = rows.find((row) => row.id === sourceId);
+  const targetIndex = rows.findIndex((row) => row.id === targetId);
+  if (!sourceRow || targetIndex < 0) return { ok: false, reason: "未找到同柜排序位置" };
+
+  const remaining = rows.filter((row) => row.id !== sourceId);
+  const insertAt = remaining.findIndex((row) => row.id === targetId);
+  remaining.splice(insertAt, 0, sourceRow);
+  remaining.forEach((row, index) => { row.planogramOrder = index; });
+  return { ok: true, state: next, row: sourceRow, target, order: remaining.map((row) => row.id) };
+}
+
 export function clonePlanogramModule(state, { sourceId, target, layout, idFactory, keyOf } = {}) {
   const source = (state?.skus || []).find((row) => row.id === sourceId);
   if (!source || source.included === false || source.inStaging) {
