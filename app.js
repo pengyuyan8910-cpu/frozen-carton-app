@@ -38,7 +38,7 @@ const q=s=>document.querySelector(s);
 const qa=s=>Array.from(document.querySelectorAll(s));
 const 包含=(r,k)=>!k||Object.values(r).some(v=>文(v).includes(k));
 const 逃=v=>文(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const 本地保存字段=["included","status","grade","rank","category2","category3","category4","name","barcode","length","width","height","volume","carton","dailyQty","dailySales","moq","moqDays","cabinetKey","cabinetLabel","position","displayCols","perCol","faceWidth","currentStock","planCartons","sourceAdvice","sourceAction","note","customPlacement","placements","modifiedFields","changeNote","selected","rowFull","skuFull","externalOwner","externalCountOverride","staticExternalOverride","avgExternalOverride"];
+const 本地保存字段=["included","status","grade","rank","category2","category3","category4","name","barcode","length","width","height","volume","carton","dailyQty","dailySales","moq","moqDays","cabinetKey","cabinetLabel","position","displayCols","perCol","faceWidth","currentStock","planCartons","sourceAdvice","sourceAction","note","customPlacement","placements","modifiedFields","changeNote","selected","rowFull","skuFull","externalOwner","externalCountOverride","staticExternalOverride","avgExternalOverride","inStaging","stagingCabinetType","stagingIce","stagingFrom"];
 function 值相同(a,b){return JSON.stringify(a??null)===JSON.stringify(b??null)}
 function 状态补丁(state){
 const init=初始状态();
@@ -66,7 +66,7 @@ state.skus=(state.skus||[]).filter(r=>!del.has(r.id));
 state.stores=[...(state.stores||[]),...(patch.newStores||[])];
 state.cabinets=[...(state.cabinets||[]),...(patch.newCabinets||[])];
 const map=new Map(state.skus.map(r=>[r.id,r]));
-for(const p of patch.skus||[]){const r=map.get(p.id);if(r)Object.assign(r,p.values||{})}
+for(const p of patch.skus||[]){const r=map.get(p.id);if(!r)continue;const values=p.values||{};const base=state.skus.find(x=>x.id===r.id);const baseCabinetKey=base?.cabinetKey;Object.assign(r,values);if(values.inStaging===undefined&&values.cabinetKey===""&&values.cabinetLabel==="待选区"&&values.position==="待选区"&&values.customPlacement===true){const source=state.cabinets.find(c=>c.key===baseCabinetKey);const typeText=文(source?.kind)+" "+文(source?.label)+" "+文(source?.key);const type=/冰淇淋|雪糕|冰品/.test(typeText)?"冰淇淋柜":/立柜/.test(typeText)?"立柜":/卧柜/.test(typeText)?"卧柜":文(source?.kind);r.inStaging=true;r.stagingCabinetType=type;r.stagingIce=type==="冰淇淋柜";r.stagingFrom=source?{key:source.key,label:source.label,position:source.position}:null}}
 for(const r of patch.newSkus||[])state.skus.push(r);
 if(Array.isArray(patch.productPool))state.productPool=patch.productPool;
 if(patch.lifecycle&&typeof patch.lifecycle==="object")state.lifecycle=JSON.parse(JSON.stringify(patch.lifecycle));
