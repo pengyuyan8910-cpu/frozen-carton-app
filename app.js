@@ -1013,20 +1013,6 @@ function 渲染陈列余量监控(){渲染陈列图();}
 function 渲染陈列图(){
   if(!q('#displayMapCanvas'))return;
   const store=门店名(),type4=当前.陈列图四级||"";
-function 陈列图柜段监控(seg,use,isStorage=false,disabled=false){
-  if(isStorage)return '<div class="layer-monitor layer-storage-monitor"><strong>第6层 存储位</strong><span>不参与冻品陈列</span></div>';
-  if(!seg)return '<div class="layer-monitor"><strong>未配置柜段</strong></div>';
-  if(disabled)return '<div class="layer-monitor layer-reserved-monitor"><strong>'+逃(seg.position)+' 其他品类预留</strong><span>不参与冻品陈列</span></div>';
-  const c=use.get(seg.key)||{length:数(seg.length),used:0,left:数(seg.length),items:[]};
-  const capacity=数(c.length),used=Math.max(0,数(c.used)),left=数(c.left),skuCount=(c.items||[]).length;
-  const rate=capacity?Math.min(100,Math.max(0,used/capacity*100)):0;
-  const leftCls=left<0?'bad':left>300?'warn':'ok';
-  return '<div class="layer-monitor" data-layer-monitor="'+逃(seg.key)+'"><div class="layer-monitor-title"><strong>'+逃(seg.position)+'</strong><span>'+skuCount+'个SKU</span></div><div class="layer-monitor-stats"><span>容量 <b>'+格(capacity,0)+'mm</b></span><span>已用 <b>'+格(used,0)+'mm</b></span><span class="'+leftCls+'">余量 <b>'+格(left,0)+'mm</b></span></div><div class="layer-monitor-bar"><i style="width:'+rate.toFixed(1)+'%"></i></div></div>';
-}
-function 渲染陈列余量监控(){渲染陈列图();}
-function 渲染陈列图(){
-  if(!q('#displayMapCanvas'))return;
-  const store=门店名(),type4=当前.陈列图四级||"";
   const rows=陈列图排序(纳入SKU(store).filter(r=>!r.inStaging&&(!type4||文(r.category4)===type4)));
   const cabs=状态.cabinets.filter(c=>c.store===store);
   const usage=new Map(柜段使用().filter(c=>c.store===store).map(c=>[c.key,c]));
