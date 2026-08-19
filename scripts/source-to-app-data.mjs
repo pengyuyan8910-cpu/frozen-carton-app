@@ -52,15 +52,18 @@ function normalizeHorizontalFaceData(data) {
 }
 
 /**
- * 满陈重算：根据柜型和产品尺寸，用四舍五入(Math.round)重新计算 perCol、faceWidth、faceOrientation。
+ * 满陈重算：根据柜型和产品尺寸，用四舍五入(Math.round)重新计算 perCol。
+ * 保留原有陈列面方向(faceOrientation)和占宽(faceWidth)，仅重算单列容量。
  *
- *  卧柜/冰淇淋柜（水平柜）— 长做陈列面，可堆叠：
- *    perCol = Math.round(柜深 / 产品宽) × Math.round(柜高 / 产品高)
+ *  卧柜/冰淇淋柜（水平柜）— 可堆叠：
+ *    长做陈列面: perCol = Math.round(柜深 / 产品宽) × Math.round(柜高 / 产品高)
+ *    宽做陈列面: perCol = Math.round(柜深 / 产品长) × Math.round(柜高 / 产品高)
  *
  *  立柜（垂直柜）— 不可堆叠，产品高沿纵深：
  *    perCol = Math.round(柜深 / 产品高) × 1
  *
  *  产品尺寸已含余量，除法一律四舍五入以减少余量空间浪费。
+ *  新放置时卧柜/冰淇淋柜默认"长做陈列面"（见 app.js 柜型摆法）。
  */
 export function recalcAllCapacity(data) {
   const cabMap = new Map((data.cabinets || []).map(c => [c.key, c]));
@@ -72,29 +75,47 @@ export function recalcAllCapacity(data) {
     if (!(L > 0 && W > 0 && H > 0 && D > 0 && CH > 0)) continue;
     const upright = /立柜/.test(text(cab.kind) + text(cab.type) + text(cab.label));
     const EPS = 0.001;
-    const raw = upright
-      ? [{ faceOrientation: "length", face: L, depth: H, h: W }, { faceOrientation: "width", face: W, depth: H, h: L }]
-      : [{ faceOrientation: "length", face: L, depth: W, h: H }, { faceOrientation: "width", face: W, depth: L, h: H }];
-    const feasible = raw
-      .filter(o => o.face > 0 && o.depth > 0 && o.h > 0 && o.depth <= D + EPS && o.h <= CH + EPS)
-      .map(o => ({ ...o, per: Math.round(D / o.depth) * (upright ? 1 : Math.round(CH / o.h)) }))
-      .filter(o => o.per > 0);
-    if (!feasible.length) continue;
-    // 卧柜/冰淇淋柜首选"长做陈列面"；立柜取面宽较小者
-    const best = !upright
-      ? (feasible.find(o => o.faceOrientation === "length") || feasible.sort((a, b) => b.per - a.per || a.face - b.face)[0])
-      : feasible.sort((a, b) => b.per - a.per || a.face - b.face)[0];
-    sku.faceOrientation = best.faceOrientation;
-    sku.faceWidth = best.face;
-    sku.perCol = best.per;
-    sku.rowFull = Math.max(0, Math.round(num(sku.displayCols) * best.per));
+
+    // 判断当前陈列面方向：优先用已有 faceOrientation，其次从 faceWidth 推断
+    const inferredOri = text(sku.faceOrientation) === "width" ? "width"
+      : text(sku.faceOrientation) === "length" ? "length"
+      : (Math.abs(num(sku.faceWidth) - W) < Math.abs(num(sku.faceWidth) - L) ? "width" : "length");
+
+    // 尝试两个方向，优先用原有方向；若不可行则用另一方向
+    const tryOrientations = inferredOri === "length" ? ["length", "width"] : ["width", "length"];
+    let best = null;
+    for (const ori of tryOrientations) {
+      let depthDim, hDim, faceDim;
+      if (upright) {
+        depthDim = H;
+        hDim = ori === "length" ? W : L;
+        faceDim = ori === "length" ? L : W;
+      } else {
+        hDim = H;
+        depthDim = ori === "length" ? W : L;
+        faceDim = ori === "length" ? L : W;
+      }
+      if (depthDim > D + EPS || hDim > CH + EPS) continue;
+      const depthCount = Math.round(D / depthDim);
+      const stackCount = upright ? 1 : Math.round(CH / hDim);
+      const perCol = depthCount * stackCount;
+      if (!(perCol > 0)) continue;
+      best = { ori, faceDim, perCol };
+      break; // 优先用第一个可行方向
+    }
+    if (!best) continue;
+
+    sku.faceOrientation = best.ori;
+    sku.faceWidth = best.faceDim;
+    sku.perCol = best.perCol;
+    sku.rowFull = Math.max(0, Math.round(num(sku.displayCols) * best.perCol));
     const cols = Math.max(0, num(sku.displayCols));
-    sku.sourceCapacityNote = `占宽=${round(cols * best.face, 0)}mm；单列容量=${best.per}（四舍五入）`;
+    sku.sourceCapacityNote = `占宽=${round(cols * best.faceDim, 0)}mm；单列容量=${best.perCol}（四舍五入）`;
     if (Array.isArray(sku.placements)) {
       sku.placements = sku.placements.map(p => ({
-        ...p, faceWidth: best.face, width: best.face, perCol: best.per,
-        fullCount: Math.max(0, Math.round(num(p.displayCols) * best.per)),
-        widthUsed: round(num(p.displayCols) * best.face)
+        ...p, faceWidth: best.faceDim, width: best.faceDim, perCol: best.perCol,
+        fullCount: Math.max(0, Math.round(num(p.displayCols) * best.perCol)),
+        widthUsed: round(num(p.displayCols) * best.faceDim)
       }));
     }
   }
