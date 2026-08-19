@@ -2716,6 +2716,22 @@ export const 严格校验新增门店排柜业务优化 = validatePlan;
 export const 严格预排新增门店业务优化 = allocateStore;
 export const 新店业务证据 = plan => plan.evidence;
 
+// Keep the default export for the browser adapter shipped on master.
+// The named exports remain the canonical API; this object is only the
+// compatibility surface expected by older loaders.
+const strictAllocationEngine = {
+  activeProductPool,
+  normalizeCabinets,
+  recalculatePlan,
+  allocateStore,
+  runAllocationPipeline,
+  improvePlan,
+  comparePlans,
+  validatePlan,
+  planSignature
+};
+export default strictAllocationEngine;
+
 if (typeof globalThis !== "undefined") {
   globalThis.StrictAllocationEngine = {
     activeProductPool,
