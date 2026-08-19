@@ -99,7 +99,7 @@ export function clonePlanogramModule(state, { sourceId, target, layout, idFactor
   clone.cabinetKey = "";
   clone.cabinetLabel = "待选区";
   clone.position = "待选区";
-  clone.displayCols = Math.max(1, Number(source.displayCols) || 1);
+  clone.displayCols = 1;
   clone.rowFull = Math.max(0, Math.round(clone.displayCols * (Number(source.perCol) || 0)));
   clone.skuFull = undefined;
   clone.placements = [];

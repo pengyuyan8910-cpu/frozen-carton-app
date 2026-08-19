@@ -19,7 +19,7 @@ const baseState = {
       cabinetKey: "甲店-卧柜-1",
       cabinetLabel: "卧柜1",
       position: "分区1",
-      displayCols: 1,
+      displayCols: 3,
       perCol: 10,
       faceWidth: 200,
       placements: [{ cabinetKey: "甲店-卧柜-1" }],
@@ -52,6 +52,7 @@ assert.equal(cloned.row.inStaging, true);
 assert.equal(cloned.row.cabinetKey, "");
 assert.equal(cloned.row.cabinetLabel, "待选区");
 assert.equal(cloned.row.position, "待选区");
+assert.equal(cloned.row.displayCols, 1, "新增模块默认陈列列数应为1");
 assert.equal(cloned.row.stagingFrom.key, "甲店-卧柜-1");
 assert.equal(cloned.row.placementCloneOf, "sku-chest");
 assert.equal(cloned.row.placements.length, 0);
