@@ -56,7 +56,7 @@
     <section id="productpool" class="view legacy-hidden" aria-hidden="true"><div id="poolTable"></div></section>
     <section id="risk" class="view"><section class="panel"><div class="panel-title controls"><h2>外储周转风险</h2><input id="riskSearch" type="search" placeholder="搜索门店、商品、类目"><select id="riskFilter"><option value="">全部风险</option></select></div><div id="riskTable" class="table-wrap"></div></section></section>
     <section id="replenish" class="view legacy-hidden" aria-hidden="true"><div id="replenishCards"></div><div id="replenishTable"></div></section>
-    <section id="allocation" class="view"><section class="panel"><div class="panel-title controls"><h2>排柜调整</h2><input id="allocationSearch" type="search" placeholder="搜索商品、条码、类目"><input id="allocationCabinetSearch" type="search" placeholder="搜索陈列柜段"><select id="allocationSceneFilter"><option value="">全部场景</option></select><select id="allocationTypeFilter"><option value="">全部冰柜类型</option></select><select id="allocationCabNoFilter"><option value="">全部陈列柜</option></select><select id="allocationPosFilter"><option value="">全部位置</option></select><button id="removeExcludedBtn" type="button">删除未纳入SKU</button></div><div class="help">筛选方式：商品搜索查商品/条码/类目；陈列柜段搜索查“立柜3m-柜1 第4层”这类位置；右侧下拉可按冰柜类型、陈列柜、具体位置筛选。可改字段：纳入、商品、等级、类目、条码、箱规、日销、体积、陈列柜段、陈列列数、单列容量、单列占宽。修改后门店执行、补货测算、柜段余量和空位建议都会联动。</div><div id="allocationTable" class="table-wrap"></div></section></section>
+    <section id="allocation" class="view"><section class="panel"><div class="panel-title controls"><h2>排柜调整</h2><input id="allocationSearch" type="search" placeholder="搜索商品、条码、类目"><input id="allocationCabinetSearch" type="search" placeholder="搜索陈列柜段"><select id="allocationSceneFilter"><option value="">全部场景</option></select><select id="allocationTypeFilter"><option value="">全部冰柜类型</option></select><select id="allocationCabNoFilter"><option value="">全部陈列柜</option></select><select id="allocationPosFilter"><option value="">全部位置</option></select><button id="removeExcludedBtn" type="button">删除未纳入SKU</button></div><div class="help">筛选方式：商品搜索查商品/条码/类目；陈列柜段搜索查“立柜3m-柜1 第4层”这类位置；右侧下拉可按冰柜类型、陈列柜、具体位置筛选。可改字段：纳入、商品、等级、类目、条码、箱规、日销、体积、陈列柜段、陈列面方向、陈列列数、单列容量、单列占宽。修改后门店执行、补货测算、柜段余量和空位建议都会联动。</div><div id="allocationTable" class="table-wrap"></div></section></section>
     <section id="cabinets" class="view"><section class="panel"><div class="panel-title"><h2>柜段余量</h2><input id="cabinetSearch" type="search" placeholder="搜索柜型、柜号、位置"></div><div id="cabinetTable" class="table-wrap"></div></section></section>
     <section id="suggestions" class="view"><section class="panel"><div class="panel-title controls"><div><h2>在售商品空位建议</h2><p>从生命周期产品池选择一个在售SKU，按指定门店的真实柜段余量生成可执行的排柜建议。</p></div><div class="suggestion-controls"><label>门店<select id="suggestStore"></select></label><label>在售商品<select id="suggestProduct"></select></label><button id="generateSuggestBtn" type="button">生成排柜建议</button></div></div><div class="help">这里不再新增商品，也不直接写入排柜。系统只读取生命周期中的在售产品、当前门店SKU和柜段占用，优先给出不超宽、同柜别、外储不超上限的方案；如需执行，请点击“定位排柜”后到排柜模块确认。</div><div id="suggestSummary" class="metric-grid"></div><div class="suggestion-full"><h3>精细化排柜建议</h3><div id="expandSuggestions" class="table-wrap"><div class="empty">请选择门店和在售商品后生成建议。</div></div></div></section></section>
 
@@ -125,6 +125,7 @@
 
 </body>
 </html>
+
 
 
 
