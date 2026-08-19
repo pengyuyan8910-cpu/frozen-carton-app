@@ -5,6 +5,7 @@ on:
     branches:
       - master
     paths:
+      - ".github/workflows/update-data.yml"
       - "data/source/*.xlsx"
       - "data/inbox/*.json"
       - "scripts/refresh-data.mjs"
