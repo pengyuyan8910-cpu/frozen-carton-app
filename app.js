@@ -38,7 +38,7 @@ const q=s=>document.querySelector(s);
 const qa=s=>Array.from(document.querySelectorAll(s));
 const 包含=(r,k)=>!k||Object.values(r).some(v=>文(v).includes(k));
 const 逃=v=>文(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const 本地保存字段=["included","status","grade","rank","category2","category3","category4","name","barcode","length","width","height","volume","carton","dailyQty","dailySales","moq","moqDays","cabinetKey","cabinetLabel","position","displayCols","perCol","faceWidth","faceOrientation","currentStock","planCartons","sourceAdvice","sourceAction","note","customPlacement","placements","modifiedFields","changeNote","selected","rowFull","skuFull","externalOwner","externalCountOverride","staticExternalOverride","avgExternalOverride","inStaging","stagingCabinetType","stagingIce","stagingFrom","placementCloneOf","placementCloneType"];
+const 本地保存字段=["included","status","grade","rank","category2","category3","category4","name","barcode","length","width","height","volume","carton","dailyQty","dailySales","moq","moqDays","cabinetKey","cabinetLabel","position","planogramOrder","displayCols","perCol","faceWidth","faceOrientation","currentStock","planCartons","sourceAdvice","sourceAction","note","customPlacement","placements","modifiedFields","changeNote","selected","rowFull","skuFull","externalOwner","externalCountOverride","staticExternalOverride","avgExternalOverride","inStaging","stagingCabinetType","stagingIce","stagingFrom","placementCloneOf","placementCloneType"];
 function 值相同(a,b){return JSON.stringify(a??null)===JSON.stringify(b??null)}
 function 状态补丁(state){
 const init=初始状态();
@@ -714,6 +714,16 @@ window.应用全店上新=()=>{const ids=qa('input[data-allstore]:checked').map(
 function 陈列图颜色(cat){const colors={"雪糕冰品":"#dbeafe","预制主食":"#dcfce7","预制菜类":"#fef3c7","火锅食材":"#fee2e2","冷冻食材":"#e0e7ff"};return colors[cat]||"#f3f4f6"}
 function 陈列图商品标签(r){const c=计算SKU(r);const direction=陈列面方向值(r)==="length"?"长做陈列面":"宽做陈列面";return 逃(r.name)+' <small>'+格(r.displayCols,0)+'列 / 满陈'+格(c.full,0)+'件</small><small>陈列面：'+direction+'</small>'}
 function 陈列图商品样式(r){const w=Math.max(70,Math.min(260,数(SKU占用宽度(r))*0.45));return 'background:'+陈列图颜色(场景分区(r))+';flex:0 0 '+格(w,0)+'px'}
+function 陈列图顺序值(r){const raw=r?.planogramOrder;if(raw===undefined||raw===null||文(raw)==="")return Number.POSITIVE_INFINITY;const value=Number(raw);return Number.isFinite(value)?value:Number.POSITIVE_INFINITY}
+function 陈列图排序(rows){return rows.map((r,i)=>({r,i})).sort((a,b)=>陈列图顺序值(a.r)-陈列图顺序值(b.r)||a.i-b.i).map(x=>x.r)}
+function 交换同柜陈列顺序(r,occupant){
+  if(!r||!occupant||r.store!==occupant.store||!r.cabinetKey||r.cabinetKey!==occupant.cabinetKey)return false;
+  const rows=状态.skus.filter(x=>x.store===r.store&&x.included!==false&&!x.inStaging&&x.cabinetKey===r.cabinetKey);
+  const ordered=陈列图排序(rows);if(ordered.length<2)return false;
+  ordered.forEach((x,i)=>{x.planogramOrder=i});
+  const rIndex=ordered.indexOf(r),oIndex=ordered.indexOf(occupant);if(rIndex<0||oIndex<0)return false;
+  const order=ordered[rIndex].planogramOrder;ordered[rIndex].planogramOrder=ordered[oIndex].planogramOrder;ordered[oIndex].planogramOrder=order;return true;
+}
 function 柜段可陈列(c){
   const status=文(c?.status);
   return !!c&&!/第6层|存储位/.test(文(c.position))&&!/其他品类预留|预留|存储/.test(status)
@@ -815,9 +825,14 @@ function 执行陈列图互换(r,occupant,source,target){
   const rLayout=目标柜型参数(r,target,陈列面方向值(r));
   const occupantLayout=目标柜型参数(occupant,source,陈列面方向值(occupant));
   if(!rLayout||!occupantLayout)return false;
+  const sameCabinet=source.key===target.key;
   Object.assign(r,rLayout);Object.assign(occupant,occupantLayout);
-  r.cabinetKey=oSource.key;r.cabinetLabel=oSource.label;r.position=oSource.position;r.customPlacement=true;清除待选标记(r);同步同SKU满陈(r);标记变更(r,"陈列柜段、陈列面方向、单列容量、单列占宽","陈列图直接互换");
-  occupant.cabinetKey=rSource.key;occupant.cabinetLabel=rSource.label;occupant.position=rSource.position;occupant.customPlacement=true;清除待选标记(occupant);同步同SKU满陈(occupant);标记变更(occupant,"陈列柜段、陈列面方向、单列容量、单列占宽","陈列图直接互换");return true;
+  r.cabinetKey=oSource.key;r.cabinetLabel=oSource.label;r.position=oSource.position;r.customPlacement=true;清除待选标记(r);
+  occupant.cabinetKey=rSource.key;occupant.cabinetLabel=rSource.label;occupant.position=rSource.position;occupant.customPlacement=true;清除待选标记(occupant);
+  if(sameCabinet)交换同柜陈列顺序(r,occupant);
+  同步同SKU满陈(r);同步同SKU满陈(occupant);
+  const fields="陈列柜段、陈列面方向、单列容量、单列占宽"+(sameCabinet?"、同柜陈列顺序":"");
+  标记变更(r,fields,"陈列图直接互换");标记变更(occupant,fields,"陈列图直接互换");return true;
 }
 function 处理陈列图拖放(skuId,targetKey,targetSkuId=""){
   const r=状态.skus.find(x=>x.id===skuId);const plan=陈列图落位策略(r,targetKey,targetSkuId);
@@ -986,7 +1001,7 @@ function 渲染陈列余量监控(){渲染陈列图();}
 function 渲染陈列图(){
   if(!q('#displayMapCanvas'))return;
   const store=门店名(),type4=当前.陈列图四级||"";
-  const rows=纳入SKU(store).filter(r=>!r.inStaging&&(!type4||文(r.category4)===type4));
+  const rows=陈列图排序(纳入SKU(store).filter(r=>!r.inStaging&&(!type4||文(r.category4)===type4)));
   const cabs=状态.cabinets.filter(c=>c.store===store);
   const usage=new Map(柜段使用().filter(c=>c.store===store).map(c=>[c.key,c]));
   const byLabel=new Map();for(const c of cabs){if(!byLabel.has(c.label))byLabel.set(c.label,[]);byLabel.get(c.label).push(c)}
@@ -1000,7 +1015,7 @@ function 渲染陈列图(){
     const 生成商品卡=r=>'<span class="map-item '+(r.id===当前.陈列图选中SKU?'map-selected':'')+' '+((r.modifiedFields&&r.modifiedFields.length)?'data-changed':'')+'" data-sku-id="'+逃(r.id)+'" style="'+陈列图商品样式(r)+'" title="点击查看信息；运营模式下可拖动">'+陈列图商品标签(r)+'</span>';
     if(kind.includes("立柜")){
       for(let i=1;i<=6;i++){
-        const pos='第'+i+'层',seg=segments.find(c=>c.position===pos),items=i===6?[]:rows.filter(r=>柜名(r)===label&&柜位(r)===pos),disabled=!柜段可陈列(seg);
+        const pos='第'+i+'层',seg=segments.find(c=>c.position===pos),items=i===6?[]:陈列图排序(rows.filter(r=>柜名(r)===label&&柜位(r)===pos)),disabled=!柜段可陈列(seg);
         const layerClass='map-layer'+(i===6?' storage-true':'')+(disabled&&i!==6?' reserved-true':'');
         html+='<div class="'+layerClass+'"'+(seg&&i!==6?' data-cab-key="'+逃(seg.key)+'" title="'+(disabled?'其他品类预留位，不可放入冻品':'运营模式下可拖放单个商品')+'"':'')+'>'+陈列图柜段监控(seg,usage,i===6,disabled)+'<div class="layer-products">';
         if(i===6)html+='<span class="map-item storage">存储位，不陈列SKU</span>';
@@ -1009,7 +1024,7 @@ function 渲染陈列图(){
       }
     }else{
       for(const seg of segments.sort((a,b)=>文(a.position).localeCompare(文(b.position),'zh-CN'))){
-        const items=rows.filter(r=>柜名(r)===label&&柜位(r)===seg.position),disabled=!柜段可陈列(seg);
+        const items=陈列图排序(rows.filter(r=>柜名(r)===label&&柜位(r)===seg.position)),disabled=!柜段可陈列(seg);
         html+='<div class="map-layer'+(disabled?' reserved-true':'')+'" data-cab-key="'+逃(seg.key)+'" title="'+(disabled?'预留位，不可放入冻品':'运营模式下可拖放单个商品')+'">'+陈列图柜段监控(seg,usage,false,disabled)+'<div class="layer-products">'+(items.map(生成商品卡).join('')||(disabled?'<span class="map-empty">预留</span>':'<span class="map-empty">空</span>'))+'</div></div>';
       }
     }
