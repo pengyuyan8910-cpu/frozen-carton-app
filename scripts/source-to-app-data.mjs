@@ -148,7 +148,7 @@ function normalizeExistingJson(raw, sourceName) {
     productPool: Array.isArray(data.productPool) && data.productPool.length
       ? data.productPool
       : buildProductPoolFromSkus(data.skus)
-  }));
+  })));
 }
 
 function calcSkuForSummary(r, data) {
