@@ -975,7 +975,10 @@ function 陈列图下架SKU(id){
 }
 function 渲染陈列图右侧(){
   const el=q("#displayMapMonitor");if(!el)return;
-  const store=门店名(),summary=门店汇总(store),staged=待选SKU(store);
+  const store=门店名(),summary=门店汇总(store),stagedRows=待选SKU(store),stagedQuery=文(q("#displayStagingSearch")?.value);
+  const staged=window.PlanogramStagingSearch?.filterPlanogramStagingRows
+    ? window.PlanogramStagingSearch.filterPlanogramStagingRows(stagedRows,stagedQuery)
+    : stagedRows.filter(r=>!stagedQuery||[r.name,r.barcode,r.category2,r.category3,r.category4].some(v=>文(v).toLowerCase().includes(stagedQuery.toLowerCase())));
   const selected=状态.skus.find(r=>r.id===当前.陈列图选中SKU&&r.store===store)||null;
   const tabs=[['all','全部商品'],['unplaced','未纳入SKU'],['eliminated','淘汰SKU'],['staging','待选区']];
   const tabsHtml='<div class="pool-tabs">'+tabs.map(([k,t])=>'<button type="button" class="'+((当前.陈列图筛选||"all")===k?'active':'')+'" data-map-pool="'+k+'">'+t+'</button>').join('')+'</div>';
