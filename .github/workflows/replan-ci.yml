@@ -3,6 +3,8 @@ name: 产品池重排回归测试
 on:
   pull_request:
     paths:
+      - "app.js"
+      - "index.html"
       - "bootstrap.js"
       - "package.json"
       - "scripts/strict-allocation-*.mjs"
@@ -27,9 +29,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 拉取仓库
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: 准备 Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 20
       - name: 安装依赖
@@ -38,6 +40,10 @@ jobs:
         run: npm run check
       - name: 新增门店统一严格引擎回归测试
         run: npm run test:new-store-routing
+      - name: 新增门店真实草稿集成验证
+        env:
+          NEW_STORE_CONFIG_PATH: data/new-store/新增门店配置.json
+        run: npm run generate-new-store-draft
       - name: Workflow依赖覆盖测试
         run: npm run test:workflow
       - name: 产品池重排回归测试
