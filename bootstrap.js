@@ -40,4 +40,3 @@
     if (main) main.innerHTML = `<section class="panel load-error"><h2>数据加载失败</h2><p>小程序没有读取到已复核通过的最新数据，请确认 data/app-data.json 存在。</p><pre>${String(err.message || err)}</pre></section>`;
   }
 })();
-
