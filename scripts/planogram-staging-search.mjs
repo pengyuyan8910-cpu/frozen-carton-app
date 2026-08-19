@@ -12,6 +12,10 @@ export function preservePlanogramStagingSearchFocus(input, render, getInput) {
   if (start !== null) nextInput.setSelectionRange?.(start, end);
 }
 
+export function shouldSkipPlanogramStagingSearchRender(event, composing = false) {
+  return Boolean(composing || event?.isComposing || event?.inputType === "insertCompositionText");
+}
+
 export function filterPlanogramStagingRows(rows, query = "") {
   const filter = text(query);
   return (Array.isArray(rows) ? rows : []).filter((row) => (

@@ -992,11 +992,24 @@ function 渲染陈列图右侧(){
   qa("[data-map-clone]").forEach(b=>b.onclick=e=>{e.stopPropagation();分身SKU到陈列图(b.dataset.mapClone)});
   qa("[data-map-down]").forEach(b=>b.onclick=()=>陈列图下架SKU(b.dataset.mapDown));
   const search=q("#displayMapPoolSearch");if(search)search.oninput=()=>渲染陈列图右侧();
-  const stagingSearch=q("#displayStagingSearch");if(stagingSearch)stagingSearch.oninput=()=>{
-    const preserve=window.PlanogramStagingSearch?.preservePlanogramStagingSearchFocus;
-    if(preserve)preserve(stagingSearch,()=>渲染陈列图右侧(),()=>q("#displayStagingSearch"));
-    else 渲染陈列图右侧();
-  };
+  const stagingSearch=q("#displayStagingSearch");if(stagingSearch){
+    let stagingSearchComposing=false;
+    const rerenderStagingSearch=()=>{
+      const preserve=window.PlanogramStagingSearch?.preservePlanogramStagingSearchFocus;
+      if(preserve)preserve(stagingSearch,()=>渲染陈列图右侧(),()=>q("#displayStagingSearch"));
+      else 渲染陈列图右侧();
+    };
+    stagingSearch.oncompositionstart=()=>{stagingSearchComposing=true;};
+    stagingSearch.oncompositionend=()=>{
+      stagingSearchComposing=false;
+      setTimeout(()=>{if(!stagingSearchComposing&&q("#displayStagingSearch")===stagingSearch)rerenderStagingSearch();},0);
+    };
+    stagingSearch.oninput=event=>{
+      const skip=window.PlanogramStagingSearch?.shouldSkipPlanogramStagingSearchRender;
+      if(skip?skip(event,stagingSearchComposing):stagingSearchComposing||event?.isComposing||event?.inputType==="insertCompositionText")return;
+      rerenderStagingSearch();
+    };
+  }
 }
 function 陈列图柜段监控(seg,use,isStorage=false,disabled=false){
   if(isStorage)return '<div class="layer-monitor layer-storage-monitor"><strong>第6层 存储位</strong><span>不参与冻品陈列</span></div>';
