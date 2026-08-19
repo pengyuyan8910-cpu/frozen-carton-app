@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   clonePlanogramModule,
   deletePlanogramModule,
+  includePlanogramSku,
   sameStoreSkuCabinetSegment,
 } from "./display-module-state.mjs";
 
@@ -38,6 +39,53 @@ const baseState = {
     },
   ],
 };
+
+const includeState = {
+  productPool: [{ id: "pool-include", barcode: "690000000099", active: true }],
+  stores: [{ store: "甲店" }, { store: "乙店" }],
+  skus: [
+    {
+      id: "sku-not-included",
+      store: "甲店",
+      barcode: "690000000099",
+      name: "待纳入水饺",
+      included: false,
+      ice: false,
+      excluded: true,
+      excludeReason: "STORE_CAPACITY_PRIORITY",
+      cabinetKey: "",
+      cabinetLabel: "",
+      position: "",
+      displayCols: 0,
+      perCol: 0,
+      faceWidth: 0,
+      placements: [],
+    },
+    {
+      id: "sku-other-store",
+      store: "乙店",
+      barcode: "690000000099",
+      name: "其他店水饺",
+      included: false,
+    },
+  ],
+};
+
+const included = includePlanogramSku(includeState, { id: "sku-not-included" });
+assert.equal(included.ok, true, "未纳入SKU应可纳入当前门店");
+assert.equal(included.row.included, true);
+assert.equal(included.row.inStaging, true, "纳入后应先进入待选区，不自动排柜");
+assert.equal(included.row.cabinetLabel, "待选区");
+assert.equal(included.row.position, "待选区");
+assert.equal(included.row.cabinetKey, "");
+assert.equal(included.row.stagingCabinetType, "待分配", "普通冻品纳入后应允许人工选择立柜或卧柜");
+assert.equal(included.row.stagingIce, false);
+assert.equal(includeState.skus[0].included, false, "操作应返回新状态，不直接改原状态");
+assert.deepEqual(included.state.productPool, includeState.productPool, "产品池不得被纳入操作改写");
+assert.equal(included.state.skus.find((row) => row.id === "sku-other-store").included, false, "其他门店不得被改写");
+
+const alreadyIncluded = includePlanogramSku(included.state, { id: "sku-not-included" });
+assert.equal(alreadyIncluded.ok, false, "已纳入SKU不能重复纳入");
 
 const cloned = clonePlanogramModule(baseState, {
   sourceId: "sku-chest",
