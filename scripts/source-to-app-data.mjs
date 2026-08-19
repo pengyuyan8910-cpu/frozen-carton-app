@@ -51,6 +51,71 @@ function normalizeHorizontalFaceData(data) {
   return { ...data, skus };
 }
 
+/**
+ * 满陈重算：根据柜型和产品尺寸，用四舍五入(Math.round)重新计算 perCol、faceWidth、faceOrientation。
+ *
+ *  卧柜/冰淇淋柜（水平柜）— 长做陈列面，可堆叠：
+ *    perCol = Math.round(柜深 / 产品宽) × Math.round(柜高 / 产品高)
+ *
+ *  立柜（垂直柜）— 不可堆叠，产品高沿纵深：
+ *    perCol = Math.round(柜深 / 产品高) × 1
+ *
+ *  产品尺寸已含余量，除法一律四舍五入以减少余量空间浪费。
+ */
+export function recalcAllCapacity(data) {
+  const cabMap = new Map((data.cabinets || []).map(c => [c.key, c]));
+  for (const sku of data.skus || []) {
+    const cab = cabMap.get(sku.cabinetKey);
+    if (!cab) continue;
+    const L = num(sku.length), W = num(sku.width), H = num(sku.height);
+    const D = num(cab.depth), CH = num(cab.height);
+    if (!(L > 0 && W > 0 && H > 0 && D > 0 && CH > 0)) continue;
+    const upright = /立柜/.test(text(cab.kind) + text(cab.type) + text(cab.label));
+    const EPS = 0.001;
+    const raw = upright
+      ? [{ faceOrientation: "length", face: L, depth: H, h: W }, { faceOrientation: "width", face: W, depth: H, h: L }]
+      : [{ faceOrientation: "length", face: L, depth: W, h: H }, { faceOrientation: "width", face: W, depth: L, h: H }];
+    const feasible = raw
+      .filter(o => o.face > 0 && o.depth > 0 && o.h > 0 && o.depth <= D + EPS && o.h <= CH + EPS)
+      .map(o => ({ ...o, per: Math.round(D / o.depth) * (upright ? 1 : Math.round(CH / o.h)) }))
+      .filter(o => o.per > 0);
+    if (!feasible.length) continue;
+    // 卧柜/冰淇淋柜首选"长做陈列面"；立柜取面宽较小者
+    const best = !upright
+      ? (feasible.find(o => o.faceOrientation === "length") || feasible.sort((a, b) => b.per - a.per || a.face - b.face)[0])
+      : feasible.sort((a, b) => b.per - a.per || a.face - b.face)[0];
+    sku.faceOrientation = best.faceOrientation;
+    sku.faceWidth = best.face;
+    sku.perCol = best.per;
+    sku.rowFull = Math.max(0, Math.round(num(sku.displayCols) * best.per));
+    const cols = Math.max(0, num(sku.displayCols));
+    sku.sourceCapacityNote = `占宽=${round(cols * best.face, 0)}mm；单列容量=${best.per}（四舍五入）`;
+    if (Array.isArray(sku.placements)) {
+      sku.placements = sku.placements.map(p => ({
+        ...p, faceWidth: best.face, width: best.face, perCol: best.per,
+        fullCount: Math.max(0, Math.round(num(p.displayCols) * best.per)),
+        widthUsed: round(num(p.displayCols) * best.face)
+      }));
+    }
+  }
+  // 重算同 SKU 合计满陈
+  for (const store of data.stores || []) {
+    const storeSkus = (data.skus || []).filter(r => r.store === store.store && r.included !== false);
+    const groups = new Map();
+    for (const r of storeSkus) {
+      const key = skuKey(r);
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
+    }
+    for (const [, rows] of groups) {
+      const total = rows.reduce((sum, r) => sum + (num(r.rowFull) || Math.max(0, Math.round(num(r.displayCols) * num(r.perCol)))), 0);
+      for (const r of rows) r.skuFull = total;
+    }
+  }
+  return data;
+}
+
 function sheetRows(workbook, name) {
   const sheet = workbook.Sheets[name];
   if (!sheet) return [];
@@ -72,7 +137,7 @@ function normalizeExistingJson(raw, sourceName) {
   if (!data || !Array.isArray(data.stores) || !Array.isArray(data.skus) || !Array.isArray(data.cabinets)) {
     throw new Error("JSON 数据不是小程序数据结构，缺少 stores/skus/cabinets");
   }
-  return reconcileStoreSummaries(normalizeHorizontalFaceData({
+  return reconcileStoreSummaries(recalcAllCapacity(normalizeHorizontalFaceData({
     ...data,
     meta: {
       ...(data.meta || {}),
@@ -383,7 +448,7 @@ export function sourceSheetsToAppData(sheets, oldData = {}, sourceName = "workbo
     .filter(r => r.store && r.declaredPoolCount > 0 && r.declaredPoolCount !== actualPoolCount)
     .map(r => `${r.store}：门店汇总“有效SKU池”为${r.declaredPoolCount}，但“71SKU有效池明细”实际为${actualPoolCount}个有效SKU。请补齐/删除明细后再上传。`);
 
-  return reconcileStoreSummaries({
+  return reconcileStoreSummaries(recalcAllCapacity({
     meta: {
       source: sourceName,
       generatedAt: new Date().toLocaleString("zh-CN", { hour12: false }),
@@ -403,7 +468,7 @@ export function sourceSheetsToAppData(sheets, oldData = {}, sourceName = "workbo
     productPool: productPool.length ? productPool : buildProductPoolFromSkus(skus),
     rules: sheets["测算规则说明"] || [],
     externalRows: sheets["10%触发_外储明细"] || []
-  });
+  }));
 }
 
 export async function sourceToAppData(sourcePath, oldData = {}) {

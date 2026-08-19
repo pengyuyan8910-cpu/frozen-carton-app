@@ -1,5 +1,5 @@
 import path from 'node:path';
-import {sourceToAppData as sourceToAppDataBase} from './source-to-app-data.mjs';
+import {sourceToAppData as sourceToAppDataBase, recalcAllCapacity} from './source-to-app-data.mjs';
 
 const text=v=>String(v??'').trim();
 const num=v=>{const n=Number(String(v??'').replace(/,/g,'').replace(/[^\d.-]/g,''));return Number.isFinite(n)?n:0};
@@ -68,6 +68,7 @@ export async function sourceToAppData(sourcePath, oldData={}){
   if(!/\.xlsx$/i.test(sourcePath)) return data;
   const rows=await workbookSkuRows(sourcePath);
   data=applyWorkbookFaceWidths(data,rows);
+  data=recalcAllCapacity(data);
   return preserveFormalStoresWhenOnlyAddingStores(data,oldData);
 }
 
