@@ -2,9 +2,9 @@
   "sourceName": "整箱到店数据测算_当前版.xlsx",
   "sourcePath": "data/source/整箱到店数据测算_当前版.xlsx",
   "sourceMode": "标准Excel底表复核",
-  "generatedAt": "2026-08-19T11:32:21.149Z",
+  "generatedAt": "2026-08-19T11:58:09.312Z",
   "appVersion": "10%触发-当前版-自动同步",
   "verifyPassed": true,
   "verifyErrorCount": 0,
-  "verifyWarningCount": 1
+  "verifyWarningCount": 0
 }
