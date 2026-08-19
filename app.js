@@ -230,7 +230,7 @@ function 校验SKU排柜变更(r,k,v){
  const nextCabinetKey=k==="cabinetKey"?String(v):r.cabinetKey;
  const cabinet=状态.cabinets.find(c=>c.key===nextCabinetKey);
  if(!cabinet){alert("未找到目标柜段，修改未保存。");return false}
- if(k==="cabinetKey"&&r.inStaging){
+  if(k==="cabinetKey"&&r.inStaging){
   const sameSegment=同SKU同柜段已有模块(r,nextCabinetKey);
   if(sameSegment){alert("修改未保存：该SKU已在同一物理柜段中，不能再次新增到该柜段。");return false}
  }
@@ -759,6 +759,7 @@ function 陈列图目标校验(r,targetKey){
   if(数(base.target.left)+0.001<base.need)return {...base,ok:false,reason:"目标余量不足，需要 "+格(base.need,0)+"mm，当前仅余 "+格(base.target.left,0)+"mm"};
   return base
 }
+ 
 function 陈列图互换校验(r,occupant){
   const targetKey=occupant?.cabinetKey;
   const sameCabinet=!!r&&!!occupant&&r.cabinetKey===occupant.cabinetKey;

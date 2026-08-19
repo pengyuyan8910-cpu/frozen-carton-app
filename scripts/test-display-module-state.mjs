@@ -5,6 +5,7 @@ import {
   sameStoreSkuCabinetSegment,
 } from "./display-module-state.mjs";
 
+
 const baseState = {
   productPool: [{ id: "pool-1", barcode: "690000000001", active: true }],
   stores: [{ store: "甲店" }, { store: "乙店" }],
