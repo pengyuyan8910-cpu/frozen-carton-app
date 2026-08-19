@@ -1,0 +1,60 @@
+{
+  "sourceWorkbook": "整箱到店数据测算_当前版.xlsx",
+  "sourceWorkbookSha256": "FF8BEED4D611C5502350584AF0670CD4BA000F18367931842B1C7FB2A6A2B5FF",
+  "generatedFrom": [
+    "10%触发_门店汇总",
+    "10%触发_SKU明细",
+    "10%触发_柜段余量",
+    "10%触发_未排入SKU清单"
+  ],
+  "stores": {
+    "宁国津河西路生活馆": {
+      "candidateSkuCount": 71,
+      "includedSkuCount": 71,
+      "excludedForStoreCount": 0,
+      "directCaseSkuCount": 52,
+      "externalSkuCount": 19,
+      "staticExternalL": 363.8,
+      "suggestedExternalL": 311,
+      "totalDisplayColumns": 192,
+      "usedWidth": 30964.5,
+      "largeRemainingSegmentCount": 0,
+      "sameTypeSplitCount": 0,
+      "category4SingleCabinetCount": 7,
+      "category4TwoCabinetCount": 14,
+      "category4ThreePlusCount": 5
+    },
+    "和县生活馆": {
+      "candidateSkuCount": 71,
+      "includedSkuCount": 71,
+      "excludedForStoreCount": 0,
+      "directCaseSkuCount": 54,
+      "externalSkuCount": 17,
+      "staticExternalL": 359.6,
+      "suggestedExternalL": 331,
+      "totalDisplayColumns": 136,
+      "usedWidth": 22128.1,
+      "largeRemainingSegmentCount": 8,
+      "sameTypeSplitCount": 0,
+      "category4SingleCabinetCount": 9,
+      "category4TwoCabinetCount": 14,
+      "category4ThreePlusCount": 5
+    },
+    "当涂阳光里生活馆": {
+      "candidateSkuCount": 71,
+      "includedSkuCount": 59,
+      "excludedForStoreCount": 12,
+      "directCaseSkuCount": 18,
+      "externalSkuCount": 41,
+      "staticExternalL": 828.4,
+      "suggestedExternalL": 609,
+      "totalDisplayColumns": 91,
+      "usedWidth": 14451,
+      "largeRemainingSegmentCount": 0,
+      "sameTypeSplitCount": 0,
+      "category4SingleCabinetCount": 18,
+      "category4TwoCabinetCount": 19,
+      "category4ThreePlusCount": 0
+    }
+  }
+}
