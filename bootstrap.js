@@ -1,5 +1,5 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_simplify_v2";
+  const DATA_VERSION = "20260820_simplify_v3";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
