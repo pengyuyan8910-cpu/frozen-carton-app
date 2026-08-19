@@ -809,7 +809,10 @@ function 放入陈列柜段(r,target){
 function 执行陈列图互换(r,occupant,source,target){
   const rSource={key:source.key,label:source.label,position:source.position};
   const oSource={key:target.key,label:target.label,position:target.position};
-  if(!应用目标柜型参数(r,target,陈列面方向值(r))||!应用目标柜型参数(occupant,source,陈列面方向值(occupant)))return false;
+  const rLayout=目标柜型参数(r,target,陈列面方向值(r));
+  const occupantLayout=目标柜型参数(occupant,source,陈列面方向值(occupant));
+  if(!rLayout||!occupantLayout)return false;
+  Object.assign(r,rLayout);Object.assign(occupant,occupantLayout);
   r.cabinetKey=oSource.key;r.cabinetLabel=oSource.label;r.position=oSource.position;r.customPlacement=true;清除待选标记(r);同步同SKU满陈(r);标记变更(r,"陈列柜段、陈列面方向、单列容量、单列占宽","陈列图直接互换");
   occupant.cabinetKey=rSource.key;occupant.cabinetLabel=rSource.label;occupant.position=rSource.position;occupant.customPlacement=true;清除待选标记(occupant);同步同SKU满陈(occupant);标记变更(occupant,"陈列柜段、陈列面方向、单列容量、单列占宽","陈列图直接互换");return true;
 }
