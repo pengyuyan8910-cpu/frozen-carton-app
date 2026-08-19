@@ -3,7 +3,7 @@
     "source": "自动严格排柜草稿",
     "configFile": "data/new-store/新增门店配置.json",
     "version": "10%触发-新增门店严格草稿",
-    "generatedAt": "2026/8/19 11:52:06"
+    "generatedAt": "2026/8/19 11:57:53"
   },
   "params": {
     "triggerRate": 0.1,
