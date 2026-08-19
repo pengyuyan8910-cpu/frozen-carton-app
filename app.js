@@ -1123,60 +1123,110 @@ const SUPABASE_ANON_KEY = 'sb_publishable_ehwIMLAALRzB4VRZwQ4quA_yS7Yh7Gg';
 let cloudClient = null;
 let docRevision = 0;
 let cloudBaseData = null;
-let cloudSdkPromise = null;
-const CLOUD_SDK_SOURCES = [
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
-  'https://unpkg.com/@supabase/supabase-js@2',
-];
-const CLOUD_SDK_TIMEOUT_MS = 10000;
-function loadCloudSdk() {
-  if (window.supabase) return Promise.resolve({ ok: true, source: 'already-loaded' });
-  if (cloudSdkPromise) return cloudSdkPromise;
-  cloudSdkPromise = (async () => {
-    const errors = [];
-    for (const source of CLOUD_SDK_SOURCES) {
-      const result = await new Promise(resolve => {
-        const script = document.createElement('script');
-        let settled = false;
-        const finish = value => {
-          if (settled) return;
-          settled = true;
-          clearTimeout(timer);
-          script.onload = null;
-          script.onerror = null;
-          resolve(value);
-        };
-        const timer = setTimeout(() => {
-          script.remove();
-          finish({ ok: false, error: '请求超时' });
-        }, CLOUD_SDK_TIMEOUT_MS);
-        script.src = source;
-        script.async = true;
-        script.onload = () => finish(window.supabase
-          ? { ok: true, source }
-          : { ok: false, error: '脚本加载后未注册 Supabase' });
-        script.onerror = () => finish({ ok: false, error: '网络请求失败' });
-        document.head.appendChild(script);
-      });
-      if (result.ok) return result;
-      errors.push(`${source.split('/')[2]}：${result.error}`);
-    }
-    return { ok: false, error: errors.join('；') || '没有可用的加载地址' };
-  })();
-  return cloudSdkPromise;
+const CLOUD_SESSION_KEY = 'frozen_carton_cloud_session_v1';
+
+function cloudReadSession() {
+  try {
+    const raw = localStorage.getItem(CLOUD_SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
 }
-async function withCloudSdk(action) {
-  cloudAccountNote('正在加载云端组件…');
-  cloudNote('');
-  const sdk = await loadCloudSdk();
-  if (!sdk.ok) {
-    const message = '云端组件加载失败：' + sdk.error;
-    cloudAccountNote(message, true);
-    cloudNote(message, true);
-    return null;
+
+function cloudWriteSession(data) {
+  if (!data?.access_token) return null;
+  const session = {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token || '',
+    token_type: data.token_type || 'bearer',
+    expires_in: data.expires_in || 3600,
+    expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in || 3600),
+    user: data.user || null,
+  };
+  try { localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(session)); } catch (_) {}
+  return session;
+}
+
+async function cloudRestRequest(path, options = {}) {
+  const headers = { apikey: SUPABASE_ANON_KEY, Accept: 'application/json', ...(options.headers || {}) };
+  const session = cloudReadSession();
+  if (session?.access_token && !options.skipAuth) headers.Authorization = `Bearer ${session.access_token}`;
+  let body = options.body;
+  if (body !== undefined && body !== null && typeof body !== 'string') {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(body);
   }
+  try {
+    const response = await fetch(`${SUPABASE_URL}${path}`, { ...options, headers, body });
+    const text = await response.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
+    if (!response.ok) {
+      return { data: null, error: { code: data?.code || data?.error_code || String(response.status), message: data?.msg || data?.message || data?.error_description || data?.error || `HTTP ${response.status}` } };
+    }
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: { message: error?.message || 'Failed to fetch' } };
+  }
+}
+
+function createCloudRestQuery(table) {
+  const state = { method: 'GET', select: '*', filters: [], payload: null };
+  const query = {
+    select(fields = '*') { state.select = fields; return query; },
+    eq(field, value) { state.filters.push(`${encodeURIComponent(field)}=eq.${encodeURIComponent(value)}`); return query; },
+    update(payload) { state.method = 'PATCH'; state.payload = payload; return query; },
+    insert(payload) { state.method = 'POST'; state.payload = payload; return query; },
+    maybeSingle() { return executeQuery(false); },
+    single() { return executeQuery(true); },
+  };
+  async function executeQuery(requireSingle) {
+    const params = [`select=${encodeURIComponent(state.select)}`, ...state.filters].join('&');
+    const result = await cloudRestRequest(`/rest/v1/${encodeURIComponent(table)}?${params}`, {
+      method: state.method,
+      body: state.payload,
+      headers: state.method === 'GET' ? {} : { Prefer: 'return=representation' },
+    });
+    if (result.error) return result;
+    const rows = Array.isArray(result.data) ? result.data : (result.data ? [result.data] : []);
+    if (requireSingle && rows.length !== 1) return { data: null, error: { message: `Expected one row, got ${rows.length}` } };
+    return { data: requireSingle || rows.length > 1 ? rows[0] : (rows[0] || null), error: null };
+  }
+  return query;
+}
+
+function createCloudRestClient() {
+  return {
+    auth: {
+      async getSession() { return { data: { session: cloudReadSession() }, error: null }; },
+      async signInWithPassword({ email, password }) {
+        const result = await cloudRestRequest('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password }, skipAuth: true });
+        if (!result.error) result.data = cloudWriteSession(result.data);
+        return result;
+      },
+      async signUp({ email, password }) {
+        const redirect = encodeURIComponent(window.location.origin + window.location.pathname);
+        const result = await cloudRestRequest(`/auth/v1/signup?redirect_to=${redirect}`, { method: 'POST', body: { email, password }, skipAuth: true });
+        if (!result.error && result.data?.access_token) result.data = cloudWriteSession(result.data);
+        return result;
+      },
+      async resend({ type, email }) {
+        return cloudRestRequest('/auth/v1/resend', { method: 'POST', body: { type, email }, skipAuth: true });
+      },
+      async signOut() {
+        const result = await cloudRestRequest('/auth/v1/logout', { method: 'POST' });
+        try { localStorage.removeItem(CLOUD_SESSION_KEY); } catch (_) {}
+        return result;
+      },
+    },
+    from(table) { return createCloudRestQuery(table); },
+  };
+}
+
+async function withCloudSdk(action) {
+  cloudAccountNote('正在连接云端服务…');
+  cloudNote('');
   if (!ensureCloudClient()) {
-    const message = '云端组件已加载，但云端配置不可用。';
+    const message = '云端配置不可用。';
     cloudAccountNote(message, true);
     cloudNote(message, true);
     return null;
@@ -1186,8 +1236,8 @@ async function withCloudSdk(action) {
 
 function ensureCloudClient() {
   if (cloudClient) return cloudClient;
-  if (window.supabase && SUPABASE_URL !== '__SUPABASE_URL__' && SUPABASE_URL.length > 10 && SUPABASE_ANON_KEY !== '__SUPABASE_ANON_KEY__') {
-    cloudClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (SUPABASE_URL !== '__SUPABASE_URL__' && SUPABASE_URL.length > 10 && SUPABASE_ANON_KEY !== '__SUPABASE_ANON_KEY__') {
+    cloudClient = createCloudRestClient();
   }
   return cloudClient;
 }
