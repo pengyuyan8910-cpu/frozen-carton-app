@@ -1056,6 +1056,29 @@ const svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+width+'" height="'+h
 导出("门店陈列图_"+门店名()+".svg",svg,"image/svg+xml;charset=utf-8");
 完成提示("陈列图已导出为图片文件。")
 }
+function 导出陈列图Excel(){
+  const store=门店名();
+  const rows=纳入SKU(store).filter(r=>r.included!==false&&!r.inStaging);
+  const exporter=window.PlanogramExcelExport;
+  if(!rows.length){alert("当前门店没有可导出的陈列商品");return}
+  if(!exporter?.buildPlanogramExportData||!exporter?.toExcelXmlWorkbook){alert("Excel导出模块尚未加载，请刷新页面后重试");return}
+  const output=exporter.buildPlanogramExportData({
+    store,
+    rows,
+    productKey:r=>产品主键(r)||SKU键(r)||r.id,
+    cabinetInfo:r=>{const c=陈列图来源柜段(r)||{};return{kind:c.kind||c.type||c.cabinetType||r.cabinetType||"",label:柜名(r),position:柜位(r)}},
+    calculate:r=>计算SKU(r),
+    productVolume:r=>单品体积(r),
+    displayDirection:r=>陈列面方向值(r)==="length"?"长做陈列面":"宽做陈列面",
+  });
+  const xml=exporter.toExcelXmlWorkbook([
+    {name:"商品汇总",rows:output.summaryRows},
+    {name:"陈列模块明细",rows:output.moduleRows},
+  ]);
+  const fileStore=文(store).replace(/[\\/:*?"<>|]/g,"_")||"当前门店";
+  导出("冻品陈列导入_"+fileStore+"_"+new Date().toISOString().slice(0,10)+".xls",xml,"application/vnd.ms-excel;charset=utf-8");
+  完成提示("Excel导出完成：商品汇总"+output.summaryRows.length+"条，陈列模块明细"+output.moduleRows.length+"条。未导出待选区和未纳入SKU。");
+}
 function 清空新品试算(){["newSkuName","newSkuBarcode","newSkuGrade","newSkuCategory","newSkuLength","newSkuWidth","newSkuHeight","newSkuVolume","newSkuCarton","newSkuDaily","newSkuCols","newSkuPerCol"].forEach(id=>{const el=q("#"+id);if(!el)return;el.value=""});const grade=q("#newSkuGrade");if(grade)grade.value="A";const carton=q("#newSkuCarton");if(carton)carton.value="1";const daily=q("#newSkuDaily");if(daily)daily.value="0";const cols=q("#newSkuCols");if(cols)cols.value="1";const box=q("#newSkuPositionSuggestions");if(box)box.innerHTML='<div class="empty">新品试算区已清空，请重新填写新品尺寸后试算。</div>';window.新品试算方案缓存={}}function 渲染逻辑(){q("#logicRules").innerHTML=(状态.rules.length?状态.rules.map(r=>"<p>"+Object.values(r).filter(Boolean).map(逃).join("：")+"</p>").join(""):"<p>当前版本采用10%触发，外储容量上限754L。</p>")}
 function 切换(id){提交当前编辑();当前.页面=id;
 qa(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
@@ -1127,6 +1150,7 @@ if(q("#trialStoreBtn"))q("#trialStoreBtn").onclick=()=>测算新增门店();
 if(q("#applyStoreBtn"))q("#applyStoreBtn").onclick=()=>追加新增门店();
 if(q("#syncDisplayMapBtn"))q("#syncDisplayMapBtn").onclick=()=>{渲染陈列图();完成提示("陈列图同步完成：已刷新当前门店的商品陈列图与余量监控。")};
 if(q("#exportDisplayMapBtn"))q("#exportDisplayMapBtn").onclick=()=>导出陈列图();
+if(q("#exportDisplayMapExcelBtn"))q("#exportDisplayMapExcelBtn").onclick=()=>导出陈列图Excel();
 if(q("#syncStoreViewBtn")){q("#syncStoreViewBtn").onclick=e=>请求同步至店员端(e)}
 q("#resetFilterBtn").onclick=()=>{["overviewSearch","storeSearch","goodsSearch","riskSearch","replenishSearch","cabinetSearch","allocationSearch","allocationCabinetSearch","allocationTypeFilter","allocationCabNoFilter","allocationPosFilter","allocationSceneFilter"].forEach(id=>{const el=q("#"+id);if(el)el.value=""});清空新品试算();window.全店上新缓存={};window.新增门店测算缓存=null;渲染全部();完成提示("筛选已重置：搜索条件、新品试算、全店上新方案和新增门店草稿已清空。")};
 q("#removeExcludedBtn").onclick=()=>完成提示("为保护历史数据，已禁用删除未纳入SKU。请保留记录并通过生命周期任务管理状态。");
