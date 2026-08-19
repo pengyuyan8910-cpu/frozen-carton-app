@@ -702,14 +702,16 @@ function isIceProduct(p){return /雪糕|冰品|冰淇淋|甜筒|冰棒|冰杯/.t
 function isIceCabinet(c){return /雪糕|冰品|冰淇淋/.test([c.kind,c.label].join(" "))}
 function orientationFor(p,c){
  const L=num(p.length),W=num(p.width),H=num(p.height);
- const opts=[{face:L,depth:W,h:H,label:"长做陈列面"},{face:W,depth:L,h:H,label:"宽做陈列面"},{face:H,depth:W,h:L,label:"高做陈列面"},{face:L,depth:H,h:W,label:"长做陈列面（侧放）"},{face:W,depth:H,h:L,label:"宽做陈列面（侧放）"},{face:H,depth:L,h:W,label:"高做陈列面（侧放）"}].filter(o=>o.face>0&&o.depth>0&&o.h>0);
- const targetFace=num(p.faceWidth);
  const vertical=/立柜/.test(c.kind||c.label);
- const fit=opts.filter(o=>(!c.depth||o.depth<=num(c.depth)+.1)&&(!c.height||o.h<=num(c.height)+.1)).map(o=>{
-  let per=Math.max(1,Math.floor(num(c.depth||o.depth)/o.depth));
-  if(!vertical)per*=Math.max(1,Math.floor(num(c.height||o.h)/o.h));
-  return {...o,per};
- }).sort((a,b)=>b.per-a.per||(targetFace?Math.abs(a.face-targetFace)-Math.abs(b.face-targetFace):0)||a.face-b.face||a.depth-b.depth);
+ const targetFace=num(p.faceWidth);
+ const raw=vertical
+  ?[{face:L,depth:H,h:W,label:"长做陈列面"},{face:W,depth:H,h:L,label:"宽做陈列面"}]
+  :[{face:L,depth:W,h:H,label:"长做陈列面"},{face:W,depth:L,h:H,label:"宽做陈列面"}];
+ const fit=raw.filter(o=>o.face>0&&o.depth>0&&o.h>0&&(!c.depth||o.depth<=num(c.depth)+.1)&&(!c.height||o.h<=num(c.height)+.1)).map(o=>{
+  const depthCount=Math.round(num(c.depth||o.depth)/o.depth);
+  const stackCount=vertical?1:Math.round(num(c.height||o.h)/o.h);
+  return {...o,per:depthCount*stackCount};
+ }).filter(o=>o.per>0).sort((a,b)=>b.per-a.per||(targetFace?Math.abs(a.face-targetFace)-Math.abs(b.face-targetFace):0)||a.face-b.face||a.depth-b.depth);
  return fit[0]||{face:0,depth:0,h:0,per:0,label:"尺寸不适配柜段"};
 }
 function selectedStores(pickerId){return [...document.querySelectorAll(`#${pickerId} input:checked`)].map(x=>x.value)}

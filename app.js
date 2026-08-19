@@ -520,13 +520,19 @@ r.customPlacement=true;
 切换("allocation");
 完成提示("空位方案已应用：排柜、柜段余量和外储测算已更新。")};
 function 柜型摆法(r,c,preferred="",strict=false){
-  const options=[{faceOrientation:"length",face:数(r.length),depth:数(r.width),h:数(r.height)},{faceOrientation:"width",face:数(r.width),depth:数(r.length),h:数(r.height)}].filter(o=>o.face>0&&o.depth>0&&o.h>0&&o.depth<=数(c?.depth)+0.001&&o.h<=数(c?.height)+0.001);
-  if(!options.length)return null;
+  const L=数(r?.length),W=数(r?.width),H=数(r?.height),D=数(c?.depth),CH=数(c?.height);
+  const upright=/立柜/.test(文(c?.kind)+" "+文(c?.type)+" "+文(c?.label));
+  if(!(L>0&&W>0&&H>0&&D>0&&CH>0))return null;
+  const raw=upright
+    ?[{faceOrientation:"length",face:L,depth:H,h:W},{faceOrientation:"width",face:W,depth:H,h:L}]
+    :[{faceOrientation:"length",face:L,depth:W,h:H},{faceOrientation:"width",face:W,depth:L,h:H}];
   const wanted=规范陈列面方向(preferred)||陈列面方向值(r);
-  const preferredOption=options.find(o=>o.faceOrientation===wanted);
-  const feasible=options.map(o=>{let per=Math.floor(数(c.depth)/o.depth);if(!文(c.kind).includes("立柜"))per*=Math.floor(数(c.height)/o.h);return{...o,per}}).filter(o=>o.per>0);
-  if(strict)return preferredOption&&feasible.some(o=>o.faceOrientation===wanted)?feasible.find(o=>o.faceOrientation===wanted):null;
-  return preferredOption&&feasible.some(o=>o.faceOrientation===wanted)?feasible.find(o=>o.faceOrientation===wanted):feasible.sort((a,b)=>b.per-a.per||a.face-b.face)[0]||null
+  const feasible=raw.filter(o=>o.face>0&&o.depth>0&&o.h>0&&o.depth<=D+0.001&&o.h<=CH+0.001).map(o=>({
+    ...o,
+    per:Math.round(D/o.depth)*(upright?1:Math.round(CH/o.h))
+  })).filter(o=>o.per>0);
+  if(strict)return feasible.find(o=>o.faceOrientation===wanted)||null;
+  return feasible.find(o=>o.faceOrientation===wanted)||feasible.sort((a,b)=>b.per-a.per||a.face-b.face)[0]||null
 }
 function 目标柜型参数(r,c,preferred="",strict=false){
   const best=柜型摆法(r,c,preferred,strict);
@@ -538,13 +544,8 @@ function 应用目标柜型参数(r,c,preferred=""){
   r.faceOrientation=layout.faceOrientation;r.faceWidth=layout.faceWidth;r.perCol=layout.perCol;
   return true
 }
-function 估算陈列面(r,c){const dims=[数(r.length),数(r.width)].filter(x=>x>0);
-return dims.length?Math.min(...dims):0}
-function 估算单列容量(r,c){const dims=[{face:数(r.width),depth:数(r.length),h:数(r.height)},{face:数(r.length),depth:数(r.width),h:数(r.height)}].filter(o=>o.face>0&&o.depth<=数(c.depth)&&o.h<=数(c.height));
-const best=dims.map(o=>{let per=Math.max(1,Math.floor(数(c.depth)/Math.max(1,o.depth)));
-if(!文(c.kind).includes("立柜"))per*=Math.max(1,Math.floor(数(c.height)/Math.max(1,o.h)));
-return{...o,per}}).sort((a,b)=>b.per-a.per)[0];
-return best?best.per:1}
+function 估算陈列面(r,c){return 目标柜型参数(r,c)?.faceWidth||0}
+function 估算单列容量(r,c){return 目标柜型参数(r,c)?.perCol||0}
 function 选项初始化(){const stores=状态.stores.map(s=>s.store).sort((a,b)=>a.localeCompare(b,"zh-CN"));
 q("#storeSelect").innerHTML=stores.map(s=>'<option value="'+逃(s)+'">'+逃(s)+"</option>").join("");
 当前.门店=当前.门店||stores[0]||"";
