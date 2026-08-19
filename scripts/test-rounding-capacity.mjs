@@ -49,6 +49,15 @@ assert.equal(chestPlacement.stackCount, 23, "卧柜堆叠数量必须四舍五�
 assert.equal(chestPlacement.perCol, 69);
 assert.equal(chest.rows[0].fullCount, 138, "满陈必须等于柜内列数×单列容量：2列×69=138");
 
+const chestToleranceProduct = { ...chestProduct, height: 500 };
+const chestTolerance = runStrictAllocation({
+  store: "ROUNDING",
+  productPool: [chestToleranceProduct],
+  cabinets: [cabinet("卧柜", "卧柜2505-柜1", 1988, 697, 460)],
+  params
+}, { maxIterations: 0, maxExpansions: 0 });
+assert.equal(chestTolerance.rows[0].placements.length, 0, "50mm层高误差只允许用于立柜，卧柜不得放宽");
+
 const upright = runStrictAllocation({
   store: "ROUNDING",
   productPool: [uprightProduct],
@@ -62,6 +71,15 @@ assert.equal(uprightPlacement.orientedHeight, 240, "立柜宽做陈列面时商�
 assert.equal(uprightPlacement.depthCount, 27, "立柜纵深数量必须四舍五入：534÷20=26.7→27");
 assert.equal(uprightPlacement.stackCount, 1);
 assert.equal(uprightPlacement.perCol, 27);
+
+const uprightToleranceProduct = { ...product, length: 300, width: 260, height: 50 };
+const uprightTolerance = runStrictAllocation({
+  store: "ROUNDING",
+  productPool: [uprightToleranceProduct],
+  cabinets: [cabinet("立柜", "立柜2250-柜1", 710, 534, 250)],
+  params
+}, { maxIterations: 0, maxExpansions: 0 });
+assert.equal(uprightTolerance.rows[0].placements.length, 1, "立柜层高允许50mm误差后应可放入300×260×50商品");
 
 const previous = runStrictAllocation({
   store: "ROUNDING",

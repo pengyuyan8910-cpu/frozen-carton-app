@@ -60,7 +60,7 @@ for (const sku of data.skus || []) {
       depthDim = ori === "length" ? W : L;
       faceDim = ori === "length" ? L : W;
     }
-    if (depthDim > D + EPS || hDim > CH + EPS) continue;
+    if (depthDim > D + EPS || hDim > CH + (upright ? 50 : 0) + EPS) continue;
     const depthCount = Math.round(D / depthDim);
     const stackCount = upright ? 1 : Math.round(CH / hDim);
     const perCol = depthCount * stackCount;

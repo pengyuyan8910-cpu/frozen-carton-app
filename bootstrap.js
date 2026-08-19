@@ -1,5 +1,5 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_module_staging_v6";
+  const DATA_VERSION = "20260820_module_staging_v7";
   const REVIEW_MARKER = "frozen_carton_open_replan_review_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };

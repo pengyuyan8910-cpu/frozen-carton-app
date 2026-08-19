@@ -532,7 +532,7 @@ function 柜型摆法(r,c,preferred="",strict=false){
     :[{faceOrientation:"length",face:L,depth:W,h:H},{faceOrientation:"width",face:W,depth:L,h:H}];
   // 卧柜/冰淇淋柜默认"长做陈列面"（可堆叠），立柜默认取面宽较小者（能放更多列）
   const wanted=规范陈列面方向(preferred)||陈列面方向值(r)||(upright?"width":"length");
-  const feasible=raw.filter(o=>o.face>0&&o.depth>0&&o.h>0&&o.depth<=D+0.001&&o.h<=CH+0.001).map(o=>({
+  const feasible=raw.filter(o=>o.face>0&&o.depth>0&&o.h>0&&o.depth<=D+0.001&&o.h<=CH+(upright?50:0)+0.001).map(o=>({
     ...o,
     per:Math.round(D/o.depth)*(upright?1:Math.round(CH/o.h))
   })).filter(o=>o.per>0);
