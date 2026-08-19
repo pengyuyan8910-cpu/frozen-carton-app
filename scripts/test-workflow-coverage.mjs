@@ -20,6 +20,7 @@ assert.match(newStore, /if \[ -z "\$file" \]; then[\s\S]*新增门店配置\.jso
 assert.match(replan, /- "app\.js"|- 'app\.js'/, 'app.js 变化必须触发统一严格引擎回归测试');
 assert.match(replan, /- "index\.html"|- 'index\.html'/, 'index.html 变化必须触发统一严格引擎回归测试');
 assert.match(replan, /npm run test:new-store-routing/, '主回归 CI 必须执行新增门店统一严格引擎回归测试');
+assert.match(replan, /NEW_STORE_CONFIG_PATH:\s*data\/new-store\/新增门店配置\.json[\s\S]*npm run generate-new-store-draft/, '主回归 CI 必须用标准配置真实生成一次新增门店草稿');
 assert.match(replan, /npm run test:replan/, '主回归 CI 必须执行产品池重排回归测试');
 assert.match(replan, /npm run test:workflow/, '主回归 CI 必须执行 workflow 依赖覆盖测试');
 
