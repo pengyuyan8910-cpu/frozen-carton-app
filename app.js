@@ -1124,26 +1124,63 @@ let cloudClient = null;
 let docRevision = 0;
 let cloudBaseData = null;
 let cloudSdkPromise = null;
+const CLOUD_SDK_SOURCES = [
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
+  'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js',
+];
+const CLOUD_SDK_TIMEOUT_MS = 10000;
 function loadCloudSdk() {
-  if (window.supabase) return Promise.resolve(true);
+  if (window.supabase) return Promise.resolve({ ok: true, source: 'already-loaded' });
   if (cloudSdkPromise) return cloudSdkPromise;
-  cloudSdkPromise = new Promise(resolve => {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-    script.async = true;
-    script.onload = () => resolve(Boolean(window.supabase));
-    script.onerror = () => resolve(false);
-    document.head.appendChild(script);
-  });
+  cloudSdkPromise = (async () => {
+    const errors = [];
+    for (const source of CLOUD_SDK_SOURCES) {
+      const result = await new Promise(resolve => {
+        const script = document.createElement('script');
+        let settled = false;
+        const finish = value => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          script.onload = null;
+          script.onerror = null;
+          resolve(value);
+        };
+        const timer = setTimeout(() => {
+          script.remove();
+          finish({ ok: false, error: '请求超时' });
+        }, CLOUD_SDK_TIMEOUT_MS);
+        script.src = source;
+        script.async = true;
+        script.onload = () => finish(window.supabase
+          ? { ok: true, source }
+          : { ok: false, error: '脚本加载后未注册 Supabase' });
+        script.onerror = () => finish({ ok: false, error: '网络请求失败' });
+        document.head.appendChild(script);
+      });
+      if (result.ok) return result;
+      errors.push(`${source.split('/')[2]}：${result.error}`);
+    }
+    return { ok: false, error: errors.join('；') || '没有可用的加载地址' };
+  })();
   return cloudSdkPromise;
 }
 async function withCloudSdk(action) {
   cloudAccountNote('正在加载云端组件…');
-  if (!await loadCloudSdk()) {
-    cloudAccountNote('云端组件加载失败，请检查网络后重试。', true);
+  cloudNote('');
+  const sdk = await loadCloudSdk();
+  if (!sdk.ok) {
+    const message = '云端组件加载失败：' + sdk.error;
+    cloudAccountNote(message, true);
+    cloudNote(message, true);
     return null;
   }
-  ensureCloudClient();
+  if (!ensureCloudClient()) {
+    const message = '云端组件已加载，但云端配置不可用。';
+    cloudAccountNote(message, true);
+    cloudNote(message, true);
+    return null;
+  }
   return action();
 }
 
@@ -1175,6 +1212,7 @@ function translateCloudError(msg) {
     'Email rate limit exceeded': '操作过于频繁，请稍后再试。',
     'User not found': '用户不存在，请检查邮箱或注册新账号。',
     'JWT expired': '登录已过期，请重新登录。',
+    'Failed to fetch': '无法连接云端服务，请检查网络后重试。',
     'column carton_documents.revision does not exist': '数据库配置异常，请刷新页面后重试。',
     'CONFLICT:': '数据版本冲突，系统将自动合并。',
   };
@@ -1362,7 +1400,7 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
     var cloudBtn = document.getElementById('cloudBtn');
     if (!cloudBtn) { if (++tries < 30) setTimeout(tryBind, 100); return; }
     function on(id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); }
-    on('cloudBtn', function () { document.getElementById('cloudDialog').showModal(); withCloudSdk(refreshCloudAccount); });
+    on('cloudBtn', function () { document.getElementById('cloudDialog').showModal(); cloudNote(''); withCloudSdk(refreshCloudAccount); });
     on('closeCloudBtn', function () { document.getElementById('cloudDialog').close(); });
     on('cloudSignUpBtn', function(){ withCloudSdk(cloudSignUp); });
     on('cloudResendBtn', function(){ withCloudSdk(cloudResendVerification); });
