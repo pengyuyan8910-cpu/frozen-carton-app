@@ -40,6 +40,8 @@ jobs:
         run: npm run check
       - name: 新增门店统一严格引擎回归测试
         run: npm run test:new-store-routing
+      - name: 正式32店底表转换复核
+        run: npm run refresh-data
       - name: 新增门店真实草稿集成验证
         env:
           NEW_STORE_CONFIG_PATH: data/new-store/新增门店配置.json
