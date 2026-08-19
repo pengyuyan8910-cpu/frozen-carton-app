@@ -1,6 +1,7 @@
 export const PHYSICAL_BUSINESS_RULES = Object.freeze({
   source: "user-confirmed-business-rule",
-  orientationRule: "商品允许水平旋转90°，长宽可互换，高度不翻转",
+  orientationRule: "卧柜/冰淇淋柜按长宽水平旋转并堆叠；立柜商品高做纵深、不堆叠",
+  capacityRoundingRule: "产品长宽高已预留余量，柜体尺寸除以产品尺寸按四舍五入取整",
   allowedOrientations: Object.freeze(["length-face", "width-face"]),
   stackRules: Object.freeze({
     vertical: Object.freeze({ allowStack: false, description: "立柜销售层不允许上下堆叠" }),
@@ -23,5 +24,5 @@ export function calculatePhysicalStackCount(cabinetClass, cabinetHeight, oriente
   if (cabinetClass === "vertical") return 1;
   const rule = physicalStackRule(cabinetClass);
   if (!rule.allowStack) return 1;
-  return Math.floor(Number(cabinetHeight) / Number(orientedHeight));
+  return Math.round(Number(cabinetHeight) / Number(orientedHeight));
 }

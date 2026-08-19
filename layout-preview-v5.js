@@ -562,7 +562,7 @@
 
     safeMerge(sheet, 4, 1, 4, lastCol);
     const legend = sheet.getCell(4, 1);
-    legend.value = '颜色：正常陈列=浅绿　外储=浅灰　已修改=浅黄　待上新=浅蓝　待淘汰=浅橙　恢复中=浅紫　空位=白色';
+    legend.value = '颜色：正常陈列=浅绿　外储=浅灰　已修改=浅黄　上新执行中=浅蓝　淘汰执行中=浅橙　恢复中=浅紫　空位=白色';
     applyCellStyle(legend, 'FFFFFFFF', 'FF596861', false);
     legend.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
 

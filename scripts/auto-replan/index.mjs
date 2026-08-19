@@ -2,13 +2,22 @@ export { loadAndValidatePhase0 } from "./phase0-input.mjs";
 export { calculatePhysicalCandidates } from "./phase1-physical-candidates.mjs";
 export { buildSkuPriority } from "./phase2-sku-priority.mjs";
 export { buildBaseAllocation } from "./phase3-base-allocation.mjs";
-export { optimizeDisplayColumns } from "./phase4-display-columns.mjs";
-export { optimizeCrossSegmentSpace } from "./phase5-space-optimization.mjs";
+export { optimizeDisplayColumns, scanDisplayColumnImprovements } from "./phase4-display-columns.mjs";
+export { auditCrossSegmentConvergence, optimizeCrossSegmentSpace } from "./phase5-space-optimization.mjs";
 export { calculateSkuInventoryMetrics, summarizeStoreInventoryMetrics } from "./inventory-metrics.mjs";
 export { detectStoreImpact } from "./impact-detection.mjs";
 export { canFitPlacement, validateSegmentWidthLedgers } from "./segment-width-ledger.mjs";
 export { DETERMINISTIC_SEARCH_BUDGET, resolveDeterministicSearchBudget } from "./deterministic-search-config.mjs";
 export { buildActionSequenceSignature, buildMetricsSignature, buildPlanSignature } from "./deterministic-signatures.mjs";
+export { runCurrentTablePolicy } from "./current-table-policy.mjs";
+export {
+  buildIncrementalPlanSignature,
+  buildIncrementalMetricsSignature,
+  createDraftFromCurrentPlan,
+  detectAffectedStores,
+  runIncrementalReplan,
+  validateIncrementalDraft
+} from "./incremental-replan.mjs";
 export * from "./chinese-messages.mjs";
 
 import { loadAndValidatePhase0 } from "./phase0-input.mjs";
@@ -65,9 +74,10 @@ export function runPhase0To5(input, options = {}) {
       && validation.iceMismatchCount === 0
       && validation.temporaryIncludedUnchanged
       && validation.pendingUnchanged
-      && (validation.deterministicBudgetLimited
-        || (validation.moveOpportunityRemainingCount === 0
-          && validation.swapOpportunityRemainingCount === 0)),
+      && validation.optimizationConverged
+      && validation.remainingImprovementCandidates === 0
+      && !validation.safetyLimitReached
+      && !validation.cycleDetected,
     phase: "PHASE_5",
     phase5
   };

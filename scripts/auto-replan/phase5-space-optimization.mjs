@@ -407,11 +407,28 @@ function actionLog(beforeStage, afterStage, action, beforeEval, afterEval) {
   };
 }
 
+function applyCandidateBudget(actions, limit, requiredStableActionKey) {
+  const selected = actions.slice(0, limit);
+  if (!requiredStableActionKey || selected.some(action => action.stableActionKey === requiredStableActionKey)) {
+    return selected;
+  }
+  const required = actions.find(action => action.stableActionKey === requiredStableActionKey);
+  if (!required || limit <= 0) return selected;
+  if (selected.length < limit) selected.push(required);
+  else selected[selected.length - 1] = required;
+  return selected;
+}
+
 function findBest(stage, currentEval, originalSegments, expectedIncluded, expectedPending, options) {
   let best = null;
   let bestEval = null;
   let bestAction = null;
-  const moveCandidates = roughMoveCandidates(stage, options.maxMoveCandidates);
+  const requiredStableActionKey = options.requiredStableActionKey;
+  const moveCandidates = applyCandidateBudget(
+    roughMoveCandidates(stage, Number.MAX_SAFE_INTEGER),
+    options.maxMoveCandidates,
+    requiredStableActionKey?.startsWith("MOVE|") ? requiredStableActionKey : ""
+  );
   for (const action of moveCandidates) {
     const simulated = simulateMove(stage, action, options.maxColumnActions);
     if (!simulated) continue;
@@ -423,7 +440,11 @@ function findBest(stage, currentEval, originalSegments, expectedIncluded, expect
       bestAction = action;
     }
   }
-  const swapCandidates = roughSwapCandidates(stage, options.maxSwapCandidates);
+  const swapCandidates = applyCandidateBudget(
+    roughSwapCandidates(stage, Number.MAX_SAFE_INTEGER),
+    options.maxSwapCandidates,
+    requiredStableActionKey?.startsWith("SWAP|") ? requiredStableActionKey : ""
+  );
   for (const action of swapCandidates) {
     const simulated = simulateSwap(stage, action, options.maxColumnActions);
     if (!simulated) continue;
@@ -456,37 +477,116 @@ export function optimizeCrossSegmentSpace(phase4, rawOptions = {}) {
   let currentEval = evaluatePlan(current, originalSegments, expectedIncluded, expectedPending);
   const actions = [];
   const searchDiagnostics = [];
-  let normalCompletion = false;
-  for (let round = 1; round <= options.maxRounds; round += 1) {
-    const found = findBest(current, currentEval, originalSegments, expectedIncluded, expectedPending, options);
-    searchDiagnostics.push({
-      round,
-      moveCandidateCount: found.moveCandidateCount,
-      swapCandidateCount: found.swapCandidateCount,
-      accepted: Boolean(found.best)
+  const optimizationBatches = [];
+  const visitedPlanSignatures = new Set([buildPlanSignature(current.temporaryIncluded)]);
+  let finalAudit = null;
+  let optimizationConverged = false;
+  let cycleDetected = false;
+  let totalRound = 0;
+  let auditedActionToResume = "";
+
+  for (let batch = 1; batch <= options.maxOptimizationBatches; batch += 1) {
+    const batchActions = [];
+    for (let batchRound = 1; batchRound <= options.optimizationBatchRounds; batchRound += 1) {
+      const roundOptions = auditedActionToResume
+        ? { ...options, requiredStableActionKey: auditedActionToResume }
+        : options;
+      const found = findBest(current, currentEval, originalSegments, expectedIncluded, expectedPending, roundOptions);
+      totalRound += 1;
+      searchDiagnostics.push({
+        batch,
+        batchRound,
+        round: totalRound,
+        moveCandidateCount: found.moveCandidateCount,
+        swapCandidateCount: found.swapCandidateCount,
+        accepted: Boolean(found.best)
+      });
+      if (!found.best) break;
+      if (!materiallyImproves(found.bestEval, currentEval) || comparePlans(found.bestEval, currentEval) >= 0) {
+        throw new Error("柜位优化候选没有严格优于当前方案，已拒绝接受。");
+      }
+      const acceptedAction = {
+        round: totalRound,
+        batch,
+        batchRound,
+        ...actionLog(current, found.best, found.bestAction, currentEval, found.bestEval)
+      };
+      current = found.best;
+      currentEval = found.bestEval;
+      auditedActionToResume = "";
+      actions.push(acceptedAction);
+      batchActions.push(acceptedAction);
+      const acceptedPlanSignature = buildPlanSignature(current.temporaryIncluded);
+      if (visitedPlanSignatures.has(acceptedPlanSignature)) {
+        cycleDetected = true;
+        break;
+      }
+      visitedPlanSignatures.add(acceptedPlanSignature);
+    }
+
+    finalAudit = auditCrossSegmentConvergence(current, phase4, options);
+    optimizationBatches.push({
+      batch,
+      acceptedActionCount: batchActions.length,
+      cumulativeActionCount: actions.length,
+      roundsExecuted: searchDiagnostics.filter(item => item.batch === batch).length,
+      directCaseSkuCount: currentEval.summary.directCaseSkuCount,
+      externalSkuCount: currentEval.summary.externalSkuCount,
+      staticExternalL: currentEval.summary.staticExternalL,
+      suggestedExternalL: currentEval.summary.suggestedExternalL,
+      remainingImprovementCandidates: finalAudit.improvingCandidateCount,
+      bestRemainingAction: finalAudit.bestImprovingAction
     });
-    if (!found.best) {
-      normalCompletion = true;
+    if (cycleDetected) break;
+    if (finalAudit.improvingCandidateCount === 0) {
+      optimizationConverged = true;
       break;
     }
-    actions.push({ round, ...actionLog(current, found.best, found.bestAction, currentEval, found.bestEval) });
-    current = found.best;
-    currentEval = found.bestEval;
+    auditedActionToResume = finalAudit.bestImprovingAction?.stableActionKey || "";
   }
+
+  const safetyLimitReached = !optimizationConverged
+    && !cycleDetected
+    && optimizationBatches.length >= options.maxOptimizationBatches;
+  const stopReason = cycleDetected
+    ? {
+      code: "OPTIMIZATION_CYCLE_DETECTED",
+      message: "\u67dc\u4f4d\u4f18\u5316\u51fa\u73b0\u91cd\u590d\u65b9\u6848\u5faa\u73af\uff0c\u672c\u6b21\u7ed3\u679c\u4e0d\u80fd\u4f7f\u7528\u3002"
+    }
+    : optimizationConverged
+      ? { code: "OPTIMIZATION_CONVERGED", message: "\u67dc\u4f4d\u4f18\u5316\u5df2\u6536\u655b\u3002" }
+      : safetyLimitReached
+        ? {
+          code: "OPTIMIZATION_SAFETY_LIMIT_REACHED",
+          message: "\u67dc\u4f4d\u4f18\u5316\u8fbe\u5230\u786e\u5b9a\u6027\u5b89\u5168\u4e0a\u9650\uff0c\u4f46\u4ecd\u5b58\u5728\u53ef\u6539\u5584\u65b9\u6848\uff0c\u672c\u6b21\u7ed3\u679c\u4e0d\u80fd\u8fdb\u5165\u6700\u7ec8\u5546\u54c1\u53d6\u820d\u3002"
+        }
+        : { code: "ABNORMAL_STOP", message: "\u67dc\u4f4d\u4f18\u5316\u5f02\u5e38\u505c\u6b62\u3002" };
   const finalSkuKeys = current.temporaryIncluded.map(row => row.skuKey).sort(stableCompare).join("|");
   const finalPendingKeys = current.pendingSkus.map(row => row.skuKey).sort(stableCompare).join("|");
-  const roundLimited = !normalCompletion && actions.length >= options.maxRounds;
   current.phase = "PHASE_5";
   current.phase4Summary = phase4Summary;
   current.phase5Actions = actions;
   current.summary = {
     ...current.summary,
+    ...currentEval.summary,
     phase5ActionCount: actions.length,
     movedSkuCount: currentEval.movementCount,
     performanceLimited: false,
-    deterministicBudgetLimited: roundLimited,
-    roundLimited,
+    deterministicBudgetLimited: safetyLimitReached,
+    roundLimited: false,
+    optimizationConverged,
+    safetyLimitReached,
+    cycleDetected,
+    remainingImprovementCandidates: finalAudit?.improvingCandidateCount ?? 0,
+    bestRemainingAction: finalAudit?.bestImprovingAction ?? null,
+    optimizationStopReason: stopReason,
     searchBudget: { ...options },
+    optimizationBatchCount: optimizationBatches.length,
+    optimizationBatches,
+    totalOptimizationRounds: totalRound,
+    visitedPlanSignatureCount: visitedPlanSignatures.size,
+    externalCapL: 754,
+    externalLimitSatisfied: currentEval.summary.suggestedExternalL <= 754,
     searchRoundsExecuted: searchDiagnostics.length,
     moveCandidatesEvaluated: searchDiagnostics.reduce((sum, item) => sum + item.moveCandidateCount, 0),
     swapCandidatesEvaluated: searchDiagnostics.reduce((sum, item) => sum + item.swapCandidateCount, 0)
@@ -499,18 +599,123 @@ export function optimizeCrossSegmentSpace(phase4, rawOptions = {}) {
     iceMismatchCount: currentEval.iceMismatchCount,
     temporaryIncludedUnchanged: currentEval.includedUnchanged && expectedSkuKeys === finalSkuKeys,
     pendingUnchanged: currentEval.pendingUnchanged && expectedPendingKeys === finalPendingKeys,
-    moveOpportunityRemainingCount: normalCompletion ? 0 : 1,
-    swapOpportunityRemainingCount: normalCompletion ? 0 : 1,
+    moveOpportunityRemainingCount: finalAudit?.improvingMoveCandidateCount ?? 0,
+    swapOpportunityRemainingCount: finalAudit?.improvingSwapCandidateCount ?? 0,
+    remainingImprovementCandidates: finalAudit?.improvingCandidateCount ?? 0,
+    optimizationConverged,
+    safetyLimitReached,
+    cycleDetected,
     performanceLimited: false,
-    deterministicBudgetLimited: roundLimited,
-    roundLimited,
+    deterministicBudgetLimited: safetyLimitReached,
+    roundLimited: false,
+    optimizationStopReason: stopReason,
     widthLedger: currentEval.width
   };
-  current.warnings = [];
-  current.notices = roundLimited ? ["柜位优化达到固定搜索轮数，已保留当前确定性方案。"] : [];
+  current.warnings = optimizationConverged ? [] : [stopReason.message];
+  current.notices = optimizationConverged ? [stopReason.message] : [];
   current.actionSequenceSignature = buildActionSequenceSignature(actions);
   current.planSignature = buildPlanSignature(current.temporaryIncluded);
   current.metricsSignature = buildMetricsSignature(current.summary);
   current.searchDiagnostics = searchDiagnostics;
   return current;
+}
+
+function auditAction(stage, simulated, action, beforeEval, afterEval) {
+  const skuKeys = action.type === "SWAP" ? [action.leftSkuKey, action.rightSkuKey] : [action.skuKey];
+  const before = skuKeys.map(skuKey => stage.temporaryIncluded.find(row => row.skuKey === skuKey));
+  const after = skuKeys.map(skuKey => simulated.temporaryIncluded.find(row => row.skuKey === skuKey));
+  const directImprovement = afterEval.summary.directCaseSkuCount > beforeEval.summary.directCaseSkuCount;
+  const inventoryImprovement = afterEval.summary.externalUnits < beforeEval.summary.externalUnits;
+  const categoryImprovement = afterEval.category.cabinetSplitPenalty < beforeEval.category.cabinetSplitPenalty
+    || afterEval.category.adjacencyPenalty < beforeEval.category.adjacencyPenalty;
+  const movedAndExpanded = after.some((row, index) => row.displayCols > before[index].displayCols);
+  let auditType = action.type;
+  if (action.type !== "SWAP" && movedAndExpanded) auditType = "MOVE_AND_EXPAND";
+  else if (!directImprovement && !inventoryImprovement && categoryImprovement) auditType = "CATEGORY整理";
+  else if (!directImprovement && afterEval.continuousSpaceScore > beforeEval.continuousSpaceScore) auditType = "FRAGMENT整理";
+  const rowSnapshot = row => ({
+    skuKey: row.skuKey,
+    name: row.name,
+    segmentKey: row.segmentKey,
+    cabinetNo: row.cabinetNo,
+    position: row.position,
+    displayCols: row.displayCols,
+    directCase: row.metrics.directCase,
+    externalUnits: row.metrics.externalUnits,
+    staticExternalL: row.metrics.staticExternalL
+  });
+  return {
+    type: auditType,
+    stableActionKey: action.stableActionKey,
+    skuKeys,
+    before: before.map(rowSnapshot),
+    after: after.map(rowSnapshot),
+    targetSegmentKeys: after.map(row => row.segmentKey),
+    directCaseImprovement: afterEval.summary.directCaseSkuCount - beforeEval.summary.directCaseSkuCount,
+    externalSkuImprovement: beforeEval.summary.externalSkuCount - afterEval.summary.externalSkuCount,
+    externalUnitImprovement: beforeEval.summary.externalUnits - afterEval.summary.externalUnits,
+    staticExternalLImprovement: round(beforeEval.summary.staticExternalL - afterEval.summary.staticExternalL),
+    suggestedExternalLImprovement: round(beforeEval.summary.suggestedExternalL - afterEval.summary.suggestedExternalL),
+    categoryCabinetPenaltyImprovement: beforeEval.category.cabinetSplitPenalty - afterEval.category.cabinetSplitPenalty,
+    categoryAdjacencyPenaltyImprovement: beforeEval.category.adjacencyPenalty - afterEval.category.adjacencyPenalty,
+    continuousSpaceImprovement: round(afterEval.continuousSpaceScore - beforeEval.continuousSpaceScore)
+  };
+}
+
+export function auditCrossSegmentConvergence(phase5, phase4, rawOptions = {}) {
+  const options = resolveDeterministicSearchBudget(rawOptions);
+  const stage = cloneStage(phase5);
+  const expectedIncluded = stage.temporaryIncluded.length;
+  const expectedPending = stage.pendingSkus.length;
+  const originalSegments = new Map((phase4?.temporaryIncluded || stage.temporaryIncluded)
+    .map(row => [row.skuKey, row.segmentKey]));
+  const currentEval = evaluatePlan(stage, originalSegments, expectedIncluded, expectedPending);
+  const moveCandidates = roughMoveCandidates(stage, Number.MAX_SAFE_INTEGER);
+  const swapCandidates = roughSwapCandidates(stage, Number.MAX_SAFE_INTEGER);
+  let improvingCandidateCount = 0;
+  let improvingMoveCandidateCount = 0;
+  let improvingSwapCandidateCount = 0;
+  let best = null;
+  let bestEval = null;
+  const byType = {};
+  const usefulSegmentKeys = new Set();
+  const skuOpportunityKeys = new Set();
+
+  const inspect = (action, simulated) => {
+    if (!simulated) return;
+    const evaluation = evaluatePlan(simulated, originalSegments, expectedIncluded, expectedPending);
+    if (!materiallyImproves(evaluation, currentEval)) return;
+    const audit = auditAction(stage, simulated, action, currentEval, evaluation);
+    improvingCandidateCount += 1;
+    if (action.type === "SWAP") improvingSwapCandidateCount += 1;
+    else improvingMoveCandidateCount += 1;
+    byType[audit.type] = (byType[audit.type] || 0) + 1;
+    audit.targetSegmentKeys.forEach(key => usefulSegmentKeys.add(key));
+    audit.skuKeys.forEach(key => skuOpportunityKeys.add(key));
+    if (!bestEval || comparePlans(evaluation, bestEval) < 0
+      || (comparePlans(evaluation, bestEval) === 0
+        && stableCompare(audit.stableActionKey, best.stableActionKey) < 0)) {
+      best = audit;
+      bestEval = evaluation;
+    }
+  };
+
+  for (const action of moveCandidates) inspect(action, simulateMove(stage, action, options.maxColumnActions));
+  for (const action of swapCandidates) inspect(action, simulateSwap(stage, action, options.maxColumnActions));
+
+  let stopReason = improvingCandidateCount === 0 ? "NO_BETTER_ACTION" : "IMPROVEMENT_REMAINS";
+  if (moveCandidates.length + swapCandidates.length === 0) stopReason = "CANDIDATE_EMPTY";
+  if (!currentEval.hardValid) stopReason = "ABNORMAL_STOP";
+  return {
+    stopReason,
+    generatedMoveCandidateCount: moveCandidates.length,
+    generatedSwapCandidateCount: swapCandidates.length,
+    improvingCandidateCount,
+    improvingMoveCandidateCount,
+    improvingSwapCandidateCount,
+    improvingCandidateCountByType: byType,
+    usefulSegmentKeys: [...usefulSegmentKeys].sort(stableCompare),
+    skuOpportunityKeys: [...skuOpportunityKeys].sort(stableCompare),
+    bestImprovingAction: best
+  };
 }

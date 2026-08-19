@@ -81,15 +81,48 @@ function physicalRuleTests() {
   assert(verticalCandidate.stackCount === 1, "立柜销售层不得根据高度自动堆叠");
   assert(verticalCandidate.perCol === 5, "立柜单列容量必须只按纵深计算");
 
+  const verticalRoundingProduct = syntheticProduct({
+    barcode: "synthetic-vertical-rounding",
+    length: 240,
+    width: 300,
+    height: 20,
+    allowedOrientations: ["length-face", "width-face"]
+  });
+  const verticalRounding0 = loadAndValidatePhase0({
+    ...baseInput,
+    productPool: [verticalRoundingProduct],
+    cabinets: [syntheticCabinet({ depth: 534, height: 250 })]
+  });
+  const verticalRoundingCandidate = calculatePhysicalCandidates(verticalRounding0).candidatesBySku.get(verticalRoundingProduct.barcode)
+    .find(candidate => candidate.orientation === "width-face");
+  assert(verticalRoundingCandidate?.orientedDepth === 20, "立柜必须用商品高作为纵深");
+  assert(verticalRoundingCandidate?.orientedHeight === 240, "立柜宽做陈列面时商品长作为层高");
+  assert(verticalRoundingCandidate?.depthCount === 27 && verticalRoundingCandidate?.perCol === 27, "立柜纵深除法必须四舍五入：534÷20=26.7→27");
+
+  const chestRoundingProduct = syntheticProduct({
+    barcode: "synthetic-chest-rounding",
+    length: 240,
+    width: 800,
+    height: 20,
+    allowedOrientations: ["length-face", "width-face"]
+  });
+  const chestRounding0 = loadAndValidatePhase0({
+    ...baseInput,
+    productPool: [chestRoundingProduct],
+    cabinets: [syntheticCabinet({ key: "测试门店__卧柜rounding__分区1", label: "卧柜rounding", position: "分区1", kind: "卧柜", type: "卧柜", length: 1988, depth: 697, height: 460 })]
+  });
+  const chestRoundingCandidate = calculatePhysicalCandidates(chestRounding0).candidatesBySku.get(chestRoundingProduct.barcode)[0];
+  assert(chestRoundingCandidate?.depthCount === 3 && chestRoundingCandidate?.stackCount === 23 && chestRoundingCandidate?.perCol === 69, "卧柜深度和堆叠除法必须四舍五入：3×23=69");
+
   const chestWithoutStack = syntheticCabinet({ key: "测试门店__卧柜1__分区1", label: "卧柜1", position: "分区1", kind: "卧柜", type: "卧柜" });
   const chest0 = loadAndValidatePhase0({ ...baseInput, cabinets: [chestWithoutStack] });
   const chestCandidate0 = calculatePhysicalCandidates(chest0).candidatesBySku.get(product.barcode)[0];
-  assert(chestCandidate0.stackCount === 1, "卧柜缺少allowStack时不得推断堆叠");
+  assert(chestCandidate0.stackCount === 5, "卧柜按统一物理规则允许按高度堆叠，不依赖历史allowStack字段");
 
   const chestWithStack = { ...chestWithoutStack, allowStack: true };
   const chest1 = loadAndValidatePhase0({ ...baseInput, cabinets: [chestWithStack] });
   const chestCandidate1 = calculatePhysicalCandidates(chest1).candidatesBySku.get(product.barcode)[0];
-  assert(chestCandidate1.stackCount === 5, "卧柜明确allowStack后应按真实高度计算堆叠");
+  assert(chestCandidate1.stackCount === 5, "卧柜明确allowStack时仍按真实高度计算堆叠");
 
   const layer6 = syntheticCabinet({ key: "测试门店__立柜3m-柜1__第6层", position: "第6层" });
   const layer60 = loadAndValidatePhase0({ ...baseInput, cabinets: [layer6] });

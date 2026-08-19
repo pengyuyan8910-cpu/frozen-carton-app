@@ -83,6 +83,29 @@ function expansionActions(stage) {
     || stableCompare(left.row.segmentKey, right.row.segmentKey));
 }
 
+export function scanDisplayColumnImprovements(stage) {
+  return expansionActions(stage).map(action => ({
+    skuKey: action.row.skuKey,
+    name: action.row.name,
+    segmentKey: action.row.segmentKey,
+    cabinetNo: action.row.cabinetNo,
+    position: action.row.position,
+    currentDisplayCols: action.row.displayCols,
+    nextDisplayCols: action.row.displayCols + 1,
+    requiredWidth: action.row.faceWidth,
+    remainingWidth: action.segment.remainingWidth,
+    directCaseBefore: action.row.metrics.directCase,
+    directCaseAfter: action.metrics.directCase,
+    externalUnitsBefore: action.row.metrics.externalUnits,
+    externalUnitsAfter: action.metrics.externalUnits,
+    staticExternalLBefore: action.row.metrics.staticExternalL,
+    staticExternalLAfter: action.metrics.staticExternalL,
+    externalUnitReduction: action.externalUnitReduction,
+    staticReductionL: action.staticReductionL,
+    suggestedReductionL: action.suggestedReductionL
+  }));
+}
+
 export function optimizeDisplayColumns(phase3, options = {}) {
   const stage = phase3;
   stage.phase = "PHASE_4";

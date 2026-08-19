@@ -2,10 +2,16 @@ import { EPSILON, asText, stableCompare } from "./common.mjs";
 import { calculateSkuInventoryMetrics } from "./inventory-metrics.mjs";
 import { calculatePhysicalStackCount } from "./physical-business-rules.mjs";
 
-const ORIENTATION_BUILDERS = Object.freeze({
-  "length-face": product => ({ faceWidth: product.length, depth: product.width, height: product.height }),
-  "width-face": product => ({ faceWidth: product.width, depth: product.length, height: product.height })
-});
+function orientedDimensions(product, orientationKey, cabinet) {
+  if (cabinet.cabinetClass === "vertical") {
+    return orientationKey === "length-face"
+      ? { faceWidth: product.length, depth: product.height, height: product.width }
+      : { faceWidth: product.width, depth: product.height, height: product.length };
+  }
+  return orientationKey === "length-face"
+    ? { faceWidth: product.length, depth: product.width, height: product.height }
+    : { faceWidth: product.width, depth: product.length, height: product.height };
+}
 
 function cabinetTypeAllowed(product, cabinet) {
   if (!product.allowedCabinetTypes.length) return true;
@@ -20,9 +26,7 @@ function candidatesForPair(product, cabinet, params) {
   const unique = new Set();
   const output = [];
   for (const orientationKey of product.allowedOrientations) {
-    const builder = ORIENTATION_BUILDERS[orientationKey];
-    if (!builder) continue;
-    const oriented = builder(product);
+    const oriented = orientedDimensions(product, orientationKey, cabinet);
     const key = `${oriented.faceWidth}|${oriented.depth}|${oriented.height}`;
     if (unique.has(key)) continue;
     unique.add(key);
@@ -30,7 +34,7 @@ function candidatesForPair(product, cabinet, params) {
     if (oriented.faceWidth > cabinet.length + EPSILON) continue;
     if (oriented.depth > cabinet.depth + EPSILON) continue;
     if (oriented.height > cabinet.height + EPSILON) continue;
-    const depthCount = Math.floor(cabinet.depth / oriented.depth);
+    const depthCount = Math.round(cabinet.depth / oriented.depth);
     const stackCount = calculatePhysicalStackCount(cabinet.cabinetClass, cabinet.height, oriented.height);
     const perCol = depthCount * stackCount;
     if (!(perCol > 0)) continue;

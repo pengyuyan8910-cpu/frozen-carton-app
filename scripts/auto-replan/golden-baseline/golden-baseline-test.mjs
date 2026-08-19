@@ -99,6 +99,7 @@ export function runGoldenBaseline({ print = true } = {}) {
   const firstActualCandidates = phase1?.candidatesBySku.get(firstCase[1])
     ?.filter(candidate => candidate.cabinetKey === firstCase[4]) || [];
   const firstLengthFace = firstActualCandidates.find(candidate => candidate.orientation === "length-face");
+  const firstExpectedLengthFace = firstCase[8].find(candidate => candidate[0] === "length-face");
   const verticalCase = baseline.physicalCases.find(item => item[3] === "vertical");
   const verticalActual = phase1?.candidatesBySku.get(verticalCase[1])
     ?.find(candidate => candidate.cabinetKey === verticalCase[4] && candidate.orientation === "length-face");
@@ -106,12 +107,12 @@ export function runGoldenBaseline({ print = true } = {}) {
   const chestActual = phase1?.candidatesBySku.get(chestCase[1])
     ?.find(candidate => candidate.cabinetKey === chestCase[4] && candidate.orientation === "length-face");
   assert(JSON.stringify(PHYSICAL_BUSINESS_RULES.allowedOrientations) === JSON.stringify(["length-face", "width-face"]), { type: "正式物理规则", field: "orientation", expected: "仅长宽两个水平方向", actual: PHYSICAL_BUSINESS_RULES.allowedOrientations.join("、") });
-  assert(firstLengthFace?.faceWidth === firstCase[8][0][1], { type: "正式物理规则", field: "faceWidth", expected: firstCase[8][0][1], actual: firstLengthFace?.faceWidth });
-  assert(firstLengthFace?.orientedDepth === firstCase[8][0][2], { type: "正式物理规则", field: "orientedDepth", expected: firstCase[8][0][2], actual: firstLengthFace?.orientedDepth });
-  assert(firstLengthFace?.orientedHeight === firstCase[8][0][3], { type: "正式物理规则", field: "orientedHeight", expected: firstCase[8][0][3], actual: firstLengthFace?.orientedHeight });
-  assert(firstLengthFace?.depthCount === firstCase[8][0][4], { type: "正式物理规则", field: "depthCount", expected: firstCase[8][0][4], actual: firstLengthFace?.depthCount });
+  assert(firstLengthFace?.faceWidth === firstExpectedLengthFace?.[1], { type: "正式物理规则", field: "faceWidth", expected: firstExpectedLengthFace?.[1], actual: firstLengthFace?.faceWidth });
+  assert(firstLengthFace?.orientedDepth === firstExpectedLengthFace?.[2], { type: "正式物理规则", field: "orientedDepth", expected: firstExpectedLengthFace?.[2], actual: firstLengthFace?.orientedDepth });
+  assert(firstLengthFace?.orientedHeight === firstExpectedLengthFace?.[3], { type: "正式物理规则", field: "orientedHeight", expected: firstExpectedLengthFace?.[3], actual: firstLengthFace?.orientedHeight });
+  assert(firstLengthFace?.depthCount === firstExpectedLengthFace?.[4], { type: "正式物理规则", field: "depthCount", expected: firstExpectedLengthFace?.[4], actual: firstLengthFace?.depthCount });
   assert(verticalActual?.stackCount === 1 && chestActual?.stackCount > 1 && firstLengthFace?.stackCount > 1, { type: "正式物理规则", field: "stackCount", expected: "立柜=1，卧柜/冰淇淋柜按真实高度大于1", actual: `立柜=${verticalActual?.stackCount}，卧柜=${chestActual?.stackCount}，冰淇淋柜=${firstLengthFace?.stackCount}` });
-  assert(firstLengthFace?.perCol === firstCase[8][0][6], { type: "正式物理规则", field: "perCol", expected: firstCase[8][0][6], actual: firstLengthFace?.perCol });
+  assert(firstLengthFace?.perCol === firstExpectedLengthFace?.[6], { type: "正式物理规则", field: "perCol", expected: firstExpectedLengthFace?.[6], actual: firstLengthFace?.perCol });
 
   const physicalFields = baseline.physicalCandidateFields;
   for (const physicalCase of baseline.physicalCases) {

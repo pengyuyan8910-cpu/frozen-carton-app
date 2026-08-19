@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
@@ -100,6 +100,25 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
 @media(max-width:1100px){.metric-grid{grid-template-columns:repeat(3,1fr)}.workspace-grid,.planogram-layout{grid-template-columns:1fr}.planogram-monitor{position:static}.side-note{order:-1}}
 @media(max-width:700px){.topbar{padding:20px;display:block}.top-actions{margin-top:14px}.safe-banner{padding:10px 20px}.tabs{padding:10px}.panel-title{display:block}.panel-title .toolbar{margin-top:12px}.metric-grid,.metric-grid.compact{grid-template-columns:repeat(2,1fr)}main{padding:14px}.form-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.cabinet-row{grid-template-columns:82px minmax(0,1fr)}}
 </style>
+<style id="lifecycle-product-detail-inline">
+#pool.plm-detail-open>.panel{margin-right:370px}.plm-detail-open{position:relative}#plmProductInspector{position:fixed;right:20px;top:108px;width:340px;max-height:calc(100vh - 126px);overflow:auto;padding:18px;background:#fff;border:1px solid #d9e4de;border-radius:14px;box-shadow:0 18px 40px rgba(30,56,45,.16);z-index:100}.plm-detail-head{display:grid;grid-template-columns:104px 1fr auto;gap:12px;align-items:start;padding-bottom:16px;border-bottom:1px solid #e3ebe6}.plm-image{width:104px;height:104px}.plm-image button{position:relative;width:104px;height:104px;padding:0;overflow:hidden;border:1px solid #d8e3dd;border-radius:8px;background:#f7faf8;color:#286649}.plm-image img{display:block;width:100%;height:100%;object-fit:contain;background:#fff}.plm-image button span{position:absolute;left:0;right:0;bottom:0;padding:7px 3px;background:rgba(11,53,38,.72);color:#fff;font-size:11px;opacity:0}.plm-image button:hover span{opacity:1}.plm-detail-head h3{margin:0 0 6px;font-size:17px;line-height:1.3}.plm-detail-head p,.plm-detail-head span{margin:0;color:#62736a;font-size:12px}.plm-detail-head>button{height:30px;background:#fff;border:1px solid #d8e3dd;border-radius:6px;color:#617168}.plm-detail-head+section,#plmProductInspector section+section{padding-top:16px;margin-top:16px;border-top:1px solid #e3ebe6}#plmProductInspector h4{margin:0 0 10px;font-size:14px}#plmProductInspector dl{display:grid;gap:9px;margin:0}#plmProductInspector dl div{display:flex;justify-content:space-between;gap:12px;font-size:13px}#plmProductInspector dt{color:#6c7b72}#plmProductInspector dd{margin:0;font-weight:700;text-align:right}.plm-detail-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.plm-detail-actions button{height:36px;border-radius:7px;border:1px solid #b7d4c5;background:#fff;color:#196445;font-weight:800}.plm-detail-actions button:first-child{background:#16724e;border-color:#16724e;color:#fff}#plmProductInspector section p{margin:10px 0 0;color:#68776f;font-size:12px;line-height:1.55}.plm-image-modal{position:fixed;inset:0;display:grid;place-items:center;padding:24px;background:rgba(7,34,25,.42);z-index:1000}.plm-image-modal>div{width:min(680px,100%);max-height:80vh;overflow:auto;padding:20px;border-radius:12px;background:#fff}.plm-image-modal h3{margin:0 0 14px}.plm-image-modal label{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:9px 0;border-bottom:1px solid #edf2ef;font-size:13px}.plm-image-modal select{min-width:0}.plm-image-modal footer{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.plm-image-modal button{height:36px;padding:0 14px;border-radius:7px;border:1px solid #bdd7c9;background:#fff}.plm-image-modal #plmSaveBatch{background:#16724e;border-color:#16724e;color:#fff}@media(max-width:1100px){#pool.plm-detail-open>.panel{margin-right:0}#plmProductInspector{position:static;width:auto;max-height:none;margin:14px 20px}}
+#poolTable tbody tr.plm-product-row{cursor:pointer}#poolTable tbody tr.plm-product-row:hover td{background:#f1faf5}#poolTable tbody tr.plm-product-row td:first-child strong:after{content:'  查看详情';display:inline-block;margin-left:8px;color:#16724e;font-size:11px;font-weight:700}
+
+.plm-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.plm-edit-field{display:grid;gap:5px;color:#62736a;font-size:12px}.plm-edit-field input{width:100%;height:34px;padding:0 9px;border:1px solid #cfddd5;border-radius:6px;color:#17372a;background:#fff}.plm-save-product{width:100%;height:38px;margin-top:14px;border:1px solid #16724e;border-radius:7px;background:#16724e;color:#fff;font-weight:800}@media(max-width:1100px){.plm-edit-grid{grid-template-columns:1fr}}
+
+/* 产品详情与产品总池同层布局：不覆盖总览指标，滚动时始终随表格可见。 */
+#pool.plm-detail-open>.panel{margin-right:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}#pool.plm-detail-open>.panel>.panel-title{grid-column:1/-1}#pool.plm-detail-open>.panel>.table-wrap{grid-column:1;grid-row:2}#pool.plm-detail-open>.panel>#plmProductInspector{position:sticky;right:auto;top:78px;width:auto;max-height:calc(100vh - 96px);grid-column:2;grid-row:2;margin:0;align-self:start;z-index:3}@media(max-width:1100px){#pool.plm-detail-open>.panel{display:block}#pool.plm-detail-open>.panel>#plmProductInspector{position:static;width:auto;margin:16px 0 0}}
+
+/* 产品详情与产品总池同层布局：不覆盖总览指标，滚动时始终随表格可见。 */
+#pool.plm-detail-open>.panel{margin-right:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;column-gap:18px;align-items:start}#pool.plm-detail-open>.panel>.panel-title{grid-column:1/-1}#pool.plm-detail-open>.panel>.table-wrap{grid-column:1;grid-row:2}#pool.plm-detail-open>.panel>#plmProductInspector{position:sticky;right:auto;top:78px;width:auto;max-height:calc(100vh - 96px);grid-column:2;grid-row:2;margin:0;align-self:start;z-index:3}@media(max-width:1100px){#pool.plm-detail-open>.panel{display:block}#pool.plm-detail-open>.panel>#plmProductInspector{position:static;width:auto;margin:16px 0 0}}
+
+/* 每次点击 SKU 后，将详情栏定位到该表格行右侧，而非固定在视窗顶部。 */
+#pool{position:relative}#pool.plm-detail-open>.panel{display:block!important;margin-right:370px!important}#pool #plmProductInspector{position:absolute!important;right:0!important;top:auto;width:340px!important;max-height:none!important;margin:0!important;z-index:5}@media(max-width:1100px){#pool.plm-detail-open>.panel{margin-right:0!important}#pool #plmProductInspector{position:static!important;width:auto!important;margin:16px 0!important}}
+
+/* 选中行的右侧锚点：卡片标题位于行上方，避免行首生硬贴边。 */
+#pool #plmProductInspector{transition:top .16s ease,box-shadow .16s ease}#pool #plmProductInspector:before{content:'';position:absolute;left:-9px;top:104px;width:16px;height:16px;background:#fff;border-left:1px solid #d9e4de;border-bottom:1px solid #d9e4de;transform:rotate(45deg);z-index:-1}
+
+</style>
 </head>
 <body>
 
@@ -136,9 +155,9 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
       <div><h2>产品总池</h2><p>统一查看商品生命周期、门店覆盖率和批量操作入口。</p></div>
       <div class="toolbar">
         <input id="poolSearch" type="search" placeholder="搜索商品、条码、类目">
-        <select id="poolStatusFilter"><option value="">全部状态</option><option>正常在售</option><option>待上新</option><option>待淘汰</option><option>恢复中</option><option>已淘汰</option></select>
+        <select id="poolStatusFilter"><option value="">全部状态</option><option>在售SKU</option><option>上新完成</option><option>淘汰完成</option></select>
         <button id="exportProductPoolBtn" class="btn" type="button">导出当前产品池</button>
-        <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button>
+        <button id="createDraftProductBtn" class="btn primary">新增新品草稿</button><button id="repairCompletedLaunchBtn" class="btn" type="button" hidden>整理已完成上新入池</button>
       </div>
     </div>
     <div id="poolTable" class="table-wrap"></div>
@@ -182,10 +201,10 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
     <aside class="panel side-note">
       <h3>本版会同时测算</h3>
       <ol>
-        <li>承接已释放或待淘汰坑位</li>
+        <li>承接已释放或淘汰执行中的坑位</li>
         <li>利用柜段自然余量直接上新</li>
         <li>压缩相邻低优先级商品排面</li>
-        <li>替换待淘汰或低优先级商品</li>
+        <li>替换淘汰执行中的商品或低优先级商品</li>
         <li>跨柜段移动原商品后腾出连续位置</li>
         <li>不满足硬约束时暂不上新</li>
       </ol>
@@ -210,8 +229,8 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
     </section>
     <aside class="panel side-note">
       <h3>淘汰后的显示</h3>
-      <div class="legend-stack"><span class="legend-chip retire">待淘汰商品</span><span class="legend-chip release">待释放坑位</span><span class="legend-chip free">已释放空位</span></div>
-      <p>商品不会立刻从陈列图消失。完成撤柜前显示“待淘汰”，撤柜后变为带宽度信息的可用坑位。</p>
+      <div class="legend-stack"><span class="legend-chip retire">淘汰执行中商品</span><span class="legend-chip release">待释放坑位</span><span class="legend-chip free">已释放空位</span></div>
+      <p>商品不会立刻从陈列图消失。完成撤柜前显示“淘汰执行中”，撤柜后变为带宽度信息的可用坑位。</p>
     </aside>
   </div>
   <section class="panel"><div class="panel-title"><div><h2>淘汰影响扫描</h2><p>展示每家门店原位置、释放宽度和后续坑位状态。</p></div></div><div id="retireResult" class="table-wrap"><div class="empty">请选择商品并扫描影响。</div></div></section>
@@ -223,7 +242,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
     <section class="panel form-panel">
       <div class="panel-title">
         <div>
-          <h2>恢复待淘汰商品</h2>
+          <h2>恢复淘汰执行中商品</h2>
           <p>逐店判断原位是否仍可使用；原位被占用时再进入多策略重新排位。</p>
         </div>
       </div>
@@ -291,7 +310,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
       </div>
     </div>
     <div id="restoreResult" class="table-wrap">
-      <div class="empty">请选择待淘汰商品并扫描。</div>
+      <div class="empty">请选择淘汰执行中商品并扫描。</div>
     </div>
   </section>
 </section>
@@ -310,7 +329,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
 <section id="tasks" class="view">
   <div id="taskMetrics" class="metric-grid"></div>
   <section class="panel"><div class="panel-title"><div><h2>变更任务中心</h2><p>任务类型永久保留历史；商品当前状态、任务执行状态和完成进度分别展示。</p></div></div><div id="taskTable" class="table-wrap"></div></section>
-  <section class="panel"><div class="panel-title"><div><h2>任务明细</h2><p>点击任务查看门店级变更前后位置。</p></div></div><div id="taskDetail" class="task-detail"><div class="empty">暂无选中任务。</div></div></section>
+  <section class="panel"><div class="panel-title"><div><h2>任务明细</h2><p>点击任务查看门店级变更前后位置。删除只清理任务记录；已完成任务仅允许删除重复历史，不会删除产品池、门店SKU或排柜数据。</p></div></div><div id="taskDetail" class="task-detail"><div class="empty">暂无选中任务。</div></div></section>
 </section>
 
 <section id="planogram" class="view">
@@ -320,7 +339,7 @@ td.name{font-weight:760;min-width:180px}.num{text-align:right;font-variant-numer
       <div class="toolbar"><label class="inline-field">门店<select id="planogramStore"></select></label><button id="openCurrentTaskBtn" class="btn">定位当前任务</button></div>
     </div>
     <div id="planogramMetrics" class="metric-grid compact"></div>
-    <div class="planogram-legend" style="padding:0 20px 14px"><span class="legend-chip base">正常陈列</span><span class="legend-chip retire">待淘汰</span><span class="legend-chip launch">待上新</span><span class="legend-chip" style="background:#efeaff;color:#5c3f9a">恢复中</span><span class="legend-chip free">释放空位</span></div>
+    <div class="planogram-legend" style="padding:0 20px 14px"><span class="legend-chip base">正常陈列</span><span class="legend-chip retire">淘汰执行中</span><span class="legend-chip launch">上新执行中</span><span class="legend-chip" style="background:#efeaff;color:#5c3f9a">恢复中</span><span class="legend-chip free">释放空位</span></div>
     <div class="planogram-layout"><div id="planogramCanvas" class="planogram-canvas"></div><aside id="planogramMonitor" class="planogram-monitor"><div class="empty">点击商品或坑位查看联动详情。</div></aside></div>
   </section>
 </section>
@@ -350,7 +369,11 @@ const PREVIEW_KEY="frozen_product_lifecycle_management_v2";
 const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
 const fmt=(v,d=0)=>num(v).toFixed(d).replace(/\.0+$/,"");
-const keyOf=p=>String(p.barcode||p.name||"").trim();
+const clean=v=>String(v||"").trim();
+const looksBarcode=v=>/^\d{8,18}$/.test(clean(v));
+const identityValues=p=>new Set([p?.barcode,p?.name,p?.productKey,p?.productName].map(clean).filter(Boolean));
+const sameProduct=(a,b)=>[...identityValues(a)].some(v=>identityValues(b).has(v));
+const keyOf=p=>{const values=[...identityValues(p)];return values.find(looksBarcode)||values[0]||""};
 const skuWidth=r=>Math.max(0,num(r.displayCols)*num(r.faceWidth));
 const storeName=s=>typeof s==="string"?s:s.store;
 const dateISO=offset=>{const d=new Date();d.setDate(d.getDate()+offset);return d.toISOString().slice(0,10)};
@@ -406,91 +429,90 @@ async function loadData(){
  if(!data&&isFormalData(window.UNIFIED_CARTON_DATA))data=window.UNIFIED_CARTON_DATA;
  if(!isFormalData(data))throw new Error(FORMAL_DATA_ERROR);
  normalizeData();
- const productCount=allProducts().length;
- document.getElementById("dataStatus").textContent=`${source}｜${data.stores.length}家门店｜${productCount}个商品｜任务完成后同步正式陈列图`;
+ const productCount=allProducts().filter(product=>productStatus(product)!=="淘汰完成").length;
+ document.getElementById("dataStatus").textContent=`${source}｜${data.stores.length}家门店｜${productCount}个在售SKU｜任务完成后同步正式陈列图`;
  notifyParentSize();
 }
 function normalizeData(){
  data.stores=(data.stores||[]).map(s=>typeof s==="string"?{store:s}:s).filter(s=>s.store);
  data.cabinets=(data.cabinets||[]).map((c,i)=>({...c,id:c.id||"cab_"+i,key:c.key||`${c.store}__${c.label}__${c.position}`,length:num(c.length)||710,depth:num(c.depth)||534,height:num(c.height)||250}));
- data.skus=(data.skus||[]).filter(r=>r.included!==false);
+ data.skus=Array.isArray(data.skus)?data.skus:[];
  if(!Array.isArray(data.productPool)||!data.productPool.length){
   const m=new Map();data.skus.forEach(r=>{const k=keyOf(r);if(k&&!m.has(k))m.set(k,{...r,id:"pool_"+m.size,active:true})});data.productPool=[...m.values()];
  }
 }
+function lifecycleBridge(){return window.parent&&window.parent!==window?window.parent.ProductLifecycle:null}
 function allProducts(){
- const map=new Map();[...(data?.productPool||[]),...(state.draftProducts||[])].forEach(p=>{const k=keyOf(p);if(k&&!map.has(k))map.set(k,p)});
+ const shared=lifecycleBridge()?.getFormalProducts?.();
+ if(Array.isArray(shared))return shared;
+ const map=new Map();(data?.productPool||[]).forEach(p=>{const k=keyOf(p);if(k&&!map.has(k))map.set(k,p)});
  return [...map.values()];
 }
-function productByKey(k){return allProducts().find(p=>keyOf(p)===k)}
-function rowsForProduct(k){return data.skus.filter(r=>keyOf(r)===k)}
+function productByKey(k){
+ const probe={productKey:k};
+ return lifecycleBridge()?.findProduct?.(probe)||allProducts().find(p=>sameProduct(p,probe))||(state.draftProducts||[]).find(p=>sameProduct(p,probe));
+}
+function rowsForProduct(k){const probe={productKey:k};return data.skus.filter(r=>r.included!==false&&sameProduct(r,probe))}
 function currentStoreRows(store){
  const removedStatuses=new Set(["已释放未分配","已预留给新品"]);
- const removedIds=new Set(state.slots.filter(s=>s.store===store&&removedStatuses.has(s.status)).map(s=>s.originalSkuId));
- return data.skus.filter(r=>r.store===store&&!removedIds.has(r.id));
+ const removedIds=new Set(state.slots.filter(s=>s.store===store&&removedStatuses.has(s.status)).map(s=>String(s.originalSkuId)));
+ const seen=new Set();
+ return data.skus.filter(r=>{
+  if(r.store!==store||r.included===false||removedIds.has(String(r.id))||productStatus(r)==="淘汰完成")return false;
+  const key=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):String(r.id||[keyOf(r),r.cabinetKey,r.position].join("||"));
+  if(seen.has(key))return false;seen.add(key);return true;
+ });
 }
 function launchTaskRows(store){
- return state.tasks.filter(t=>t.type==="上新"&&t.status!=="已撤销").flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="位置冲突已撤销").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
+ return state.tasks.filter(t=>t.type==="上新"&&!['已完成','已撤销','已撤回'].includes(t.status)).flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="位置冲突已撤销").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
 }
 function restoreTaskRows(store){
  return state.tasks.filter(t=>t.type==="恢复"&&!["已撤销"].includes(t.status)).flatMap(t=>t.rows.filter(r=>r.store===store&&r.status!=="暂不恢复").map(r=>({...r,taskId:t.id,taskStatus:t.status})));
 }
+function productAliases(p){return new Set([String(p?.barcode||"").trim(),String(p?.name||"").trim()].filter(Boolean))}
 function productStatus(p){
- const k=keyOf(p);
- const ignored=new Set(["已撤销","部分撤销"]);
- const latest=state.tasks.find(t=>t.productKey===k&&!ignored.has(t.status));
- if(latest){
-  if(latest.type==="恢复"){
-   if(latest.status==="已完成")return "正常在售";
-   if(latest.status==="已撤销")return "待淘汰";
-   return "恢复中";
-  }
-  if(latest.type==="淘汰"){
-   if(["已撤回","部分撤回"].includes(latest.status))return latest.status==="已撤回"?"正常在售":"恢复中";
-   if(latest.status==="已完成")return "已淘汰";
-   return "待淘汰";
-  }
-  if(latest.type==="上新"){
-   return latest.status==="已完成"?"正常在售":"待上新";
-  }
- }
- if(state.draftProducts.some(x=>keyOf(x)===k))return "待上新";
- if(p.active===false)return "已淘汰";
- return "正常在售";
+ const shared=lifecycleBridge()?.getProductStatus?.(p);if(typeof shared==="string")return shared;
+ if(p?.active===false||["淘汰完成","已淘汰"].includes(p?.lifecycleStatus))return "淘汰完成";
+ return p?.lifecycleStatus==="上新完成"?"上新完成":"在售SKU";
 }
 function coverageCount(k){
- const set=new Set();
- currentStores().forEach(s=>{
-  if(currentStoreRows(s).some(r=>keyOf(r)===k)||launchTaskRows(s).some(r=>r.productKey===k&&r.taskStatus==="已完成"))set.add(s);
- });
+ const probe={productKey:k},set=new Set();
+ currentStores().forEach(store=>{if(currentStoreRows(store).some(row=>sameProduct(row,probe)))set.add(store)});
  return set.size;
 }
 function currentStores(){return data.stores.map(storeName)}
 function gradeTag(g){const x=String(g||"").toLowerCase();return `<span class="tag ${x}">${esc(g||"未评级")}</span>`}
-function statusTag(s){const cls=s==="正常在售"?"status-normal":s==="待上新"?"status-launch":s==="待淘汰"?"status-retire":s==="恢复中"?"status-restore":"status-archived";return `<span class="tag ${cls}">${esc(s)}</span>`}
+function statusTag(s){const cls=s==="在售SKU"?"status-normal":["上新完成","上新执行中"].includes(s)?"status-launch":["淘汰完成"].includes(s)?"status-archived":s==="淘汰执行中"?"status-retire":"status-restore";return `<span class="tag ${cls}">${esc(s)}</span>`}
 function metric(label,value,sub="",cls=""){return `<div class="metric ${cls}"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`}
 function table(cols,rows){
  if(!rows.length)return `<div class="empty">没有匹配数据。</div>`;
  return `<table><thead><tr>${cols.map(c=>`<th>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>${rows.map((r,i)=>`<tr>${cols.map(c=>`<td class="${c.cls||""}">${c.render?c.render(r,i):esc(r[c.key])}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
-}
-function switchView(id){
+}function switchView(id){
  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===id));
  window.scrollTo({top:0,behavior:"auto"});
- if(id==="planogram")renderPlanogram();
+ renderAll(id);
+ requestAnimationFrame(notifyParentSize);
 }
-function renderAll(){
- renderSelectors();renderPool();renderRestore();renderSlots();renderTasks();renderPlanogram();
+function renderCurrentView(id){
+ const view=id||document.querySelector(".tabs button.active")?.dataset.view||"pool";
+ const renderers={pool:renderPool,launch:renderLaunchResult,retire:renderRetireResult,restore:renderRestore,slots:renderSlots,tasks:renderTasks,planogram:renderPlanogram};
+ (renderers[view]||renderPool)();
+}
+function renderAll(id){
+ renderSelectors();renderCurrentView(id);
 }
 function renderSelectors(){
  const products=allProducts().sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
- const opts=products.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(p.category4||p.category3||"未分类")}</option>`).join("");
+ const launchProducts=[...products,...(state.draftProducts||[]).filter(draft=>!products.some(product=>sameProduct(product,draft)))].sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
+ const launchOpts=launchProducts.map(p=>`<option value="${esc(keyOf(p))}">${esc(looksBarcode(p.name)?p.barcode:p.name)}｜${esc(p.category4||p.category3||"未分类")}</option>`).join("");
+ const formalOpts=products.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(p.category4||p.category3||"未分类")}</option>`).join("");
  const lp=document.getElementById("launchProduct"),rp=document.getElementById("retireProduct"),xrp=document.getElementById("restoreProduct");
  const lv=lp.value,rv=rp.value,xv=xrp.value;
- lp.innerHTML=opts;rp.innerHTML=opts;
- const restoreProducts=products.filter(p=>state.tasks.some(t=>t.type==="淘汰"&&t.productKey===keyOf(p)&&!["已撤销","已撤回"].includes(t.status)));
- xrp.innerHTML=restoreProducts.length?restoreProducts.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(productStatus(p))}</option>`).join(""):`<option value="">暂无待恢复商品</option>`;
- if(products.some(p=>keyOf(p)===lv))lp.value=lv;
+ lp.innerHTML=launchOpts;rp.innerHTML=formalOpts;
+ const restoreProducts=products.filter(p=>state.tasks.some(t=>t.type==="淘汰"&&sameProduct(t,p)&&!["已撤销","已撤回"].includes(t.status)));
+ xrp.innerHTML=restoreProducts.length?restoreProducts.map(p=>`<option value="${esc(keyOf(p))}">${esc(p.name)}｜${esc(productStatus(p))}</option>`).join(""):`<option value="">暂无可恢复商品</option>`;
+ if(launchProducts.some(p=>keyOf(p)===lv))lp.value=lv;
  if(products.some(p=>keyOf(p)===rv))rp.value=rv;
  if(restoreProducts.some(p=>keyOf(p)===xv))xrp.value=xv;
  const stores=currentStores();
@@ -531,19 +553,31 @@ function renderProductCards(){
  render("retireProductCard",document.getElementById("retireProduct").value);
  render("restoreProductCard",document.getElementById("restoreProduct").value);
 }
+function missingCompletedLaunchTasks(){
+ const products=allProducts();
+ return (state.tasks||[])
+  .filter(task=>task?.type==="上新"&&task?.status==="已完成")
+  .filter(task=>!products.some(product=>sameProduct(product,task)));
+}
 function renderPool(){
- const products=allProducts();const totalStores=currentStores().length;
+ const products=allProducts();
+ const repairBtn=document.getElementById("repairCompletedLaunchBtn");
+ const pendingRepairs=missingCompletedLaunchTasks();
+ if(repairBtn){
+  repairBtn.hidden=!pendingRepairs.length;
+  repairBtn.textContent=pendingRepairs.length?`整理 ${pendingRepairs.length} 个已完成上新入池`:"整理已完成上新入池";
+ }
+ // 统一口径：仅正式产品池；淘汰完成不计入在售。草稿和未完成任务不改变商品状态或统计。
+ const effectiveProducts=products.filter(p=>productStatus(p)!=="淘汰完成");
+ const totalStores=currentStores().length;
  const statuses=products.map(productStatus);
  document.getElementById("poolMetrics").innerHTML=[
-  metric("有效商品",products.filter(p=>p.active!==false).length,"产品池当前可用"),
-  metric("正常在售",statuses.filter(x=>x==="正常在售").length,"未进入变更任务","good"),
-  metric("待上新",statuses.filter(x=>x==="待上新").length,"含新品草稿与任务",""),
-  metric("待淘汰",statuses.filter(x=>x==="待淘汰").length,"等待门店执行","warn"),
-  metric("恢复中",statuses.filter(x=>x==="恢复中").length,"恢复原位或重新排位"),
-  metric("坑位资源",state.slots.length,"释放与预留位置"),
-  metric("进行中任务",state.tasks.filter(t=>!["已完成","已撤销"].includes(t.status)).length,"上新、淘汰与恢复")
- ].join("");
- const q=document.getElementById("poolSearch").value.trim(),sf=document.getElementById("poolStatusFilter").value;
+  metric("在售SKU",effectiveProducts.length,"生命周期产品总池唯一在售口径","good"),
+  metric("上新完成",statuses.filter(x=>x==="上新完成").length,"已完成并纳入在售SKU"),
+  metric("淘汰完成",statuses.filter(x=>x==="淘汰完成").length,"已完成且不计入在售SKU","warn"),
+  metric("进行中任务",state.tasks.filter(task=>!["已完成","已撤销","已撤回"].includes(task.status)).length,"尚未改变商品在售状态"),
+  metric("坑位资源",state.slots.length,"释放与预留位置")
+ ].join(""); const q=document.getElementById("poolSearch").value.trim(),sf=document.getElementById("poolStatusFilter").value;
  const rows=products.filter(p=>{const s=[p.name,p.barcode,p.category3,p.category4].join(" ");return(!q||s.includes(q))&&(!sf||productStatus(p)===sf)}).sort((a,b)=>num(a.rank||9999)-num(b.rank||9999));
  document.getElementById("poolTable").innerHTML=table([
   {name:"商品",cls:"name",render:p=>`<strong>${esc(p.name)}</strong><br><small>${esc(p.barcode||"暂无条码")}</small>`},
@@ -555,10 +589,9 @@ function renderPool(){
   {name:"生命周期",render:p=>statusTag(productStatus(p))},
   {name:"操作",render:p=>{
    const s=productStatus(p),k=esc(keyOf(p));
-   if(s==="待淘汰")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看任务</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">恢复在售</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">继续淘汰</button></div>`;
-   if(s==="恢复中")return `<div class="mini-actions"><button class="mini-btn primary" onclick="openProductTask('${k}','恢复')">查看恢复</button><button class="mini-btn" onclick="prefillRestore('${k}')">调整方案</button></div>`;
-   if(s==="待上新")return `<div class="mini-actions"><button class="mini-btn primary" onclick="prefillLaunch('${k}')">调整上新</button><button class="mini-btn" onclick="openProductTask('${k}','上新')">查看任务</button></div>`;
-   return `<div class="mini-actions"><button class="mini-btn primary" onclick="prefillLaunch('${k}')">上新</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
+   if(s==="淘汰完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','淘汰')">查看淘汰记录</button><button class="mini-btn primary" onclick="prefillRestore('${k}')">恢复在售</button></div>`;
+   if(s==="上新完成")return `<div class="mini-actions"><button class="mini-btn" onclick="openProductTask('${k}','上新')">查看上新记录</button><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
+   return `<div class="mini-actions"><button class="mini-btn danger" onclick="prefillRetire('${k}')">淘汰</button></div>`;
   }}
  ],rows);
 }
@@ -662,20 +695,23 @@ function cabinetRows(store){
  const map=new Map(data.cabinets.filter(c=>c.store===store).map(c=>[c.key,{...c,used:0,items:[]}]));
  currentStoreRows(store).forEach(r=>{const c=map.get(r.cabinetKey);if(c){c.used+=skuWidth(r);c.items.push(r)}});
  launchTaskRows(store).forEach(r=>{if(r.taskStatus!=="已撤销"){const c=map.get(r.cabinetKey);if(c){c.used+=num(r.needWidth);c.items.push(r)}}});
- for(const c of map.values())c.left=Math.max(0,num(c.length)-c.used);
+ for(const c of map.values()){c.used=Number(c.used.toFixed(1));c.left=Number((num(c.length)-c.used).toFixed(1));c.over=c.left<-.5}
  return [...map.values()];
 }
 function isIceProduct(p){return /雪糕|冰品|冰淇淋|甜筒|冰棒|冰杯/.test([p.name,p.category3,p.category4].join(" "))}
 function isIceCabinet(c){return /雪糕|冰品|冰淇淋/.test([c.kind,c.label].join(" "))}
 function orientationFor(p,c){
  const L=num(p.length),W=num(p.width),H=num(p.height);
- const opts=[{face:L,depth:W,h:H,label:"长做陈列面"},{face:W,depth:L,h:H,label:"宽做陈列面"},{face:H,depth:W,h:L,label:"高做陈列面"}].filter(o=>o.face>0&&o.depth>0&&o.h>0);
- const fit=opts.filter(o=>(!c.depth||o.depth<=num(c.depth)+.1)&&(!c.height||o.h<=num(c.height)+.1)).map(o=>{
-  let per=Math.max(1,Math.floor(num(c.depth||o.depth)/o.depth));
-  if(!/立柜/.test(c.kind||c.label))per*=Math.max(1,Math.floor(num(c.height||o.h)/o.h));
+ const vertical=/立柜/.test([c.kind,c.type,c.label].join(" "));
+ const opts=vertical
+  ? [{face:L,depth:H,h:W,label:"长做陈列面"},{face:W,depth:H,h:L,label:"宽做陈列面"}]
+  : [{face:L,depth:W,h:H,label:"长做陈列面"},{face:W,depth:L,h:H,label:"宽做陈列面"}];
+ const fit=opts.filter(o=>o.face>0&&o.depth>0&&o.h>0).filter(o=>(!c.depth||o.depth<=num(c.depth)+.1)&&(!c.height||o.h<=num(c.height)+.1)).map(o=>{
+  let per=Math.max(1,Math.round(num(c.depth||o.depth)/o.depth));
+  if(!vertical)per*=Math.max(1,Math.round(num(c.height||o.h)/o.h));
   return {...o,per};
  }).sort((a,b)=>b.per-a.per||a.face-b.face);
- return fit[0]||{face:Math.min(...[L,W,H].filter(Boolean),100),depth:0,h:0,per:1,label:"尺寸待复核"};
+ return fit[0]||{face:Math.min(...[L,W].filter(Boolean),100),depth:0,h:0,per:1,label:"尺寸待复核"};
 }
 function selectedStores(pickerId){return [...document.querySelectorAll(`#${pickerId} input:checked`)].map(x=>x.value)}
 
@@ -726,7 +762,7 @@ function makeLaunchCandidate(p,store,c,o,cols,method,extra={}){
  if(s.strategy==="category")score+=cat.points*1.7;
  if(s.strategy==="minimal")score+=method==="natural"?32:method==="released"?28:method==="pending"?20:-10;
  if(s.strategy==="external")score+=Math.max(0,38-q.externalL*.5)+cols*4;
- const methodName={released:"承接已释放坑位",pending:"承接待淘汰坑位",natural:"利用柜段自然余量",shrink:"压缩相邻商品排面",replace:"替换低优先级商品",move:"跨柜段调位"}[method]||method;
+ const methodName={released:"承接已释放坑位",pending:"承接淘汰执行中的坑位",natural:"利用柜段自然余量",shrink:"压缩相邻商品排面",replace:"替换低优先级商品",move:"跨柜段调位"}[method]||method;
  const adjustment={released:"无需移动商品",pending:"等待原商品撤柜",natural:"无需移动商品",shrink:"调整1个商品排面",replace:"淘汰并替换1个商品",move:"跨柜移动1个商品"}[method]||"";
  return{
   id:`${store}__${method}__${c.key}__${cols}__${extra.shrinkSkuId||extra.replaceSkuId||extra.moveSkuId||extra.sourceSlotId||""}`,
@@ -1103,7 +1139,7 @@ function renderRetireResult(){
  document.getElementById("retireResult").innerHTML=table([
   {name:"门店",cls:"name",render:r=>esc(r.store)},{name:"原位置",render:r=>`${esc(r.cabinetLabel)} ${esc(r.position)}`},
   {name:"原陈列",render:r=>`${fmt(r.displayCols)}列 × ${fmt(r.faceWidth)}mm`},{name:"释放宽度",render:r=>`<strong>${fmt(r.width)}mm</strong>`},
-  {name:"执行方式",render:r=>esc(document.getElementById("retireMode").selectedOptions[0].textContent)},{name:"坑位后续状态",render:r=>statusTag(target==="待释放"?"待淘汰":"已淘汰")}
+  {name:"执行方式",render:r=>esc(document.getElementById("retireMode").selectedOptions[0].textContent)},{name:"坑位后续状态",render:r=>statusTag(target==="待释放"?"淘汰执行中":"淘汰完成")}
  ],retirePlans);
 }
 function applyRetire(){
@@ -1142,7 +1178,7 @@ function renderSlots(){
  document.getElementById("slotTable").innerHTML=table([
   {name:"坑位编号",render:s=>esc(s.id)},{name:"门店",cls:"name",render:s=>esc(s.store)},{name:"位置",render:s=>`${esc(s.cabinetLabel)} ${esc(s.position)}`},
   {name:"可用宽度",render:s=>`<strong>${fmt(s.width)}mm</strong>`},{name:"释放来源",render:s=>esc(s.originalProduct||"-")},{name:"目标新品",render:s=>esc(s.targetProduct||"-")},
-  {name:"状态",render:s=>statusTag(s.status==="待释放"?"待淘汰":s.status==="已释放未分配"?"已淘汰":"待上新")},
+  {name:"状态",render:s=>statusTag(s.status==="待释放"?"淘汰执行中":s.status==="已释放未分配"?"淘汰完成":"上新执行中")},
   {name:"操作",render:s=>s.status==="待释放"?`<button class="mini-btn primary" onclick="completeSlot('${esc(s.id)}')">模拟撤柜完成</button>`:"-"}
  ],rows);
 }
@@ -1198,8 +1234,13 @@ function taskProgressHtml(task){
  return `<div class="coverage"><div class="coverage-bar"><i style="width:${p.pct}%"></i></div><span>${p.done}/${p.total}</span></div>`;
 }
 function taskProductStatus(task){
- const p=productByKey(task.productKey);
- return p?productStatus(p):(task.type==="恢复"&&task.status==="已完成"?"正常在售":task.type==="淘汰"&&task.status==="已完成"?"已淘汰":"-");
+ if(task.status==="已完成"){
+  if(task.type==="上新")return "上新完成";
+  if(task.type==="淘汰")return "淘汰完成";
+  if(task.type==="恢复")return "在售SKU";
+ }
+ const p=productByKey(task.productKey)||productByKey(task.productName);
+ return p?productStatus(p):"在售SKU";
 }
 
 function renderTasks(){
@@ -1221,18 +1262,33 @@ function renderTasks(){
   {name:"任务执行状态",render:t=>taskExecutionTag(t)},
   {name:"完成进度",render:t=>taskProgressHtml(t)},
   {name:"计划日期",render:t=>esc(t.date||"-")},
-  {name:"创建时间",render:t=>esc(t.createdAt)}
+  {name:"创建时间",render:t=>esc(t.createdAt)},
+  {name:"操作",render:t=>`<button class="mini-btn danger" type="button" data-delete-task="${esc(t.id)}">删除记录</button>`}
  ],tasks);
  renderTaskDetail();
 }
 function showTask(id){selectedTaskId=id;renderTaskDetail()}
+function taskSameProduct(a,b){return sameProduct(a,b)||sameProduct({productKey:a?.productKey,productName:a?.productName,barcode:a?.barcode,name:a?.productName},{productKey:b?.productKey,productName:b?.productName,barcode:b?.barcode,name:b?.productName})}
+function deleteTask(id){
+ const index=state.tasks.findIndex(x=>x.id===id);if(index<0)return;
+ const task=state.tasks[index];
+ const terminal=["已完成","已撤销","已撤回"].includes(task.status);
+ const hasCompletedPeer=state.tasks.some((other,i)=>i!==index&&other.status==="已完成"&&other.type===task.type&&taskSameProduct(task,other));
+ if(terminal&&task.status==="已完成"&&!hasCompletedPeer){toast("该已完成任务是此SKU唯一的完成事实，不能删除；请保留产品池与排柜数据。");return}
+ const message=terminal?"确认删除这条任务历史记录吗？产品池、门店SKU、排柜和图片不会被删除。":"确认删除这条未完成任务吗？仅清理任务记录及其未执行的坑位预留，不会删除产品。";
+ if(!window.confirm(message))return;
+ if(!terminal)state.slots=(state.slots||[]).filter(slot=>slot.taskId!==id);
+ state.tasks.splice(index,1);
+ if(selectedTaskId===id)selectedTaskId=state.tasks[0]?.id||null;
+ saveState();renderAll();toast("任务记录已删除，业务数据保持不变");
+}
 function renderTaskDetail(){
  const el=document.getElementById("taskDetail"),t=state.tasks.find(x=>x.id===selectedTaskId)||state.tasks[0];
  if(!t){el.innerHTML='<div class="empty">暂无任务。</div>';return}
  selectedTaskId=t.id;
  const terminal=["已完成","已撤销","已撤回"].includes(t.status);
  const progress=taskProgress(t);
- el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" onclick="completeTask('${esc(t.id)}')" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button></div></div>`+
+ el.innerHTML=`<div class="task-head"><div><h3>${esc(taskTypeLabel(t.type))}｜${esc(t.productName)}</h3><p>${esc(t.id)} · 商品当前状态：${esc(taskProductStatus(t))} · 任务状态：${esc(taskExecutionLabel(t))} · 进度：${progress.done}/${progress.total} · 计划日期 ${esc(t.date||"-")}</p></div><div class="toolbar"><button class="btn success" type="button" data-complete-task="${esc(t.id)}" ${terminal?"disabled":""}>模拟全部门店完成</button><button class="btn" onclick="focusTask('${esc(t.id)}')">在陈列图查看</button><button class="btn danger" type="button" data-delete-task="${esc(t.id)}">删除记录</button></div></div>`+
  table([
   {name:"门店",cls:"name",render:r=>esc(r.store)},
   {name:"位置",render:r=>`${esc(r.cabinetLabel||"-")} ${esc(r.position||"")}`},
@@ -1243,6 +1299,12 @@ function renderTaskDetail(){
 }
 function completeTask(id){
  const t=state.tasks.find(x=>x.id===id);if(!t)return;
+ const validation=lifecycleBridge()?.validateTaskCompletion?.(t);
+ if(validation&&validation.ok===false){
+  const first=validation.errors?.[0];
+  toast(`无法完成：${first?.store||"门店"} ${first?.cabinet||"柜段"} 容量不足（剩余${fmt(first?.left)}mm，需要${fmt(first?.need)}mm），请重新生成排位方案`);
+  return;
+ }
  t.status="已完成";
  if(t.type==="上新"){
   (t.rows||[]).forEach(r=>r.status="上新完成");
@@ -1284,8 +1346,8 @@ function renderPlanogram(){
  const adjustmentCount=new Set([...shrinkById.keys(),...replaceById.keys(),...moveById.keys()]).size;
  document.getElementById("planogramMetrics").innerHTML=[
   metric("正常陈列",currentStoreRows(store).length,"SKU陈列行"),
-  metric("待淘汰/替换",pendingRetire.length+replaceById.size,"保留原商品状态","warn"),
-  metric("待上新",launches.filter(x=>x.taskStatus!=="已完成").length,"虚拟新品块"),
+  metric("淘汰执行中/替换",pendingRetire.length+replaceById.size,"保留原商品状态","warn"),
+  metric("上新执行中",launches.filter(x=>x.taskStatus!=="已完成").length,"虚拟新品块"),
   metric("联动调整",adjustmentCount+released.length+restores.length,"压缩、替换、移位、恢复","good")
  ].join("");
 
@@ -1318,7 +1380,7 @@ function renderPlanogram(){
       const cols=shrink?num(shrink.shrinkToCols):num(r.displayCols);
       const width=Math.max(num(r.faceWidth),num(r.faceWidth)*Math.max(1,cols));
       let type="base",sub=`${fmt(cols)}列 · ${fmt(width)}mm`,status="正常陈列",kind="商品",task="";
-      if(isRetire){type="retire";status="待淘汰";sub=`待淘汰 · 释放${fmt(skuWidth(r))}mm`}
+      if(isRetire){type="retire";status="淘汰执行中";sub=`淘汰执行中 · 释放${fmt(skuWidth(r))}mm`}
       if(replace){type="replace";status="待替换";sub=`待替换 → ${replace.productName}`;task=replace.taskId}
       if(shrink){type="adjusted";status="排面调整";sub=`${fmt(shrink.shrinkFromCols)}列→${fmt(shrink.shrinkToCols)}列 · 释放${fmt(r.faceWidth)}mm`;task=shrink.taskId}
       if(moved){type="move";status="跨柜调位";sub=`由${r._movePlan.moveFromLabel} ${r._movePlan.moveFromPosition}移入`;task=r._movePlan.taskId}
@@ -1341,15 +1403,22 @@ function renderPlanogram(){
 }
 
 function showMonitor(d){
- const mapped=d.status==="正常陈列"||d.status==="已完成上新"?"正常在售":d.status==="待淘汰"||d.status==="待替换"?"待淘汰":d.status==="恢复待执行"?"恢复中":d.status==="待门店执行"||d.status==="排面调整"||d.status==="跨柜调位"?"待上新":"已淘汰";
+ const mapped=d.status==="正常陈列"||d.status==="已完成上新"?"在售SKU":d.status==="待淘汰"||d.status==="待替换"?"淘汰执行中":d.status==="恢复待执行"?"恢复中":d.status==="待门店执行"||d.status==="排面调整"||d.status==="跨柜调位"?"上新执行中":"淘汰完成";
  document.getElementById("planogramMonitor").innerHTML=`<h3 class="monitor-title">${esc(d.product||d.kind)}</h3><div class="monitor-status">${statusTag(mapped)}</div><dl class="monitor-grid"><dt>对象类型</dt><dd>${esc(d.kind)}</dd><dt>门店</dt><dd>${esc(d.store)}</dd><dt>陈列柜</dt><dd>${esc(d.cabinet)}</dd><dt>具体位置</dt><dd>${esc(d.position)}</dd><dt>当前联动状态</dt><dd>${esc(d.status)}</dd><dt>占用/释放宽度</dt><dd>${fmt(d.width)}mm</dd><dt>类目/用途</dt><dd>${esc(d.category||"-")}</dd><dt>关联任务</dt><dd>${esc(d.task||"无")}</dd></dl><div class="monitor-note">${esc(d.change||"该区域与产品池状态、任务中心和坑位资源池使用同一套预览状态。")}</div>`;
 }
 window.prefillLaunch=k=>{switchView("launch");document.getElementById("launchProduct").value=k;renderStorePickers();renderProductCards()};
 window.prefillRetire=k=>{switchView("retire");document.getElementById("retireProduct").value=k;renderStorePickers();renderProductCards()};
-window.completeSlot=completeSlot;window.showTask=showTask;window.completeTask=completeTask;window.focusTask=focusTask;
+window.completeSlot=completeSlot;window.showTask=showTask;window.completeTask=completeTask;window.deleteTask=deleteTask;window.focusTask=focusTask;
 
 function bind(){
  document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>switchView(b.dataset.view));
+ document.getElementById("taskTable").onclick=e=>{const remove=e.target.closest("[data-delete-task]");if(remove){e.stopPropagation();deleteTask(remove.dataset.deleteTask)}};
+ document.getElementById("taskDetail").onclick=e=>{
+  const remove=e.target.closest("[data-delete-task]");
+  if(remove){e.stopPropagation();deleteTask(remove.dataset.deleteTask);return}
+  const button=e.target.closest("[data-complete-task]");
+  if(button&&!button.disabled)completeTask(button.dataset.completeTask);
+ };
  ["poolSearch","poolStatusFilter"].forEach(id=>document.getElementById(id).oninput=renderPool);
  ["slotSearch","slotStatusFilter"].forEach(id=>document.getElementById(id).oninput=renderSlots);
  document.getElementById("launchProduct").onchange=()=>{renderStorePickers();renderProductCards();launchPlans=[];renderLaunchResult()};
@@ -1366,6 +1435,16 @@ function bind(){
  document.getElementById("planogramStore").onchange=renderPlanogram;
  document.getElementById("openCurrentTaskBtn").onclick=()=>{if(selectedTaskId)focusTask(selectedTaskId);else toast("请先在任务中心选择任务")};
  document.getElementById("exportProductPoolBtn").onclick=exportProductPoolXlsx;
+ document.getElementById("repairCompletedLaunchBtn").onclick=()=>{
+  const repair=window.parent?.ProductLifecycle?.repairCompletedLaunchTasks?.();
+  if(!repair?.ok){toast(repair?.message||"暂时无法执行修复");return;}
+  if(repair.promoted?.length){
+   state=loadState();
+   data=window.parent?.ProductLifecycle?.getData?.()||data;
+   normalizeData();renderAll();notifyParentSize();
+   toast(`${repair.promoted.length} 个已完成上新SKU已纳入产品总池，请到“云端协作”手动保存`);
+  }else toast(repair.message||"没有可补齐的SKU");
+ };
  document.getElementById("createDraftProductBtn").onclick=()=>document.getElementById("draftProductDialog").showModal();
  document.getElementById("closeDraftDialog").onclick=document.getElementById("cancelDraftProduct").onclick=()=>document.getElementById("draftProductDialog").close();
  document.getElementById("draftProductForm").onsubmit=e=>{e.preventDefault();const f=new FormData(e.currentTarget);const p=Object.fromEntries(f.entries());["length","width","height","carton","volume"].forEach(k=>p[k]=num(p[k]));if(!p.volume)p.volume=p.length*p.width*p.height/1e6;p.id="draft_"+Date.now();p.active=true;p.rank=9999;state.draftProducts.push(p);saveState();document.getElementById("draftProductDialog").close();e.currentTarget.reset();renderAll();prefillLaunch(keyOf(p));toast("新品草稿已加入产品总池")};
@@ -1380,12 +1459,24 @@ state={draftProducts:[],tasks:[],slots:[],committedPatches:[]};launchPlans=[];re
 function notifyParentSize(){
  try{
   if(window.parent!==window){
-   window.parent.postMessage({type:"plm:resize",height:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)},"*");
+   window.parent.postMessage({type:"plm:resize",height:document.body.scrollHeight},"*");
   }
  }catch(e){}
 }
 window.addEventListener("message",e=>{
  const msg=e.data||{};
+ if(msg.type==="plm:state-hydrated"||msg.type==="plm:data-refreshed"){
+  state=loadState();
+  data=window.parent?.ProductLifecycle?.getData?.()||data;
+  normalizeData();
+  launchPlans=[];retirePlans=[];restorePlans=[];
+  renderAll();notifyParentSize();
+ } if(msg.type==="plm:products-repaired"){
+  state=loadState();
+  data=window.parent?.ProductLifecycle?.getData?.()||data;
+  normalizeData();renderAll();notifyParentSize();
+  if(msg.promoted?.length)toast(`${msg.promoted.length} 个已完成上新SKU已纳入产品总池，请手动保存云端`);
+ }
  if(msg.type==="plm:set-store"&&msg.store){
   const select=document.getElementById("planogramStore");
   if(select&&[...select.options].some(o=>o.value===msg.store)){
@@ -1402,6 +1493,74 @@ if("ResizeObserver" in window){
 (async function init(){
  document.getElementById("launchDate").value=dateISO(7);document.getElementById("retireDate").value=dateISO(7);document.getElementById("restoreDate").value=dateISO(7);
  bind();try{await loadData();renderAll();notifyParentSize();}catch(error){showFormalDataError(error);}
+})();
+</script>
+<script id="lifecycle-product-detail-inline">
+(() => {
+  const pool = document.getElementById('poolTable');
+  const section = document.getElementById('pool');
+  if (!pool || !section) return;
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const productKey = p => String(p.barcode || p.name || '').trim();
+  const imageKey = p => `product::${productKey(p)}`;
+  const numeric = new Set(['carton','dailyQty','faceWidth']);
+  const products = () => typeof allProducts === 'function' ? allProducts() : [];
+  const findProduct = name => products().find(p => p.name === name);
+  const db = () => new Promise((resolve, reject) => { const r = indexedDB.open('frozen-carton-product-images', 1); r.onupgradeneeded = () => r.result.createObjectStore('images', { keyPath:'key' }); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
+  const getImage = async key => { try { const d = await db(); return await new Promise((resolve, reject) => { const r = d.transaction('images').objectStore('images').get(key); r.onsuccess = () => resolve(r.result?.file || null); r.onerror = () => reject(r.error); }); } catch { return null; } };
+const putImage = async (key, file) => { const d = await db(); return new Promise((resolve, reject) => { const r = d.transaction('images','readwrite').objectStore('images').put({ key, file, updatedAt:Date.now() }); r.onsuccess = resolve; r.onerror = () => reject(r.error); }); };
+  const toCloudImage = file => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = () => reject(reader.error); reader.onload = () => { const img = new Image(); img.onerror = () => resolve(reader.result); img.onload = () => { const max = 360, ratio = Math.min(1, max / Math.max(img.width, img.height)); const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(img.width * ratio)); canvas.height = Math.max(1, Math.round(img.height * ratio)); canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height); resolve(canvas.toDataURL('image/jpeg', .70)); }; img.src = reader.result; }; reader.readAsDataURL(file); });
+  const syncImage = async (product, file) => { const imageData = await toCloudImage(file); await putImage(imageKey(product), file); const saved = window.parent?.ProductLifecycle?.updateProduct?.(productKey(product), { imageData }); if (!saved) throw new Error('图片未写入产品总池'); return imageData; };
+  let selected = null;
+  const picker = document.createElement('input'); picker.type = 'file'; picker.accept = 'image/*'; picker.hidden = true; document.body.appendChild(picker);
+
+async function renderImage(p) {
+    const slot = document.querySelector('#plmProductInspector .plm-image'); if (!slot) return;
+    const file = p.imageData ? null : await getImage(imageKey(p));
+    const src = p.imageData || (file ? URL.createObjectURL(file) : '');
+    slot.innerHTML = src ? `<button id="plmReplaceImage" type="button"><img src="${esc(src)}" alt="${esc(p.name)}"><span>更换图片</span></button>` : `<button id="plmUploadImage" type="button">上传商品图片</button>`;
+    slot.querySelector('button').onclick = () => picker.click();
+  }
+  function field(label, name, value, type='text') { return `<label class="plm-edit-field"><span>${label}</span><input data-field="${name}" type="${type}" value="${esc(value ?? '')}"></label>`; }
+  async function show(p, rowEl) {
+    selected = p;
+    let aside = document.getElementById('plmProductInspector');
+    if (!aside) { aside = document.createElement('aside'); aside.id = 'plmProductInspector'; section.appendChild(aside); section.classList.add('plm-detail-open'); }
+    const panel = section.querySelector('.panel');
+    const rowTop = rowEl ? rowEl.getBoundingClientRect().top - section.getBoundingClientRect().top : 300;
+    const panelTop = panel ? panel.getBoundingClientRect().top - section.getBoundingClientRect().top : 300;
+    // 详情卡片以选中行作为锚点，但让标题略高于行，避免卡片像从该行向下坠落。
+    const detailTop = Math.max(panelTop + 58, rowTop - 88);
+    aside.style.top = Math.round(detailTop) + 'px';
+    const coverage = typeof coverageCount === 'function' ? coverageCount(productKey(p)) : '—';
+    const row = typeof rowsForProduct === 'function' ? rowsForProduct(productKey(p))[0] : null;
+    const faceWidth = p.faceWidth ?? row?.faceWidth ?? 0;
+    aside.innerHTML = `<div class="plm-detail-head"><div class="plm-image"></div><div><h3>${esc(p.name)}</h3><p>${esc(p.barcode || '暂无条码')}</p><span>产品总池 · 统一维护</span></div><button id="plmCloseDetail" type="button">关闭</button></div>
+      <section><h4>商品资料（修改后同步所有模块）</h4><div class="plm-edit-grid">
+      ${field('产品名称','name',p.name)}${field('等级','grade',p.grade)}${field('条码','barcode',p.barcode)}${field('三级类目','category3',p.category3)}${field('箱规','carton',p.carton,'number')}${field('日均销量','dailyQty',p.dailyQty,'number')}${field('单列占宽 mm','faceWidth',faceWidth,'number')}</div>
+      <button id="plmSaveProduct" class="plm-save-product" type="button">保存并同步全部门店 / 陈列图</button></section>
+      <section><h4>覆盖信息</h4><dl><div><dt>尺寸</dt><dd>${esc(p.length)}×${esc(p.width)}×${esc(p.height)}mm</dd></div><div><dt>门店覆盖</dt><dd>${esc(coverage)}</dd></div></dl><p>风险和排柜调整请在“商品明细”中按具体门店执行。</p></section>`;
+// 内容渲染完成后，用实际卡片高度让“信息栏中部”与被点击 SKU 行对齐。
+    requestAnimationFrame(() => {
+      const rowCenter = rowTop + (rowEl?.getBoundingClientRect().height || 44) / 2;
+      const minTop = panelTop + 58;
+      aside.style.top = Math.round(Math.max(minTop, rowCenter - aside.offsetHeight / 2)) + 'px';
+    });    aside.querySelector('#plmCloseDetail').onclick = () => { aside.remove(); section.classList.remove('plm-detail-open'); };
+    aside.querySelector('#plmSaveProduct').onclick = () => {
+      const changes = {}; aside.querySelectorAll('[data-field]').forEach(input => { const name = input.dataset.field; changes[name] = numeric.has(name) ? Number(input.value || 0) : input.value.trim(); });
+      const originalKey = productKey(p);
+      if (!changes.name) return alert('产品名称不能为空。');
+      if (window.parent?.ProductLifecycle?.updateProduct?.(originalKey, changes)) {
+        window.parent.postMessage({ type:'plm:product-updated', product:changes.name }, '*');
+      } else alert('商品资料暂时无法保存，请刷新后重试。');
+    };
+    await renderImage(p);
+  }
+picker.onchange = async () => { const file = picker.files?.[0]; if (!file || !selected) return; if (!file.type.startsWith('image/')) return alert('请选择图片文件。'); try { await syncImage(selected, file); picker.value = ''; await renderImage(selected); alert('图片已绑定到当前产品总池。请到“云端协作”手动点击“保存至云端”后，再由伙伴手动拉取。'); } catch (error) { alert('图片保存失败，请重试。'); console.error(error); } };
+  const matchFile = file => { const stem = file.name.replace(/\.[^.]+$/, '').trim(); return products().find(p => stem === p.name || stem === String(p.barcode || '') || stem === `${p.barcode}_${p.name}`) || null; };
+  function openBatch() { const input = document.createElement('input'); input.type='file'; input.accept='image/*'; input.multiple=true; input.onchange=async()=>{ const files=[...input.files].filter(file=>file.type.startsWith('image/')); let count=0; for (const file of files) { const p=matchFile(file); if (p) { await syncImage(p,file); count++; } } if(selected) renderImage(selected); alert(`已绑定 ${count} 张图片；未匹配的图片未写入。请到“云端协作”手动点击“保存至云端”。`); }; input.click(); }
+  function bind() { [...pool.querySelectorAll('tbody tr')].forEach(tr => { const name=tr.querySelector('td:first-child strong')?.textContent.trim() || ''; const p=findProduct(name); if(!p) return; tr.classList.add('plm-product-row'); tr.onclick=e=>{ if(!e.target.closest('button')) show(p, tr); }; }); const toolbar=document.querySelector('#pool .toolbar'); if(toolbar&&!document.getElementById('plmBatchImages')) { const b=document.createElement('button'); b.id='plmBatchImages'; b.className='btn'; b.type='button'; b.textContent='批量上传图片'; b.onclick=openBatch; toolbar.appendChild(b); } }
+  new MutationObserver(() => requestAnimationFrame(bind)).observe(pool,{childList:true,subtree:true}); bind();
 })();
 </script>
 </body>
