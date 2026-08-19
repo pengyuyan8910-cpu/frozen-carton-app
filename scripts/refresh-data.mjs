@@ -6,6 +6,7 @@ import { verifyAppData } from "./verify-app-data.mjs";
 import { writeAppDataWorkbook } from "./app-data-to-workbook.mjs";
 import { expandAcceptedBaselinePayload } from "./accepted-baseline-loader.mjs";
 
+// 2026-08-19：显式触发一次正式底表复核，应用Excel单列占宽与仅新增门店保护。
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceDir = path.join(root, "data", "source");
 const inboxDir = path.join(root, "data", "inbox");
