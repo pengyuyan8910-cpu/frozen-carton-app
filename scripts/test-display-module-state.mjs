@@ -86,4 +86,3 @@ assert.deepEqual(
 assert.equal(moved.state.skus.find((row) => row.id === "order-other").planogramOrder, 0);
 
 console.log("display module state tests passed");
-

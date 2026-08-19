@@ -67,38 +67,36 @@ export function clonePlanogramModule(state, { sourceId, target, layout, idFactor
   if (!source || source.included === false || source.inStaging) {
     return { ok: false, reason: "只能从当前已陈列模块创建新模块" };
   }
-  if (!target?.key || !layout?.faceWidth || !layout?.perCol) {
-    return { ok: false, reason: "目标柜段或目标陈列参数无效" };
-  }
-  const modules = sameStoreSkuModules(state, source, { keyOf });
-  if (modules.some((row) => row.cabinetKey === target.key)) {
-    return { ok: false, reason: "该SKU在目标柜段已有陈列模块" };
-  }
+  const sourceCabinet = (state?.cabinets || []).find((cabinet) => cabinet.key === source.cabinetKey);
+  const sourceTypeText = [sourceCabinet?.kind, sourceCabinet?.type, sourceCabinet?.label, source.cabinetLabel].filter(Boolean).join(" ");
+  const sourceType = target?.kind || target?.type || source.cabinetType || (/立柜/.test(sourceTypeText) ? "立柜" : /卧柜/.test(sourceTypeText) ? "卧柜" : sourceTypeText);
+  const sourceIce = target ? /冰淇淋|雪糕|冰品/.test([target.kind, target.type, target.label].filter(Boolean).join(" ")) : /冰淇淋|雪糕|冰品/.test(sourceTypeText);
   const clone = structuredClone(source);
   clone.id = idFactory ? idFactory(source, target) : `sku_module_${Date.now()}`;
   clone.included = true;
-  clone.inStaging = false;
-  delete clone.stagingCabinetType;
-  delete clone.stagingIce;
-  delete clone.stagingFrom;
-  clone.cabinetKey = target.key;
-  clone.cabinetLabel = target.label || "";
-  clone.position = target.position || "";
+  clone.inStaging = true;
+  clone.stagingCabinetType = sourceType;
+  clone.stagingIce = sourceIce;
+  clone.stagingFrom = {
+    key: source.cabinetKey || "",
+    label: source.cabinetLabel || "",
+    position: source.position || "",
+  };
+  clone.cabinetKey = "";
+  clone.cabinetLabel = "待选区";
+  clone.position = "待选区";
   clone.displayCols = Math.max(1, Number(source.displayCols) || 1);
-  clone.faceOrientation = layout.faceOrientation;
-  clone.faceWidth = Number(layout.faceWidth);
-  clone.perCol = Number(layout.perCol);
-  clone.rowFull = Math.max(0, Math.round(clone.displayCols * clone.perCol));
+  clone.rowFull = Math.max(0, Math.round(clone.displayCols * (Number(source.perCol) || 0)));
   clone.skuFull = undefined;
   clone.placements = [];
   clone.customPlacement = true;
   clone.placementCloneOf = source.id;
-  clone.placementCloneType = target.kind || target.type || "";
+  clone.placementCloneType = "";
   clone.modifiedFields = [...new Set([...(source.modifiedFields || []), "分身陈列"])];
-  clone.changeNote = "同商品多模块陈列";
+  clone.changeNote = "同商品新增待选模块";
   clone.sourceAdvice = "多模块陈列";
-  clone.sourceAction = "新增陈列模块";
-  clone.note = `由 ${source.name || source.barcode || source.id} 生成的跨柜型陈列实例`;
+  clone.sourceAction = "新增模块";
+  clone.note = `由 ${source.name || source.barcode || source.id} 生成的待选陈列模块`;
 
   const next = structuredClone(state);
   next.skus = [...(next.skus || []), clone];
@@ -114,4 +112,3 @@ export function deletePlanogramModule(state, { id, keyOf } = {}) {
   next.skus = (next.skus || []).filter((candidate) => candidate.id !== id);
   return { ok: true, state: next, row };
 }
-

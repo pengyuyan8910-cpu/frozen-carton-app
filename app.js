@@ -233,6 +233,11 @@ function 校验SKU排柜变更(r,k,v){
  const nextCabinetKey=k==="cabinetKey"?String(v):r.cabinetKey;
  const cabinet=状态.cabinets.find(c=>c.key===nextCabinetKey);
  if(!cabinet){alert("未找到目标柜段，修改未保存。");return false}
+ if(k==="cabinetKey"&&r.inStaging){
+  const targetPhysical=物理柜标识(cabinet);
+  const samePhysical=状态.skus.some(row=>row!==r&&row.included&&!row.inStaging&&row.store===r.store&&SKU键(row)===SKU键(r)&&物理柜标识(陈列图来源柜段(row))===targetPhysical);
+  if(samePhysical){alert("修改未保存：该SKU已在同一物理柜中，不能新增到该柜的其他分区。");return false}
+ }
  const nextCols=k==="displayCols"?Math.max(0,数(v)):Math.max(0,数(r.displayCols));
  const nextLayout=(k==="cabinetKey"||k==="faceOrientation")?目标柜型参数(r,cabinet,k==="faceOrientation"?v:陈列面方向值(r),k==="faceOrientation"):null;
  if((k==="cabinetKey"||k==="faceOrientation")&&!nextLayout){alert("修改未保存：该商品的长宽高没有一种水平摆法能放入目标柜段。");return false}
@@ -265,7 +270,7 @@ const r=状态.skus.find(x=>x.id===id);
  const targetLayout=targetCabinet?目标柜型参数(r,targetCabinet,k==="faceOrientation"?v:陈列面方向值(r),k==="faceOrientation"):null;
  if((k==="cabinetKey"||k==="faceOrientation")&&targetCabinet&&!targetLayout){requestAnimationFrame(()=>渲染全部());return false}
  r[k]=v;
- if(k==="cabinetKey"){const cabinet=targetCabinet;if(cabinet){r.cabinetLabel=cabinet.label;r.position=cabinet.position;Object.assign(r,targetLayout)}}
+ if(k==="cabinetKey"){const cabinet=targetCabinet;if(cabinet){r.cabinetLabel=cabinet.label;r.position=cabinet.position;Object.assign(r,targetLayout);if(r.inStaging)清除待选标记(r)}}
  if(k==="faceOrientation"&&targetLayout)Object.assign(r,targetLayout);
  if(k==="faceOrientation"&&!targetCabinet){r.faceWidth=v==="length"?数(r.length):数(r.width)}
  if(["cabinetKey","faceOrientation","faceWidth","displayCols","perCol"].includes(k)){r.customPlacement=true;delete r.widthOverride}
@@ -740,6 +745,7 @@ function 柜段可陈列(c){
 }
 function 待选SKU(store=门店名()){return 纳入SKU(store).filter(r=>r.inStaging)}
 function 陈列图来源柜段(r){return 状态.cabinets.find(c=>c.key===r?.cabinetKey)}
+function 物理柜标识(c){return 文(c?.physicalCabinetKey||c?.cabinetGroupKey||c?.label||c?.cabinetLabel||c?.key)}
 function 陈列图基础校验(r,targetKey,allowSameCabinet=false){
   const source=陈列图来源柜段(r);
   const target=柜段使用().find(c=>c.key===targetKey);
@@ -751,8 +757,13 @@ function 陈列图基础校验(r,targetKey,allowSameCabinet=false){
   const sourceIce=source?是否冰品柜段(source):!!r.stagingIce;
   if(!sourceType)return {ok:false,reason:"待选商品缺少原冰柜类型信息"};
   if(sourceIce!==是否冰品柜段(target))return {ok:false,reason:"冰品与普通冻品不能混放"};
-  const sameModule=状态.skus.some(x=>x.id!==r.id&&x.included&&!x.inStaging&&x.store===r.store&&SKU键(x)===SKU键(r)&&x.cabinetKey===target.key);
-  if(sameModule)return {ok:false,reason:"该SKU在目标柜段已有陈列位置"};
+  const targetPhysical=物理柜标识(target);
+  const samePhysicalModule=r.inStaging&&状态.skus.some(x=>{
+    if(x.id===r.id||!x.included||x.inStaging||x.store!==r.store||SKU键(x)!==SKU键(r))return false;
+    const existing=陈列图来源柜段(x);
+    return 物理柜标识(existing)===targetPhysical;
+  });
+  if(samePhysicalModule)return {ok:false,reason:"该SKU已在同一物理柜中，不能新增到该柜的其他分区"};
   const layout=目标柜型参数(r,target,陈列面方向值(r));
   if(!layout)return {ok:false,reason:"该商品的长宽高没有一种水平摆法能放入目标柜段"};
   return {ok:true,source,target,layout,need:数(r.displayCols)*layout.faceWidth}
@@ -865,41 +876,19 @@ function 同SKU陈列模块(r){
   const key=产品主键(r)||SKU键(r);
   return 状态.skus.filter(x=>x.store===r?.store&&x.included!==false&&(产品主键(x)||SKU键(x))===key);
 }
-function 分身预估外储(store,candidate){
-  const rows=纳入SKU(store).map(r=>({...r}));rows.push({...candidate});
-  const groups=new Map();for(const row of rows){const key=产品主键(row)||SKU键(row)||row.id;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
-  for(const group of groups.values()){const total=group.reduce((sum,row)=>sum+(数(row.rowFull)||满陈(row)),0);group.forEach(row=>{row.skuFull=total})}
-  const ext=rows.map(计算SKU).filter(c=>c.external>0),avg=ext.reduce((sum,c)=>sum+c.avgVol,0),info=状态.stores.find(x=>x.store===store)||{};
-  const p95=avg*数(info.p95Factor||状态.params.p95Factor);
-  return{avg,p95,suggested:Math.ceil(p95*数(状态.params.externalSafetyFactor)),extSku:ext.length}
-}
-function 分身候选SKU(r){
-  if(!r||r.included===false||r.inStaging)return [];
-  const store=r.store||门店名(),cols=Math.max(1,数(r.displayCols)||1);
-  const modules=同SKU陈列模块(r).filter(x=>!x.inStaging);
-  return 柜段使用().filter(c=>c.store===store&&c.key!==r.cabinetKey&&柜段可陈列(c)&&!c.over&&是否冰品SKU(r)===是否冰品柜段(c)).map(c=>{
-    const layout=目标柜型参数(r,c,陈列面方向值(r));if(!layout)return null;
-    const need=cols*数(layout.faceWidth);if(!(need>0&&数(layout.perCol)>0)||need>数(c.left)+0.001)return null;
-    const candidate={...r,included:true,inStaging:false,cabinetKey:c.key,cabinetLabel:c.label,position:c.position,displayCols:cols,...layout,rowFull:Math.max(0,Math.round(cols*数(layout.perCol))),placements:[],customPlacement:true};
-    const projected=分身预估外储(store,candidate);if(projected.suggested>数(状态.params.externalCapL))return null;
-    const sameCategory=modules.some(x=>x.cabinetKey===c.key&&文(x.category4)&&文(x.category4)===文(r.category4));
-    const sameScene=modules.some(x=>x.cabinetKey===c.key&&场景分区(x)===场景分区(r));
-    return{c,layout,candidate,projected,score:(sameCategory?100000:0)+(sameScene?20000:0)-Math.max(0,数(c.left)-need)};
-  }).filter(Boolean).sort((a,b)=>b.score-a.score)
-}
-function 分身SKU到陈列图(id,targetKey=""){
+function 分身SKU到陈列图(id){
   if(!当前是否运营()){alert("新增模块需要先进入运营模式。");return}
-  const source=状态.skus.find(x=>x.id===id),plans=分身候选SKU(source),plan=plans.find(x=>x.c.key===targetKey)||plans[0];
-  if(!source||!plan){alert("当前没有满足产品匹配、柜段余量、满陈或外储上限的可用新增模块位置。请先释放空间或调整排柜。");return}
+  const source=状态.skus.find(x=>x.id===id);
+  if(!source||source.included===false||source.inStaging){alert("只能从当前已陈列模块新增模块。");return}
   const helper=window.DisplayModuleState?.clonePlanogramModule;
   if(!helper){alert("新增模块功能尚未加载，请刷新页面后重试。");return}
-  const result=helper(状态,{sourceId:source.id,target:plan.c,layout:plan.layout,keyOf:x=>产品主键(x)||SKU键(x),idFactory:()=>"sku_module_"+Date.now()+"_"+Math.random().toString(36).slice(2,8)});
+  const result=helper(状态,{sourceId:source.id,keyOf:x=>产品主键(x)||SKU键(x),idFactory:()=>"sku_module_"+Date.now()+"_"+Math.random().toString(36).slice(2,8)});
   if(!result.ok){alert("无法新增模块："+result.reason);return}
   状态.skus=result.state.skus;
   const nextSource=状态.skus.find(x=>x.id===source.id),clone=状态.skus.find(x=>x.id===result.row.id);
-  同步同SKU满陈(nextSource);标记变更(nextSource,"分身陈列","同商品跨柜型分身");标记变更(clone,"分身陈列","同商品跨柜型分身");
-  当前.陈列图选中SKU=clone.id;保存();渲染全部();setTimeout(()=>定位到陈列图商品(clone.id),0);
-  完成提示("已新增同SKU模块："+plan.c.label+" "+plan.c.position+"（"+冰柜类型(plan.c)+"）。原陈列位置保持不变。");
+  同步同SKU满陈(nextSource);标记变更(nextSource,"分身陈列","同商品新增待选模块");标记变更(clone,"分身陈列","同商品新增待选模块");
+  当前.陈列图选中SKU=clone.id;保存();渲染全部();
+  完成提示("已新增同SKU模块，已放入待选区。请手动迁移到目标柜段；同一物理柜内已有该SKU时不能再次放入。");
 }
 function 删除陈列模块(id){
   if(!当前是否运营()){alert("删除陈列模块需要先进入运营模式。");return}
@@ -987,10 +976,9 @@ function 渲染陈列图右侧(){
     const c=计算SKU(selected),externalCls=summary.suggested>数(状态.params.externalCapL)?' bad':' ok';
     const location=selected.inStaging?'待选区':柜名(selected)+' · '+柜位(selected);
     const modules=同SKU陈列模块(selected),moduleIndex=Math.max(0,modules.findIndex(x=>x.id===selected.id))+1;
-    const clonePlans=当前是否运营()&&!selected.inStaging?分身候选SKU(selected):[];
     const moduleRows=modules.map((m,i)=>'<div class="module-row '+(m.id===selected.id?'active':'')+'"><span>模块'+(i+1)+' · '+逃(冰柜类型(陈列图来源柜段(m)))+' · '+逃(m.inStaging?'待选区':柜名(m)+' '+柜位(m))+'</span>'+(当前是否运营()&&modules.length>1?'<button type="button" class="module-delete" data-map-delete-module="'+逃(m.id)+'">删除</button>':'')+'</div>').join('');
-    const cloneOptions=clonePlans.map(plan=>'<button type="button" class="clone-mini" data-map-clone="'+逃(selected.id)+'" data-map-clone-target="'+逃(plan.c.key)+'">新增模块：'+逃(plan.c.label)+' '+逃(plan.c.position)+'（'+逃(冰柜类型(plan.c))+'）</button>').join('');
-    const moduleHtml='<div class="module-management"><div class="module-title"><b>当前SKU陈列模块 '+modules.length+' 个</b><small>当前为模块'+moduleIndex+'</small></div>'+moduleRows+(当前是否运营()&&clonePlans.length?'<div class="module-clone-options"><span>可新增柜段（按目标柜段重新计算满陈）</span>'+cloneOptions+'</div>':'')+'</div>';
+    const cloneButton=当前是否运营()&&!selected.inStaging?'<button type="button" class="clone-mini" data-map-clone="'+逃(selected.id)+'">新增模块</button>':'';
+    const moduleHtml='<div class="module-management"><div class="module-title"><b>当前SKU陈列模块 '+modules.length+' 个</b><small>当前为模块'+moduleIndex+'</small></div>'+moduleRows+(cloneButton?'<div class="module-clone-options"><span>新增后进入待选区，请手动迁移到目标柜段</span>'+cloneButton+'</div>':'')+'</div>';
     selectedHtml='<section class="selection-card selection-card-active"><div class="selection-topline"><span>当前选中 SKU</span><em>陈列图已选中</em></div><div class="selection-head"><span class="tag '+分级(selected.grade)+'">'+逃(selected.grade||'未评级')+'</span><strong>'+逃(selected.name)+'</strong></div><p class="selection-meta">'+逃(selected.barcode||'无条码')+'｜'+逃(selected.category3||'未分类')+' / '+逃(selected.category4||'未分组')+'</p><p class="selection-location">当前位置：'+逃(location)+'</p>'+moduleHtml+'<div class="selection-actions"><button type="button" data-map-locate="'+逃(selected.id)+'">定位陈列图</button>'+(当前是否运营()&&modules.length>1?'<button type="button" class="danger-mini" data-map-delete-module="'+逃(selected.id)+'">删除当前模块</button>':'')+(当前是否运营()?'<button type="button" class="danger-mini" data-map-down="'+逃(selected.id)+'">下架SKU</button>':'')+'</div>'+(当前是否运营()?'<div class="selection-editor"><label>陈列柜段'+选择柜(selected)+'</label><label>陈列面方向'+选择陈列面方向(selected)+'</label><label>陈列列数<input type="number" min="0" step="1" value="'+格(selected.displayCols,0)+'" onchange="改SKU(\''+selected.id+'\',\'displayCols\',this.value)"></label><label>单列容量<input type="number" min="0" step="0.1" value="'+格(selected.perCol,1)+'" onchange="改SKU(\''+selected.id+'\',\'perCol\',this.value)"></label><label>单列占宽mm<input type="number" min="0" step="0.1" value="'+格(selected.faceWidth,1)+'" onchange="改SKU(\''+selected.id+'\',\'faceWidth\',this.value)"></label></div>':'')+'<div class="frozen-metrics"><div><span>箱规</span><b>'+格(selected.carton,0)+'件/箱</b></div><div><span>满陈</span><b>'+格(c.full,0)+'件</b></div><div><span>触发库存</span><b>'+格(c.trigger,0)+'件</b></div><div><span>需外储</span><b>'+格(c.external,0)+'件</b></div><div><span>静态外储</span><b>'+格(c.staticVol,1)+'L</b></div></div><div class="external-watch'+externalCls+'"><b>本店外储联动</b><span>动态P95 '+格(summary.p95,1)+'L</span><span>建议外储 '+格(summary.suggested,0)+'L / 上限 '+格(状态.params.externalCapL,0)+'L</span></div></section>';
   }
   const stagedEmpty=stagedRows.length?(stagedQuery?'没有匹配的待选SKU':'暂无待分配商品'):'暂无待分配商品';
@@ -1003,7 +991,7 @@ function 渲染陈列图右侧(){
   qa("[data-map-select]").forEach(b=>b.onclick=()=>选中陈列图SKU(b.dataset.mapSelect));
   qa("[data-map-locate]").forEach(b=>b.onclick=()=>选中陈列图SKU(b.dataset.mapLocate));
   qa("[data-map-delete-module]").forEach(b=>b.onclick=e=>{e.stopPropagation();删除陈列模块(b.dataset.mapDeleteModule)});
-  qa("[data-map-clone]").forEach(b=>b.onclick=e=>{e.stopPropagation();分身SKU到陈列图(b.dataset.mapClone,b.dataset.mapCloneTarget||"")});
+  qa("[data-map-clone]").forEach(b=>b.onclick=e=>{e.stopPropagation();分身SKU到陈列图(b.dataset.mapClone)});
   qa("[data-map-down]").forEach(b=>b.onclick=()=>陈列图下架SKU(b.dataset.mapDown));
   const search=q("#displayMapPoolSearch");if(search)search.oninput=()=>渲染陈列图右侧();
   const stagingSearch=q("#displayStagingSearch");if(stagingSearch)stagingSearch.oninput=()=>渲染陈列图右侧();
