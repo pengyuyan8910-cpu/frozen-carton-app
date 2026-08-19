@@ -1,30 +1,221 @@
 {
   "passed": true,
-  "generatedAt": "2026-08-19T11:58:09.311Z",
-  "source": "整箱到店数据测算_当前版.xlsx",
-  "version": "10%触发-当前版-自动同步",
+  "generatedAt": "2026-08-19T17:02:13.949Z",
+  "source": "当前67SKU正式产品池 + 统一严格排柜全量重排",
+  "version": "10%触发-最新67SKU-长宽占宽-严格重排-20260820",
   "errors": [],
-  "warnings": [],
+  "warnings": [
+    "已记录大剩余柜段 8 个：蚌埠香榭兰庭生活馆mini-立柜3m-柜1-第3层（剩余330mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）；合肥包河万达生活馆-立柜3m-柜1-第2层（剩余530mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）；淮北上城国际生活馆-立柜3m-柜1-第3层（剩余530mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）；淮南盛港广场生活馆-立柜3m-柜1-第1层（剩余400mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）；无为鼓楼小区生活馆-立柜7.5m-柜8-第1层（剩余450mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）；无为鼓楼小区生活馆-立柜7.5m-柜4-第4层（剩余385mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）；芜湖中御公馆生活馆mini-立柜3m-柜1-第2层（剩余530mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）；芜湖中御公馆生活馆mini-立柜3m-柜3-第1层（剩余450mm；严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位）"
+  ],
   "metrics": {
     "storeCount": 32,
-    "skuRows": 1939,
-    "includedRows": 1939,
+    "skuRows": 2212,
+    "includedRows": 1957,
     "uniqueSkuPool": 67,
     "cabinetRows": 848,
-    "excludedRows": 257,
+    "excludedRows": 255,
     "productPool": 67,
     "overCabinetCount": 0,
-    "largeUsedLeftCount": 0,
-    "reserveEmptySegmentCount": 12,
+    "largeUsedLeftCount": 8,
+    "reserveEmptySegmentCount": 34,
     "newStoreReservedRows": 0,
     "sameTypeSplitCount": 0,
     "iceWrongCount": 0,
-    "maxSuggestedExternalL": 754
+    "maxSuggestedExternalL": 749
   },
   "details": {
     "overCabinets": [],
-    "largeUsedLeft": [],
+    "largeUsedLeft": [
+      {
+        "store": "蚌埠香榭兰庭生活馆mini",
+        "cabinet": "立柜3m-柜1",
+        "position": "第3层",
+        "left": 330,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      },
+      {
+        "store": "合肥包河万达生活馆",
+        "cabinet": "立柜3m-柜1",
+        "position": "第2层",
+        "left": 530,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      },
+      {
+        "store": "淮北上城国际生活馆",
+        "cabinet": "立柜3m-柜1",
+        "position": "第3层",
+        "left": 530,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      },
+      {
+        "store": "淮南盛港广场生活馆",
+        "cabinet": "立柜3m-柜1",
+        "position": "第1层",
+        "left": 400,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      },
+      {
+        "store": "无为鼓楼小区生活馆",
+        "cabinet": "立柜7.5m-柜8",
+        "position": "第1层",
+        "left": 450,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      },
+      {
+        "store": "无为鼓楼小区生活馆",
+        "cabinet": "立柜7.5m-柜4",
+        "position": "第4层",
+        "left": 385,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      },
+      {
+        "store": "芜湖中御公馆生活馆mini",
+        "cabinet": "立柜3m-柜1",
+        "position": "第2层",
+        "left": 530,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      },
+      {
+        "store": "芜湖中御公馆生活馆mini",
+        "cabinet": "立柜3m-柜3",
+        "position": "第1层",
+        "left": 450,
+        "reason": "严格排柜已收敛；当前无可追加且不破坏物理方向、同SKU同柜型及外储约束的SKU，保留空位"
+      }
+    ],
     "reserveEmptySegments": [
+      {
+        "store": "淮南盛港广场生活馆",
+        "cabinet": "立柜3m-柜3",
+        "position": "第3层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜1",
+        "position": "第1层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜1",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜1",
+        "position": "第5层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜2",
+        "position": "第1层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜2",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜2",
+        "position": "第5层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜6",
+        "position": "第1层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜6",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜7",
+        "position": "第5层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜8",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜4",
+        "position": "第1层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜4",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "宁国津河西路生活馆",
+        "cabinet": "立柜7.5m-柜4",
+        "position": "第3层",
+        "length": 710
+      },
+      {
+        "store": "无为鼓楼小区生活馆",
+        "cabinet": "立柜7.5m-柜2",
+        "position": "第4层",
+        "length": 710
+      },
+      {
+        "store": "芜湖镜湖万达生活馆",
+        "cabinet": "立柜3m-柜2",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "芜湖镜湖万达生活馆",
+        "cabinet": "立柜3m-柜3",
+        "position": "第1层",
+        "length": 710
+      },
+      {
+        "store": "芜湖镜湖万达生活馆",
+        "cabinet": "立柜3m-柜3",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "芜湖镜湖万达生活馆",
+        "cabinet": "立柜3m-柜3",
+        "position": "第5层",
+        "length": 710
+      },
+      {
+        "store": "芜湖镜湖万达生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第1层",
+        "length": 710
+      },
+      {
+        "store": "芜湖镜湖万达生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第2层",
+        "length": 710
+      },
+      {
+        "store": "芜湖镜湖万达生活馆",
+        "cabinet": "立柜3m-柜4",
+        "position": "第3层",
+        "length": 710
+      },
       {
         "store": "和县生活馆",
         "cabinet": "立柜3m-柜1",
@@ -102,291 +293,291 @@
     "storeReports": [
       {
         "store": "蚌埠香榭兰庭生活馆mini",
-        "includedSku": 64,
-        "directSku": 37,
-        "externalSku": 27,
-        "dynamicAvgL": 294.4,
-        "dynamicP95L": 385.6,
-        "suggestedExternalL": 463
+        "includedSku": 63,
+        "directSku": 50,
+        "externalSku": 13,
+        "dynamicAvgL": 92.5,
+        "dynamicP95L": 121.2,
+        "suggestedExternalL": 146
       },
       {
         "store": "当涂阳光里生活馆",
         "includedSku": 54,
-        "directSku": 21,
-        "externalSku": 33,
-        "dynamicAvgL": 508.9,
-        "dynamicP95L": 622.9,
-        "suggestedExternalL": 748
+        "directSku": 23,
+        "externalSku": 31,
+        "dynamicAvgL": 365.8,
+        "dynamicP95L": 447.7,
+        "suggestedExternalL": 538
       },
       {
         "store": "固镇新天地生活馆",
-        "includedSku": 67,
-        "directSku": 48,
-        "externalSku": 19,
-        "dynamicAvgL": 235.1,
-        "dynamicP95L": 314.4,
-        "suggestedExternalL": 378
+        "includedSku": 66,
+        "directSku": 59,
+        "externalSku": 7,
+        "dynamicAvgL": 43.1,
+        "dynamicP95L": 57.6,
+        "suggestedExternalL": 70
       },
       {
         "store": "广德悦锦里生活馆",
-        "includedSku": 55,
-        "directSku": 17,
-        "externalSku": 38,
-        "dynamicAvgL": 507.7,
-        "dynamicP95L": 626.3,
-        "suggestedExternalL": 752
+        "includedSku": 54,
+        "directSku": 14,
+        "externalSku": 40,
+        "dynamicAvgL": 402.8,
+        "dynamicP95L": 496.8,
+        "suggestedExternalL": 597
       },
       {
         "store": "合肥包河万达生活馆",
         "includedSku": 67,
-        "directSku": 42,
-        "externalSku": 25,
-        "dynamicAvgL": 225.5,
-        "dynamicP95L": 333.6,
-        "suggestedExternalL": 401
+        "directSku": 58,
+        "externalSku": 9,
+        "dynamicAvgL": 69.9,
+        "dynamicP95L": 103.4,
+        "suggestedExternalL": 125
       },
       {
         "store": "淮北大华步行街生活馆",
         "includedSku": 67,
-        "directSku": 48,
-        "externalSku": 19,
-        "dynamicAvgL": 111.1,
-        "dynamicP95L": 151.7,
-        "suggestedExternalL": 182
+        "directSku": 56,
+        "externalSku": 11,
+        "dynamicAvgL": 73.5,
+        "dynamicP95L": 100.3,
+        "suggestedExternalL": 121
       },
       {
         "store": "淮北华松国际生活馆",
         "includedSku": 65,
-        "directSku": 48,
-        "externalSku": 17,
-        "dynamicAvgL": 136.3,
-        "dynamicP95L": 177.7,
-        "suggestedExternalL": 214
+        "directSku": 52,
+        "externalSku": 13,
+        "dynamicAvgL": 95.9,
+        "dynamicP95L": 125,
+        "suggestedExternalL": 150
       },
       {
         "store": "淮北上城国际生活馆",
         "includedSku": 67,
-        "directSku": 42,
-        "externalSku": 25,
-        "dynamicAvgL": 224.3,
-        "dynamicP95L": 331.5,
-        "suggestedExternalL": 398
+        "directSku": 58,
+        "externalSku": 9,
+        "dynamicAvgL": 60.6,
+        "dynamicP95L": 89.5,
+        "suggestedExternalL": 108
       },
       {
         "store": "淮南盛港广场生活馆",
         "includedSku": 67,
-        "directSku": 42,
-        "externalSku": 25,
-        "dynamicAvgL": 231.4,
-        "dynamicP95L": 318.1,
-        "suggestedExternalL": 382
+        "directSku": 49,
+        "externalSku": 18,
+        "dynamicAvgL": 145.3,
+        "dynamicP95L": 199.7,
+        "suggestedExternalL": 240
       },
       {
         "store": "郎溪东城国际生活馆",
-        "includedSku": 53,
-        "directSku": 18,
-        "externalSku": 35,
-        "dynamicAvgL": 510.3,
-        "dynamicP95L": 618.7,
-        "suggestedExternalL": 743
+        "includedSku": 56,
+        "directSku": 23,
+        "externalSku": 33,
+        "dynamicAvgL": 393.8,
+        "dynamicP95L": 477.5,
+        "suggestedExternalL": 573
       },
       {
         "store": "南陵望宝国际生活馆",
-        "includedSku": 55,
-        "directSku": 15,
-        "externalSku": 40,
-        "dynamicAvgL": 488.1,
-        "dynamicP95L": 614.9,
-        "suggestedExternalL": 738
+        "includedSku": 57,
+        "directSku": 14,
+        "externalSku": 43,
+        "dynamicAvgL": 476.7,
+        "dynamicP95L": 600.5,
+        "suggestedExternalL": 721
       },
       {
         "store": "南陵新天地生活馆",
-        "includedSku": 55,
-        "directSku": 15,
-        "externalSku": 40,
-        "dynamicAvgL": 496.9,
-        "dynamicP95L": 626.6,
-        "suggestedExternalL": 752
+        "includedSku": 56,
+        "directSku": 13,
+        "externalSku": 43,
+        "dynamicAvgL": 419.5,
+        "dynamicP95L": 529.1,
+        "suggestedExternalL": 635
       },
       {
         "store": "宁国津河西路生活馆",
-        "includedSku": 67,
-        "directSku": 46,
-        "externalSku": 21,
-        "dynamicAvgL": 201.2,
-        "dynamicP95L": 286.2,
-        "suggestedExternalL": 344
+        "includedSku": 64,
+        "directSku": 60,
+        "externalSku": 4,
+        "dynamicAvgL": 24.6,
+        "dynamicP95L": 35.1,
+        "suggestedExternalL": 43
       },
       {
         "store": "宁国上乘财富中心生活馆",
-        "includedSku": 52,
-        "directSku": 12,
-        "externalSku": 40,
-        "dynamicAvgL": 498.3,
-        "dynamicP95L": 611.5,
-        "suggestedExternalL": 734
+        "includedSku": 53,
+        "directSku": 8,
+        "externalSku": 45,
+        "dynamicAvgL": 508.5,
+        "dynamicP95L": 624.1,
+        "suggestedExternalL": 749
       },
       {
         "store": "宿州国购广场生活馆",
         "includedSku": 67,
-        "directSku": 21,
-        "externalSku": 46,
-        "dynamicAvgL": 399.1,
-        "dynamicP95L": 481.4,
-        "suggestedExternalL": 578
+        "directSku": 45,
+        "externalSku": 22,
+        "dynamicAvgL": 164.3,
+        "dynamicP95L": 198.2,
+        "suggestedExternalL": 238
       },
       {
         "store": "铜陵北斗星城生活馆",
-        "includedSku": 59,
-        "directSku": 23,
-        "externalSku": 36,
-        "dynamicAvgL": 505.3,
-        "dynamicP95L": 627.4,
-        "suggestedExternalL": 753
+        "includedSku": 57,
+        "directSku": 22,
+        "externalSku": 35,
+        "dynamicAvgL": 367.8,
+        "dynamicP95L": 456.7,
+        "suggestedExternalL": 549
       },
       {
         "store": "无为鼓楼小区生活馆",
-        "includedSku": 64,
-        "directSku": 34,
-        "externalSku": 30,
-        "dynamicAvgL": 367.4,
-        "dynamicP95L": 450.8,
-        "suggestedExternalL": 541
+        "includedSku": 59,
+        "directSku": 43,
+        "externalSku": 16,
+        "dynamicAvgL": 75.5,
+        "dynamicP95L": 92.7,
+        "suggestedExternalL": 112
       },
       {
         "store": "无为松鼠工厂生活馆",
-        "includedSku": 54,
-        "directSku": 13,
+        "includedSku": 55,
+        "directSku": 14,
         "externalSku": 41,
-        "dynamicAvgL": 519.2,
-        "dynamicP95L": 627.6,
-        "suggestedExternalL": 754
+        "dynamicAvgL": 417.3,
+        "dynamicP95L": 504.5,
+        "suggestedExternalL": 606
       },
       {
         "store": "芜湖德盛广场生活馆mini",
-        "includedSku": 47,
-        "directSku": 9,
-        "externalSku": 38,
-        "dynamicAvgL": 495.6,
-        "dynamicP95L": 605.6,
-        "suggestedExternalL": 727
+        "includedSku": 52,
+        "directSku": 11,
+        "externalSku": 41,
+        "dynamicAvgL": 494.8,
+        "dynamicP95L": 604.6,
+        "suggestedExternalL": 726
       },
       {
         "store": "芜湖官山花园生活馆",
-        "includedSku": 56,
-        "directSku": 15,
-        "externalSku": 41,
-        "dynamicAvgL": 509.7,
-        "dynamicP95L": 626.8,
-        "suggestedExternalL": 753
+        "includedSku": 54,
+        "directSku": 14,
+        "externalSku": 40,
+        "dynamicAvgL": 395.8,
+        "dynamicP95L": 486.8,
+        "suggestedExternalL": 585
       },
       {
         "store": "芜湖金鹰生活馆",
         "includedSku": 50,
-        "directSku": 11,
-        "externalSku": 39,
-        "dynamicAvgL": 508.2,
-        "dynamicP95L": 626.5,
-        "suggestedExternalL": 752
+        "directSku": 9,
+        "externalSku": 41,
+        "dynamicAvgL": 452,
+        "dynamicP95L": 557.2,
+        "suggestedExternalL": 669
       },
       {
         "store": "芜湖镜湖万达生活馆",
         "includedSku": 67,
-        "directSku": 57,
-        "externalSku": 10,
-        "dynamicAvgL": 68.4,
-        "dynamicP95L": 112.2,
-        "suggestedExternalL": 135
+        "directSku": 64,
+        "externalSku": 3,
+        "dynamicAvgL": 30.1,
+        "dynamicP95L": 49.4,
+        "suggestedExternalL": 60
       },
       {
         "store": "芜湖三山碧桂园生活馆",
-        "includedSku": 49,
-        "directSku": 12,
-        "externalSku": 37,
-        "dynamicAvgL": 482.6,
-        "dynamicP95L": 590,
-        "suggestedExternalL": 708
+        "includedSku": 55,
+        "directSku": 15,
+        "externalSku": 40,
+        "dynamicAvgL": 452.9,
+        "dynamicP95L": 553.6,
+        "suggestedExternalL": 665
       },
       {
         "store": "芜湖天和苑生活馆",
-        "includedSku": 52,
-        "directSku": 18,
-        "externalSku": 34,
-        "dynamicAvgL": 501,
-        "dynamicP95L": 625.9,
-        "suggestedExternalL": 752
+        "includedSku": 56,
+        "directSku": 23,
+        "externalSku": 33,
+        "dynamicAvgL": 374,
+        "dynamicP95L": 467.2,
+        "suggestedExternalL": 561
       },
       {
         "store": "芜湖阳光之城生活馆",
         "includedSku": 47,
-        "directSku": 9,
-        "externalSku": 38,
-        "dynamicAvgL": 363.2,
-        "dynamicP95L": 436.7,
-        "suggestedExternalL": 525
+        "directSku": 11,
+        "externalSku": 36,
+        "dynamicAvgL": 304.3,
+        "dynamicP95L": 365.8,
+        "suggestedExternalL": 439
       },
       {
         "store": "芜湖中央城生活馆mini",
-        "includedSku": 52,
+        "includedSku": 49,
         "directSku": 9,
-        "externalSku": 43,
-        "dynamicAvgL": 515.8,
-        "dynamicP95L": 626.5,
-        "suggestedExternalL": 752
+        "externalSku": 40,
+        "dynamicAvgL": 426.8,
+        "dynamicP95L": 518.3,
+        "suggestedExternalL": 623
       },
       {
         "store": "芜湖中御公馆生活馆mini",
         "includedSku": 67,
-        "directSku": 42,
-        "externalSku": 25,
-        "dynamicAvgL": 224.3,
-        "dynamicP95L": 343.5,
-        "suggestedExternalL": 413
+        "directSku": 59,
+        "externalSku": 8,
+        "dynamicAvgL": 45.5,
+        "dynamicP95L": 69.7,
+        "suggestedExternalL": 84
       },
       {
         "store": "芜湖左岸生活馆mini",
         "includedSku": 67,
-        "directSku": 47,
-        "externalSku": 20,
-        "dynamicAvgL": 264.9,
-        "dynamicP95L": 363.8,
-        "suggestedExternalL": 437
+        "directSku": 57,
+        "externalSku": 10,
+        "dynamicAvgL": 102.8,
+        "dynamicP95L": 141.2,
+        "suggestedExternalL": 170
       },
       {
         "store": "宣城中锐第一城生活馆",
-        "includedSku": 49,
-        "directSku": 12,
-        "externalSku": 37,
-        "dynamicAvgL": 482.6,
-        "dynamicP95L": 597.2,
-        "suggestedExternalL": 717
+        "includedSku": 55,
+        "directSku": 15,
+        "externalSku": 40,
+        "dynamicAvgL": 452.9,
+        "dynamicP95L": 560.4,
+        "suggestedExternalL": 673
       },
       {
         "store": "和县生活馆",
-        "includedSku": 67,
-        "directSku": 36,
-        "externalSku": 31,
-        "dynamicAvgL": 334.4,
-        "dynamicP95L": 512,
-        "suggestedExternalL": 615
+        "includedSku": 63,
+        "directSku": 55,
+        "externalSku": 8,
+        "dynamicAvgL": 71.5,
+        "dynamicP95L": 109.5,
+        "suggestedExternalL": 132
       },
       {
         "store": "三山星悦广场生活馆",
         "includedSku": 67,
-        "directSku": 39,
-        "externalSku": 28,
-        "dynamicAvgL": 257.2,
-        "dynamicP95L": 393.8,
-        "suggestedExternalL": 473
+        "directSku": 55,
+        "externalSku": 12,
+        "dynamicAvgL": 78.8,
+        "dynamicP95L": 120.7,
+        "suggestedExternalL": 145
       },
       {
         "store": "芜湖凤凰城生活馆",
-        "includedSku": 51,
-        "directSku": 12,
-        "externalSku": 39,
-        "dynamicAvgL": 508.7,
-        "dynamicP95L": 622.6,
-        "suggestedExternalL": 748
+        "includedSku": 46,
+        "directSku": 14,
+        "externalSku": 32,
+        "dynamicAvgL": 348,
+        "dynamicP95L": 425.9,
+        "suggestedExternalL": 512
       }
     ]
   }
