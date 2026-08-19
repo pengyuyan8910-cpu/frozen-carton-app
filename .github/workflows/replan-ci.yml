@@ -6,11 +6,15 @@ on:
       - "bootstrap.js"
       - "package.json"
       - "scripts/strict-allocation-*.mjs"
+      - "scripts/generate-new-store-draft.mjs"
+      - "scripts/source-to-app-data*.mjs"
       - "scripts/product-pool-replan-*.mjs"
       - "scripts/replan-workbook.mjs"
       - "scripts/xlsx-lite.mjs"
+      - "scripts/test-new-store-routing.mjs"
       - "scripts/test-*-replan*.mjs"
       - ".github/workflows/replan-ci.yml"
+      - ".github/workflows/generate-new-store-draft.yml"
       - ".github/workflows/update-data.yml"
   workflow_dispatch:
 
@@ -31,5 +35,7 @@ jobs:
         run: npm install
       - name: 语法检查
         run: npm run check
+      - name: 新增门店统一严格引擎回归测试
+        run: npm run test:new-store-routing
       - name: 产品池重排回归测试
         run: npm run test:replan
