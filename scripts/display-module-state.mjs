@@ -95,9 +95,9 @@ export function clonePlanogramModule(state, { sourceId, target, layout, idFactor
   clone.placementCloneOf = source.id;
   clone.placementCloneType = target.kind || target.type || "";
   clone.modifiedFields = [...new Set([...(source.modifiedFields || []), "分身陈列"])];
-  clone.changeNote = "同商品跨柜型分身";
-  clone.sourceAdvice = "分身陈列";
-  clone.sourceAction = "跨柜型分身";
+  clone.changeNote = "同商品多模块陈列";
+  clone.sourceAdvice = "多模块陈列";
+  clone.sourceAction = "新增陈列模块";
   clone.note = `由 ${source.name || source.barcode || source.id} 生成的跨柜型陈列实例`;
 
   const next = structuredClone(state);
@@ -114,3 +114,4 @@ export function deletePlanogramModule(state, { id, keyOf } = {}) {
   next.skus = (next.skus || []).filter((candidate) => candidate.id !== id);
   return { ok: true, state: next, row };
 }
+
