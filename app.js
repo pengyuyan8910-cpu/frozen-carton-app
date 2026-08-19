@@ -501,7 +501,7 @@ r.customPlacement=true;
 渲染全部();
 切换("allocation");
 完成提示("空位方案已应用：排柜、柜段余量和外储测算已更新。")};
-function 估算陈列面(r,c){const dims=[数(r.length),数(r.width),数(r.height)].filter(x=>x>0);
+function 估算陈列面(r,c){const dims=[数(r.length),数(r.width)].filter(x=>x>0);
 return dims.length?Math.min(...dims):0}
 function 估算单列容量(r,c){const dims=[{face:数(r.width),depth:数(r.length),h:数(r.height)},{face:数(r.length),depth:数(r.width),h:数(r.height)}].filter(o=>o.face>0&&o.depth<=数(c.depth)&&o.h<=数(c.height));
 const best=dims.map(o=>{let per=Math.max(1,Math.floor(数(c.depth)/Math.max(1,o.depth)));
@@ -1074,13 +1074,13 @@ function 新店压缩到可执行(pre){
   if(pre.missing.length)warnings.push('暂不纳入SKU '+pre.missing.length+' 个，已作为解决方案输出，不再让门店自行处理超库容');
   return{ok:errors.length===0,errors,warnings,summary};
 }
-const 原预排新增门店_严格版=预排新增门店;
 预排新增门店=function(store,type,cabs){
   const adapter=globalThis.StrictAllocationAdapter;
   if(adapter?.allocateStore){
     const plan=adapter.allocateStore({store,type,productPool:产品池有效(),cabinets:cabs,params:门店严格参数(store),storeRecord:门店严格记录(store),physicalRecords:[]},{maxIterations:12,maxExpansions:180});
-    const rows=plan.rows.map(r=>({...r,store,included:!!r.included,status:r.included?'新增门店严格测算-纳入':'新增门店严格测算-未排入',sourceAdvice:'新增门店严格测算',sourceAction:r.included?'严格测算纳入':`未排入：${r.reason}`,note:r.included?'严格自动排柜生成':r.reason}));
-    const cabinets=plan.cabinets.map(c=>({...c,used:c.usedWidth,left:c.leftWidth,sourceUsed:c.usedWidth,sourceLeft:c.leftWidth,items:rows.filter(r=>r.included&&r.cabinetKey===c.key)}));
+    const sourceRows=plan.rows||plan.skus||[];
+    const rows=sourceRows.map(r=>({...r,store,included:!!r.included,status:r.included?'新增门店严格测算-纳入':'新增门店严格测算-未排入',sourceAdvice:'新增门店严格测算',sourceAction:r.included?'严格测算纳入':`未排入：${r.reason||r.unplacedReason||'严格引擎未找到合法陈列位'}`,note:r.included?'严格自动排柜生成':(r.reason||r.unplacedReason||'严格引擎未找到合法陈列位')}));
+    const cabinets=(plan.cabinets||[]).map(c=>{const used=c.usedWidth??c.used??c.sourceUsed??0;const left=c.leftWidth??c.left??c.sourceLeft??(数(c.length)-数(used));return{...c,used,left,sourceUsed:used,sourceLeft:left,items:rows.filter(r=>r.included&&(r.cabinetKey===c.key||r.cabinetKey===c.segmentKey))}});
     return {...plan,cabinets,skus:rows,included:rows.filter(r=>r.included),missing:rows.filter(r=>!r.included),strict:true,strictEngine:true,enginePlan:plan,validation:plan.validation};
   }
   throw new Error('严格自动排柜适配层尚未加载，未执行旧版兜底排柜。');

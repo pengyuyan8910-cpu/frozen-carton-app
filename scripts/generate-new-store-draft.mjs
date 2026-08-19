@@ -3,6 +3,25 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sourceToAppData} from './source-to-app-data.mjs';
 import {writeAppDataWorkbook} from './app-data-to-workbook.mjs';
+import {allocateStore} from './strict-allocation-engine.mjs';
+
+function strictSolve(base,cfg){
+ const params={...(base.params||{}),triggerRate:.1,p95Factor:n(base.params?.p95Factor)||1.241748,externalSafetyFactor:1.2,externalCapL:n(cfg.externalCapL)||n(cfg.cap)||754};
+ const enginePlan=allocateStore({store:cfg.name,type:cfg.type||'新店',productPool:base.productPool||[],cabinets:buildCabinets(cfg),params,physicalRecords:[]});
+ const skus=(enginePlan.skus||[]).map(r=>({...r,status:r.included?U.included:U.missing,reason:r.reason||r.unplacedReason||(!r.included?'严格引擎未找到合法陈列位':''),rowFull:r.fullCount||0,skuFull:r.fullCount||0,displayCols:r.displayCols||0,perCol:r.perCol||0,faceWidth:r.faceWidth||0}));
+ const cabinets=(enginePlan.cabinets||[]).map(c=>{const used=c.used??c.sourceUsed??0;const left=c.left??c.sourceLeft??(n(c.length)-n(used));return{...c,used,sourceUsed:used,sourceLeft:left,items:[]}});
+ return{store:enginePlan.store,type:enginePlan.type,cap:enginePlan.params.externalCapL,factor:enginePlan.params.p95Factor,cabinets,skus,included:skus.filter(r=>r.included),missing:skus.filter(r=>!r.included),enginePlan,strict:true};
+}
+
+function strictVerify(p){
+ const validation=p.enginePlan.validation;
+ const summary=p.enginePlan.summary;
+ return{passed:validation.ok,errors:[...validation.errors],warnings:[...validation.warnings],metrics:{skuCount:summary.placedSkuCount,missingSkuCount:summary.unplacedSkuCount,directSku:summary.directSkuCount,externalSku:summary.externalSkuCount,staticExternalL:summary.staticExternalL,dynamicAvgExternalL:summary.avgExternalL,dynamicP95L:summary.p95ExternalL,suggestedExternalL:summary.suggestedExternalL}};
+}
+
+solve=strictSolve;
+verify=strictVerify;
+
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=path.join(root,'data','source','\u6574\u7bb1\u5230\u5e97\u6570\u636e\u6d4b\u7b97_\u5f53\u524d\u7248.xlsx');
 const cfgXlsx=path.join(root,'data','new-store','\u65b0\u589e\u95e8\u5e97\u914d\u7f6e.xlsx');
