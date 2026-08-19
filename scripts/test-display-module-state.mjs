@@ -37,17 +37,8 @@ const baseState = {
   ],
 };
 
-const target = {
-  key: "甲店-立柜-1",
-  label: "立柜1",
-  position: "第1层",
-  kind: "立柜",
-};
-
 const cloned = clonePlanogramModule(baseState, {
   sourceId: "sku-chest",
-  target,
-  layout: { faceOrientation: "width", faceWidth: 180, perCol: 3 },
   idFactory: () => "sku-upright",
 });
 
@@ -55,7 +46,11 @@ assert.equal(cloned.ok, true);
 assert.equal(cloned.state.skus.length, 3);
 assert.equal(cloned.state.skus.filter((row) => row.store === "甲店").length, 2);
 assert.equal(cloned.state.skus.find((row) => row.id === "sku-chest").cabinetKey, "甲店-卧柜-1");
-assert.equal(cloned.row.cabinetKey, "甲店-立柜-1");
+assert.equal(cloned.row.inStaging, true);
+assert.equal(cloned.row.cabinetKey, "");
+assert.equal(cloned.row.cabinetLabel, "待选区");
+assert.equal(cloned.row.position, "待选区");
+assert.equal(cloned.row.stagingFrom.key, "甲店-卧柜-1");
 assert.equal(cloned.row.placementCloneOf, "sku-chest");
 assert.equal(cloned.row.placements.length, 0);
 assert.deepEqual(cloned.state.productPool, baseState.productPool);
@@ -91,3 +86,4 @@ assert.deepEqual(
 assert.equal(moved.state.skus.find((row) => row.id === "order-other").planogramOrder, 0);
 
 console.log("display module state tests passed");
+
