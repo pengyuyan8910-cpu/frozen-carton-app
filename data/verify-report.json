@@ -1,6 +1,6 @@
 {
   "passed": true,
-  "generatedAt": "2026-08-18T11:44:09.587Z",
+  "generatedAt": "2026-08-19T11:32:21.148Z",
   "source": "整箱到店数据测算_当前版.xlsx",
   "version": "10%触发-当前版-自动同步",
   "errors": [],
@@ -8,16 +8,16 @@
     "已记录大剩余柜段 5 个：合肥包河万达生活馆-立柜3m-柜3-第4层（剩余410mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；淮北上城国际生活馆-立柜3m-柜3-第4层（剩余475mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；淮北上城国际生活馆-立柜3m-柜4-第1层（剩余410mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；无为鼓楼小区生活馆-立柜7.5m-柜6-第5层（剩余350mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）；芜湖中御公馆生活馆mini-立柜3m-柜3-第4层（剩余450mm；待按正式Skill执行同四级品类、同三级A/B、外储改善或暂不纳入SKU补位）"
   ],
   "metrics": {
-    "storeCount": 30,
-    "skuRows": 1836,
-    "includedRows": 1836,
+    "storeCount": 32,
+    "skuRows": 1954,
+    "includedRows": 1954,
     "uniqueSkuPool": 67,
-    "cabinetRows": 786,
-    "excludedRows": 242,
+    "cabinetRows": 848,
+    "excludedRows": 258,
     "productPool": 67,
     "overCabinetCount": 0,
     "largeUsedLeftCount": 5,
-    "reserveEmptySegmentCount": 28,
+    "reserveEmptySegmentCount": 36,
     "newStoreReservedRows": 0,
     "sameTypeSplitCount": 0,
     "iceWrongCount": 0,
@@ -228,6 +228,54 @@
       {
         "store": "和县生活馆",
         "cabinet": "立柜3m-柜4",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "三山星悦广场生活馆",
+        "cabinet": "立柜2.25m-柜1",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "三山星悦广场生活馆",
+        "cabinet": "立柜2.25m-柜2",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "三山星悦广场生活馆",
+        "cabinet": "立柜2.25m-柜3",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "芜湖凤凰城生活馆",
+        "cabinet": "立柜4.5m-柜1",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "芜湖凤凰城生活馆",
+        "cabinet": "立柜4.5m-柜2",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "芜湖凤凰城生活馆",
+        "cabinet": "立柜4.5m-柜3",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "芜湖凤凰城生活馆",
+        "cabinet": "立柜4.5m-柜4",
+        "position": "第6层",
+        "length": 710
+      },
+      {
+        "store": "芜湖凤凰城生活馆",
+        "cabinet": "立柜4.5m-柜5",
         "position": "第6层",
         "length": 710
       }
@@ -503,6 +551,24 @@
         "dynamicAvgL": 206.4,
         "dynamicP95L": 316,
         "suggestedExternalL": 380
+      },
+      {
+        "store": "三山星悦广场生活馆",
+        "includedSku": 67,
+        "directSku": 39,
+        "externalSku": 28,
+        "dynamicAvgL": 257.2,
+        "dynamicP95L": 393.8,
+        "suggestedExternalL": 473
+      },
+      {
+        "store": "芜湖凤凰城生活馆",
+        "includedSku": 51,
+        "directSku": 12,
+        "externalSku": 39,
+        "dynamicAvgL": 508.7,
+        "dynamicP95L": 622.6,
+        "suggestedExternalL": 748
       }
     ]
   }
