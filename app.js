@@ -691,7 +691,6 @@ function 陈列图基础校验(r,targetKey){
   const sourceType=source?冰柜类型(source):文(r.stagingCabinetType);
   const sourceIce=source?是否冰品柜段(source):!!r.stagingIce;
   if(!sourceType)return {ok:false,reason:"待选商品缺少原冰柜类型信息"};
-  if(sourceType!==冰柜类型(target))return {ok:false,reason:"只能移动到同一冰柜类型"};
   if(sourceIce!==是否冰品柜段(target))return {ok:false,reason:"冰品与普通冻品不能混放"};
   const sameType=状态.skus.some(x=>x.id!==r.id&&x.included&&!x.inStaging&&x.store===r.store&&SKU键(x)===SKU键(r)&&冰柜类型(陈列图来源柜段(x))===冰柜类型(target));
   if(sameType)return {ok:false,reason:"该SKU在同柜型已有陈列位置"};
