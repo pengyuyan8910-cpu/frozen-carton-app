@@ -18,8 +18,8 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: frozen-carton-new-store-draft
-  cancel-in-progress: true
+  group: frozen-carton-master-writes
+  cancel-in-progress: false
 jobs:
   generate-draft:
     runs-on: ubuntu-latest
@@ -66,5 +66,7 @@ jobs:
             echo "新增门店草稿没有变化"
           else
             git commit -m "chore: 自动生成新增门店严格排柜草稿"
-            git push
+            git fetch origin master
+            git rebase origin/master
+            git push origin HEAD:master
           fi

@@ -17,6 +17,11 @@ assert.match(newStore, /scripts\/source-to-app-data-preserve-face\.mjs/, '新增
 assert.match(newStore, /scripts\/generate-new-store-draft\.mjs/, '新增门店草稿脚本变化必须触发 workflow');
 assert.match(newStore, /if \[ -z "\$file" \]; then[\s\S]*新增门店配置\.json/, '非门店配置代码变化时必须使用仓库内标准新增门店配置执行真实草稿验证，而不是直接跳过');
 
+for (const [name, source] of [['update-data.yml', updateData], ['generate-new-store-draft.yml', newStore]]) {
+  assert.match(source, /concurrency:\s*\n\s*group:\s*frozen-carton-master-writes\s*\n\s*cancel-in-progress:\s*false/, `${name} 必须与另一个写 master 的 workflow 共用串行写入锁，且不能取消排队任务`);
+  assert.match(source, /git fetch origin master[\s\S]*git rebase origin\/master[\s\S]*git push origin HEAD:master/, `${name} 提交自动结果前必须基于最新 master 重放并显式推送，避免并发非快进失败`);
+}
+
 assert.match(replan, /- "app\.js"|- 'app\.js'/, 'app.js 变化必须触发统一严格引擎回归测试');
 assert.match(replan, /- "index\.html"|- 'index\.html'/, 'index.html 变化必须触发统一严格引擎回归测试');
 assert.match(replan, /npm run test:new-store-routing/, '主回归 CI 必须执行新增门店统一严格引擎回归测试');
