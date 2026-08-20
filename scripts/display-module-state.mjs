@@ -64,7 +64,6 @@ export function includePlanogramSku(state, { id } = {}) {
   return { ok: true, state: next, row };
 }
 
-
 function orderValue(row) {
   const value = Number(row?.planogramOrder);
   return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
@@ -156,3 +155,4 @@ export function deletePlanogramModule(state, { id, keyOf } = {}) {
   next.skus = (next.skus || []).filter((candidate) => candidate.id !== id);
   return { ok: true, state: next, row };
 }
+
