@@ -18,3 +18,4 @@ assert.equal(items[0].hidden, false, "清空搜索后第一个 SKU 应恢复显�
 assert.equal(items[1].hidden, false, "清空搜索后第二个 SKU 应恢复显示");
 
 console.log("planogram staging DOM filter tests passed");
+
