@@ -762,9 +762,9 @@
     const cabinetNodes = Array.from(canvas.querySelectorAll(':scope > .map-cabinet'));
     const pages = cabinetNodes.map(function (cabinet, index) {
       const title = index === 0 && titleNode ? titleNode.outerHTML : '';
-      return '<section class="pdf-cabinet-page">' + title + cabinet.outerHTML + '</section>';
+      return '<section class="pdf-cabinet-page"><div class="pdf-cabinet-content">' + title + cabinet.outerHTML + '</div></section>';
     }).join('');
-    const pageMarkup = pages || '<section class="pdf-cabinet-page">' + canvas.innerHTML + '</section>';
+    const pageMarkup = pages || '<section class="pdf-cabinet-page"><div class="pdf-cabinet-content">' + canvas.innerHTML + '</div></section>';
     const printCanvas = '<div id="displayMapCanvas" class="display-map pdf-planogram">' + pageMarkup + '</div>';
     const printStyles = '<style>' +
       '@page{size:landscape;margin:8mm}' +
@@ -772,22 +772,27 @@
       'body{min-width:0!important}' +
       '.display-map-shell{display:block!important;width:100%!important;max-width:100%!important;overflow:visible!important}' +
       '#displayMapCanvas{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;overflow:visible!important}' +
-      '.pdf-cabinet-page{display:block!important;width:100%!important;height:calc(100vh - 16mm)!important;min-height:0!important;max-height:calc(100vh - 16mm)!important;overflow:hidden!important;break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always;padding:0!important;margin:0!important}' +
+      '.pdf-cabinet-page{display:block!important;width:100%!important;height:194mm!important;min-height:194mm!important;max-height:194mm!important;overflow:hidden!important;break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always;padding:0!important;margin:0!important}' +
       '.pdf-cabinet-page:last-child{break-after:auto;page-break-after:auto}' +
-      '.pdf-cabinet-page>.map-store-title{margin:0 0 6px!important}' +
-      '.pdf-cabinet-page>.map-cabinet{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;break-inside:avoid;page-break-inside:avoid}' +
+      '.pdf-cabinet-content{display:block!important;width:100%!important;transform-origin:top left!important}' +
+      '.pdf-cabinet-content>.map-cabinet{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;break-inside:avoid;page-break-inside:avoid}' +
       '.map-item{break-inside:avoid}' +
       '</style>';
     const fitScript = '<script>' +
       '(function(){' +
       'function fit(){document.querySelectorAll(".pdf-cabinet-page").forEach(function(page){' +
-      'var cabinet=page.querySelector(".map-cabinet");if(!cabinet)return;' +
-      'var title=page.querySelector(".map-store-title");var titleHeight=title?title.offsetHeight+6:0;' +
-      'var available=page.clientHeight-titleHeight;var natural=cabinet.offsetHeight;' +
-      'if(available>0&&natural>available){var scale=available/natural;cabinet.style.transformOrigin="top left";cabinet.style.transform="scale("+scale+")";cabinet.style.width=(100/scale)+"%";}' +
+      'var content=page.querySelector(".pdf-cabinet-content");if(!content)return;' +
+      'content.style.transform="none";content.style.width="100%";content.style.height="auto";' +
+      'var availableHeight=page.clientHeight;var availableWidth=page.clientWidth;' +
+      'var naturalHeight=content.scrollHeight;var naturalWidth=content.scrollWidth;' +
+      'if(availableHeight>0&&naturalHeight>0){var scale=Math.min(1,availableHeight/naturalHeight,availableWidth/naturalWidth);' +
+      'content.style.transformOrigin="top left";content.style.transform="scale("+scale+")";' +
+      'content.style.width=(100/scale)+"%";content.style.height=(naturalHeight*scale)+"px";}' +
       '});}' +
       'window.__fitPlanogramPages=fit;' +
-      'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit).catch(fit);}else{setTimeout(fit,80);}' +
+      'function schedule(){requestAnimationFrame(function(){requestAnimationFrame(fit);});}' +
+      'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(schedule).catch(schedule);}else{schedule();}' +
+      'setTimeout(schedule,120);' +
       '})();' +
       '<\\/script>';
     printWindow.document.open();
@@ -801,8 +806,8 @@
       printWindow.focus();
       printWindow.print();
     };
-    printWindow.addEventListener('load', function () { setTimeout(triggerPrint, 220); }, { once: true });
-    setTimeout(triggerPrint, 900);
+    printWindow.addEventListener('load', function () { setTimeout(triggerPrint, 260); }, { once: true });
+    setTimeout(triggerPrint, 1000);
   }
   async function exportExcelPlanogram() {
     const button = document.getElementById('exportDisplayMapBtn');
