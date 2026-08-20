@@ -778,35 +778,50 @@
       '.pdf-cabinet-content>.map-cabinet{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;break-inside:avoid;page-break-inside:avoid}' +
       '.map-item{break-inside:avoid}' +
       '</style>';
-    const fitScript = '<script>' +
-      '(function(){' +
-      'function fit(){document.querySelectorAll(".pdf-cabinet-page").forEach(function(page){' +
-      'var content=page.querySelector(".pdf-cabinet-content");if(!content)return;' +
-      'content.style.transform="none";content.style.width="100%";content.style.height="auto";' +
-      'var availableHeight=page.clientHeight;var availableWidth=page.clientWidth;' +
-      'var naturalHeight=content.scrollHeight;var naturalWidth=content.scrollWidth;' +
-      'if(availableHeight>0&&naturalHeight>0){var scale=Math.min(1,availableHeight/naturalHeight,availableWidth/naturalWidth);' +
-      'content.style.transformOrigin="top left";content.style.transform="scale("+scale+")";' +
-      'content.style.width=(100/scale)+"%";content.style.height=(naturalHeight*scale)+"px";}' +
-      '});}' +
-      'window.__fitPlanogramPages=fit;' +
-      'function schedule(){requestAnimationFrame(function(){requestAnimationFrame(fit);});}' +
-      'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(schedule).catch(schedule);}else{schedule();}' +
-      'setTimeout(schedule,120);' +
-      '})();' +
-      '<\\/script>';
     printWindow.document.open();
-    printWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>冻品门店陈列图</title>' + styles + printStyles + '</head><body><div class="display-map-shell">' + printCanvas + '</div>' + fitScript + '</body></html>');
+    printWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>冻品门店陈列图</title>' + styles + printStyles + '</head><body><div class="display-map-shell">' + printCanvas + '</div></body></html>');
     printWindow.document.close();
+    const fitPrintPages = function () {
+      if (printWindow.closed) return;
+      const pages = printWindow.document.querySelectorAll('.pdf-cabinet-page');
+      pages.forEach(function (page) {
+        const content = page.querySelector('.pdf-cabinet-content');
+        if (!content) return;
+        content.style.transform = 'none';
+        content.style.width = '100%';
+        content.style.height = 'auto';
+        const availableHeight = page.clientHeight;
+        const availableWidth = page.clientWidth;
+        const naturalHeight = content.scrollHeight;
+        const naturalWidth = content.scrollWidth;
+        if (availableHeight > 0 && availableWidth > 0 && naturalHeight > 0 && naturalWidth > 0) {
+          const scale = Math.min(1, availableHeight / naturalHeight, availableWidth / naturalWidth);
+          content.style.transformOrigin = 'top left';
+          content.style.transform = 'scale(' + scale + ')';
+          content.style.width = (100 / scale) + '%';
+          content.style.height = (naturalHeight * scale) + 'px';
+        }
+      });
+    };
     let printed = false;
     const triggerPrint = function () {
-      if (printed) return;
+      if (printed || printWindow.closed) return;
+      fitPrintPages();
+      const firstPage = printWindow.document.querySelector('.pdf-cabinet-page');
+      if (firstPage && firstPage.clientHeight === 0) {
+        setTimeout(triggerPrint, 120);
+        return;
+      }
       printed = true;
-      if (typeof printWindow.__fitPlanogramPages === 'function') printWindow.__fitPlanogramPages();
       printWindow.focus();
       printWindow.print();
     };
-    printWindow.addEventListener('load', function () { setTimeout(triggerPrint, 260); }, { once: true });
+    printWindow.addEventListener('load', function () {
+      if (printWindow.document.fonts && printWindow.document.fonts.ready) {
+        printWindow.document.fonts.ready.then(fitPrintPages).catch(function () {});
+      }
+      setTimeout(triggerPrint, 260);
+    }, { once: true });
     setTimeout(triggerPrint, 1000);
   }
   async function exportExcelPlanogram() {
