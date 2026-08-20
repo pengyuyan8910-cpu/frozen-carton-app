@@ -1,6 +1,6 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_cloudflow_v2";
-  const RULE_VERSION = "20260820_physical_floor_v2";
+  const DATA_VERSION = "20260820_cloudflow_v3_global_capacity";
+  const RULE_VERSION = "20260820_physical_floor_v3_global_capacity";
   const APP_VERSION = "20260820_cloudflow_v2";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
@@ -43,4 +43,5 @@
     if (main) main.innerHTML = `<section class="panel load-error"><h2>数据加载失败</h2><p>小程序没有读取到已复核通过的最新数据，请确认 data/app-data.json 存在。</p><pre>${String(err.message || err)}</pre></section>`;
   }
 })();
+
 

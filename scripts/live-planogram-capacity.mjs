@@ -116,8 +116,10 @@ export function recalculateLoadedPlanogram(state) {
       for (let index = 0; index < placements.length; index += 1) {
         const placement = placements[index];
         const cabinet = cabinetMap.get(text(placement.cabinetKey)) || cabinetMap.get(text(row.cabinetKey));
-        const preferred = normalizeOrientation(placement.orientation)
-          || normalizeOrientation(row.faceOrientation)
+        // The editable row direction is authoritative. A legacy placement can
+        // still carry the previous direction after the user changes the select.
+        const preferred = normalizeOrientation(row.faceOrientation)
+          || normalizeOrientation(placement.orientation)
           || inferOrientation(row);
         const layout = setPlacementCapacity(placement, row, cabinet, preferred, index === 0 ? row.displayCols : 1);
         if (!layout) continue;
@@ -131,7 +133,8 @@ export function recalculateLoadedPlanogram(state) {
     }
 
     if (!primary) continue;
-    row.faceOrientation = primary.orientation;
+    // Capacity follows the saved module orientation, but rehydration must not
+    // rewrite the row's existing direction field. That field is user layout data.
     row.faceWidth = primary.faceWidth;
     row.perCol = primary.perCol;
     row.rowFull = Math.max(0, Math.floor(number(row.displayCols)) * primary.perCol);
@@ -177,4 +180,5 @@ export function recalculateLoadedPlanogram(state) {
 }
 
 export default { recalculateLoadedPlanogram };
+
 
