@@ -254,7 +254,8 @@ function orientationOptions(product, cabinet) {
     const key = `${candidate.faceWidth}|${candidate.orientedDepth}|${candidate.orientedHeight}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    if (candidate.orientedDepth > cabinet.depth + EPSILON || candidate.orientedHeight > cabinet.height + EPSILON) continue;
+    const heightAllowance = vertical ? 50 : 0;
+    if (candidate.orientedDepth > cabinet.depth + EPSILON || candidate.orientedHeight > cabinet.height + heightAllowance + EPSILON) continue;
     // Product dimensions include the business allowance. Capacity quotients
     // therefore use four舍五入; cabinet columns themselves still use a
     // physical-width floor elsewhere in the allocator.

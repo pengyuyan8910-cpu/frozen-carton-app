@@ -1,6 +1,5 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_staging_search_v1";
-  const REVIEW_MARKER = "frozen_carton_open_replan_review_v1";
+  const DATA_VERSION = "20260820_simplify_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
@@ -25,21 +24,13 @@
     window.PlanogramExcelExport = await import(`./scripts/planogram-excel-export.mjs?v=${DATA_VERSION}`);
     window.PlanogramStagingSearch = await import(`./scripts/planogram-staging-search.mjs?v=${DATA_VERSION}`);
     await import(`./scripts/strict-allocation-adapter.mjs?v=${DATA_VERSION}`);
+    window.UnifiedStateMigration = await import(`./scripts/unified-state-migration.mjs?v=${DATA_VERSION}`);
+    window.CloudStateGuard = await import(`./scripts/cloud-state-guard.mjs?v=${DATA_VERSION}`);
     const status = report?.passed === false ? "复核失败" : "复核通过";
     setNote(`${data.meta?.version || "当前版本"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
-    try {
-      if (sessionStorage.getItem(REVIEW_MARKER) === "1") {
-        const ops = document.getElementById("opsMode");
-        if (ops) ops.checked = true;
-      }
-    } catch (_) {}
     const app = document.createElement("script");
     app.src = `app.js?v=${DATA_VERSION}`;
-    app.onload = async () => {
-      window.ProductLifecycle?.init?.();
-      try { await import(`./scripts/product-pool-replan-ui.mjs?v=${DATA_VERSION}`); }
-      catch (replanError) { console.error("产品池重排模块加载失败", replanError); }
-    };
+    app.onload = () => { window.ProductLifecycle?.init?.(); };
     app.onerror = () => setNote("程序加载失败，请联系运营");
     document.body.appendChild(app);
   } catch (err) {

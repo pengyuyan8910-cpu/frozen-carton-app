@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   clonePlanogramModule,
   deletePlanogramModule,
+  sameStoreSkuCabinetSegment,
 } from "./display-module-state.mjs";
 
 const baseState = {
@@ -17,7 +18,7 @@ const baseState = {
       cabinetKey: "甲店-卧柜-1",
       cabinetLabel: "卧柜1",
       position: "分区1",
-      displayCols: 1,
+      displayCols: 3,
       perCol: 10,
       faceWidth: 200,
       placements: [{ cabinetKey: "甲店-卧柜-1" }],
@@ -37,17 +38,8 @@ const baseState = {
   ],
 };
 
-const target = {
-  key: "甲店-立柜-1",
-  label: "立柜1",
-  position: "第1层",
-  kind: "立柜",
-};
-
 const cloned = clonePlanogramModule(baseState, {
   sourceId: "sku-chest",
-  target,
-  layout: { faceOrientation: "width", faceWidth: 180, perCol: 3 },
   idFactory: () => "sku-upright",
 });
 
@@ -55,10 +47,55 @@ assert.equal(cloned.ok, true);
 assert.equal(cloned.state.skus.length, 3);
 assert.equal(cloned.state.skus.filter((row) => row.store === "甲店").length, 2);
 assert.equal(cloned.state.skus.find((row) => row.id === "sku-chest").cabinetKey, "甲店-卧柜-1");
-assert.equal(cloned.row.cabinetKey, "甲店-立柜-1");
+assert.equal(cloned.row.inStaging, true);
+assert.equal(cloned.row.cabinetKey, "");
+assert.equal(cloned.row.cabinetLabel, "待选区");
+assert.equal(cloned.row.position, "待选区");
+assert.equal(cloned.row.displayCols, 1, "新增模块默认陈列列数应为1");
+assert.equal(cloned.row.stagingFrom.key, "甲店-卧柜-1");
 assert.equal(cloned.row.placementCloneOf, "sku-chest");
 assert.equal(cloned.row.placements.length, 0);
 assert.deepEqual(cloned.state.productPool, baseState.productPool);
+
+const segmentState = {
+  skus: [
+    {
+      id: "sku-segment-1",
+      store: "甲店",
+      barcode: "690000000002",
+      included: true,
+      inStaging: false,
+      cabinetKey: "甲店__卧柜2505-柜1__分区1",
+    },
+    {
+      id: "sku-segment-2",
+      store: "甲店",
+      barcode: "690000000003",
+      included: true,
+      inStaging: false,
+      cabinetKey: "甲店__卧柜2505-柜1__分区2",
+    },
+    {
+      id: "sku-staged",
+      store: "甲店",
+      barcode: "690000000002",
+      included: true,
+      inStaging: true,
+      cabinetKey: "",
+    },
+  ],
+};
+
+assert.equal(
+  sameStoreSkuCabinetSegment(segmentState, segmentState.skus[2], "甲店__卧柜2505-柜1__分区1"),
+  true,
+  "同SKU进入已有分区1应被禁止",
+);
+assert.equal(
+  sameStoreSkuCabinetSegment(segmentState, segmentState.skus[2], "甲店__卧柜2505-柜1__分区2"),
+  false,
+  "同一台柜子的分区2属于不同柜段，应允许进入",
+);
 
 const deleted = deletePlanogramModule(cloned.state, { id: "sku-upright" });
 assert.equal(deleted.ok, true);
