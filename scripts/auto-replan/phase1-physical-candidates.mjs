@@ -34,7 +34,8 @@ function candidatesForPair(product, cabinet, params) {
     if (oriented.faceWidth > cabinet.length + EPSILON) continue;
     if (oriented.depth > cabinet.depth + EPSILON) continue;
     if (oriented.height > cabinet.height + EPSILON) continue;
-    const depthCount = Math.round(cabinet.depth / oriented.depth);
+    // 卧柜/冰淇淋柜的 cabinet.depth 是业务上的柜体宽度字段。
+    const depthCount = Math.floor(cabinet.depth / oriented.depth);
     const stackCount = calculatePhysicalStackCount(cabinet.cabinetClass, cabinet.height, oriented.height);
     const perCol = depthCount * stackCount;
     if (!(perCol > 0)) continue;

@@ -1,4 +1,4 @@
-import fs from "node:fs";
+﻿import fs from "node:fs";
 import path from "node:path";
 
 const text = v => String(v ?? "").trim();
@@ -52,17 +52,17 @@ function normalizeHorizontalFaceData(data) {
 }
 
 /**
- * 满陈重算：根据柜型和产品尺寸，用四舍五入(Math.round)重新计算 perCol。
+ * 满陈重算：根据柜型和产品实际尺寸，向下取整重新计算 perCol。
  * 保留原有陈列面方向(faceOrientation)和占宽(faceWidth)，仅重算单列容量。
  *
  *  卧柜/冰淇淋柜（水平柜）— 可堆叠：
- *    长做陈列面: perCol = Math.round(柜深 / 产品宽) × Math.round(柜高 / 产品高)
- *    宽做陈列面: perCol = Math.round(柜深 / 产品长) × Math.round(柜高 / 产品高)
+ *    长做陈列面: perCol = floor(柜体宽 / 产品宽) × floor(柜高 / 产品高)
+ *    宽做陈列面: perCol = floor(柜体宽 / 产品长) × floor(柜高 / 产品高)
  *
  *  立柜（垂直柜）— 不可堆叠，产品高沿纵深：
- *    perCol = Math.round(柜深 / 产品高) × 1
+ *    perCol = floor(柜体宽 / 产品高) × 1
  *
- *  产品尺寸已含余量，除法一律四舍五入以减少余量空间浪费。
+ *  产品尺寸按实际尺寸计算，物理除法一律向下取整。
  *  新放置时卧柜/冰淇淋柜默认"长做陈列面"（见 app.js 柜型摆法）。
  */
 export function recalcAllCapacity(data) {
@@ -96,8 +96,8 @@ export function recalcAllCapacity(data) {
         faceDim = ori === "length" ? L : W;
       }
       if (depthDim > D + EPS || hDim > CH + (upright ? 50 : 0) + EPS) continue;
-      const depthCount = Math.round(D / depthDim);
-      const stackCount = upright ? 1 : Math.round(CH / hDim);
+      const depthCount = Math.floor(D / depthDim);
+      const stackCount = upright ? 1 : Math.floor(CH / hDim);
       const perCol = depthCount * stackCount;
       if (!(perCol > 0)) continue;
       best = { ori, faceDim, perCol };
@@ -108,13 +108,13 @@ export function recalcAllCapacity(data) {
     sku.faceOrientation = best.ori;
     sku.faceWidth = best.faceDim;
     sku.perCol = best.perCol;
-    sku.rowFull = Math.max(0, Math.round(num(sku.displayCols) * best.perCol));
+    sku.rowFull = Math.max(0, Math.floor(num(sku.displayCols) * best.perCol));
     const cols = Math.max(0, num(sku.displayCols));
-    sku.sourceCapacityNote = `占宽=${round(cols * best.faceDim, 0)}mm；单列容量=${best.perCol}（四舍五入）`;
+    sku.sourceCapacityNote = `占宽=${round(cols * best.faceDim, 0)}mm；单列容量=${best.perCol}（实际尺寸向下取整）`;
     if (Array.isArray(sku.placements)) {
       sku.placements = sku.placements.map(p => ({
         ...p, faceWidth: best.faceDim, width: best.faceDim, perCol: best.perCol,
-        fullCount: Math.max(0, Math.round(num(p.displayCols) * best.perCol)),
+        fullCount: Math.max(0, Math.floor(num(p.displayCols) * best.perCol)),
         widthUsed: round(num(p.displayCols) * best.faceDim)
       }));
     }
@@ -130,7 +130,7 @@ export function recalcAllCapacity(data) {
       groups.get(key).push(r);
     }
     for (const [, rows] of groups) {
-      const total = rows.reduce((sum, r) => sum + (num(r.rowFull) || Math.max(0, Math.round(num(r.displayCols) * num(r.perCol)))), 0);
+      const total = rows.reduce((sum, r) => sum + (num(r.rowFull) || Math.max(0, Math.floor(num(r.displayCols) * num(r.perCol)))), 0);
       for (const r of rows) r.skuFull = total;
     }
   }
@@ -503,5 +503,4 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
   const raw = await readWorkbook(sourcePath);
   return sourceSheetsToAppData(raw.sheets || {}, oldData, sourceName);
 }
-
 

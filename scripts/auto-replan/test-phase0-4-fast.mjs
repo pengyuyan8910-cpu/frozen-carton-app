@@ -97,7 +97,7 @@ function physicalRuleTests() {
     .find(candidate => candidate.orientation === "width-face");
   assert(verticalRoundingCandidate?.orientedDepth === 20, "立柜必须用商品高作为纵深");
   assert(verticalRoundingCandidate?.orientedHeight === 240, "立柜宽做陈列面时商品长作为层高");
-  assert(verticalRoundingCandidate?.depthCount === 27 && verticalRoundingCandidate?.perCol === 27, "立柜纵深除法必须四舍五入：534÷20=26.7→27");
+  assert(verticalRoundingCandidate?.depthCount === 26 && verticalRoundingCandidate?.perCol === 26, "立柜纵深除法必须按实际尺寸向下取整：534÷20=26.7→26");
 
   const chestRoundingProduct = syntheticProduct({
     barcode: "synthetic-chest-rounding",
@@ -112,7 +112,7 @@ function physicalRuleTests() {
     cabinets: [syntheticCabinet({ key: "测试门店__卧柜rounding__分区1", label: "卧柜rounding", position: "分区1", kind: "卧柜", type: "卧柜", length: 1988, depth: 697, height: 460 })]
   });
   const chestRoundingCandidate = calculatePhysicalCandidates(chestRounding0).candidatesBySku.get(chestRoundingProduct.barcode)[0];
-  assert(chestRoundingCandidate?.depthCount === 3 && chestRoundingCandidate?.stackCount === 23 && chestRoundingCandidate?.perCol === 69, "卧柜深度和堆叠除法必须四舍五入：3×23=69");
+  assert(chestRoundingCandidate?.depthCount === 2 && chestRoundingCandidate?.stackCount === 23 && chestRoundingCandidate?.perCol === 46, "卧柜柜体宽度和堆叠除法必须按实际尺寸向下取整：2×23=46");
 
   const chestWithoutStack = syntheticCabinet({ key: "测试门店__卧柜1__分区1", label: "卧柜1", position: "分区1", kind: "卧柜", type: "卧柜" });
   const chest0 = loadAndValidatePhase0({ ...baseInput, cabinets: [chestWithoutStack] });

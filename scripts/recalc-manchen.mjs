@@ -1,16 +1,16 @@
 /**
- * 满陈重算脚本 — 仅重算 perCol（四舍五入），保留原有陈列面方向和占宽。
+ * 满陈重算脚本 — 仅重算 perCol（实际尺寸向下取整），保留原有陈列面方向和占宽。
  * 若原有方向不可行，自动尝试另一方向。
  *
  * 规则：
  *  卧柜/冰淇淋柜（可堆叠）：
- *    长做陈列面: perCol = Math.round(柜深/产品宽) × Math.round(柜高/产品高)
- *    宽做陈列面: perCol = Math.round(柜深/产品长) × Math.round(柜高/产品高)
+ *    长做陈列面: perCol = floor(柜体宽/产品宽) × floor(柜高/产品高)
+ *    宽做陈列面: perCol = floor(柜体宽/产品长) × floor(柜高/产品高)
  *
  *  立柜（不可堆叠，产品高沿纵深）：
- *    perCol = Math.round(柜深/产品高) × 1
+ *    perCol = floor(柜体宽/产品高) × 1
  *
- *  所有除法使用 Math.round（四舍五入），产品尺寸已含余量。
+ *  所有物理除法按实际尺寸向下取整，产品尺寸中的余量不再触发额外容量。
  */
 
 import fs from "node:fs";
@@ -61,8 +61,8 @@ for (const sku of data.skus || []) {
       faceDim = ori === "length" ? L : W;
     }
     if (depthDim > D + EPS || hDim > CH + (upright ? 50 : 0) + EPS) continue;
-    const depthCount = Math.round(D / depthDim);
-    const stackCount = upright ? 1 : Math.round(CH / hDim);
+    const depthCount = Math.floor(D / depthDim);
+    const stackCount = upright ? 1 : Math.floor(CH / hDim);
     const perCol = depthCount * stackCount;
     if (!(perCol > 0)) continue;
     best = { ori, faceDim, perCol };
@@ -76,7 +76,7 @@ for (const sku of data.skus || []) {
   sku.faceOrientation = best.ori;
   sku.faceWidth = best.faceDim;
   sku.perCol = best.perCol;
-  sku.rowFull = Math.max(0, Math.round(num(sku.displayCols) * best.perCol));
+  sku.rowFull = Math.max(0, Math.floor(num(sku.displayCols) * best.perCol));
 
   delete sku.externalCountOverride;
   delete sku.staticExternalOverride;
@@ -85,12 +85,12 @@ for (const sku of data.skus || []) {
   delete sku.riskOverride;
 
   const cols = Math.max(0, num(sku.displayCols));
-  sku.sourceCapacityNote = `占宽=${Math.round(cols * best.faceDim)}mm；单列容量=${best.perCol}（四舍五入）`;
+  sku.sourceCapacityNote = `占宽=${Math.round(cols * best.faceDim)}mm；单列容量=${best.perCol}（实际尺寸向下取整）`;
 
   if (Array.isArray(sku.placements)) {
     sku.placements = sku.placements.map(p => ({
       ...p, faceWidth: best.faceDim, width: best.faceDim, perCol: best.perCol,
-      fullCount: Math.max(0, Math.round(num(p.displayCols) * best.perCol)),
+      fullCount: Math.max(0, Math.floor(num(p.displayCols) * best.perCol)),
       widthUsed: Math.round(num(p.displayCols) * best.faceDim)
     }));
   }
@@ -108,7 +108,7 @@ for (const store of data.stores || []) {
     groups.get(key).push(r);
   }
   for (const [, rows] of groups) {
-    const total = rows.reduce((sum, r) => sum + (num(r.rowFull) || Math.max(0, Math.round(num(r.displayCols) * num(r.perCol)))), 0);
+    const total = rows.reduce((sum, r) => sum + (num(r.rowFull) || Math.max(0, Math.floor(num(r.displayCols) * num(r.perCol)))), 0);
     for (const r of rows) r.skuFull = total;
   }
 }
@@ -126,7 +126,7 @@ for (const cab of data.cabinets || []) {
 
 // 重算门店汇总
 function calcSkuForSummary(r, params) {
-  const full = num(r.skuFull) || num(r.rowFull) || Math.round(num(r.displayCols) * num(r.perCol));
+  const full = num(r.skuFull) || num(r.rowFull) || Math.floor(num(r.displayCols) * num(r.perCol));
   const trigger = Math.ceil(full * num(params?.triggerRate || 0.1));
   const receivable = Math.max(0, full - trigger);
   const inShelf = Math.min(num(r.carton), receivable);
@@ -166,8 +166,8 @@ for (const s of data.stores || []) {
 
 data.meta = data.meta || {};
 data.meta.generatedAt = new Date().toLocaleString("zh-CN", { hour12: false });
-data.meta.version = "10%触发-满陈四舍五入重算版";
-data.meta.note = "满陈计算统一使用Math.round（四舍五入）；卧柜可堆叠，立柜不堆叠。";
+data.meta.version = "10%触发-实际尺寸向下取整重算版";
+data.meta.note = "满陈计算按实际尺寸向下取整；卧柜/冰淇淋柜按柜体宽度与柜高堆叠，立柜按柜体宽度中的产品高计算纵深且不堆叠。";
 
 fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), "utf8");
 
@@ -176,4 +176,3 @@ console.log(`变更: ${changed} 条`);
 console.log(`未变: ${unchanged} 条`);
 console.log(`跳过: ${skipped} 条`);
 console.log(`总计: ${changed + unchanged + skipped} 条`);
-

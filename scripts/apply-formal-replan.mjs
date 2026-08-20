@@ -8,7 +8,7 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const skuKey = row => text(row?.barcode || row?.skuKey || row?.name);
 
 function rowMetrics(row, params) {
-  const full = number(row.skuFull || row.rowFull || row.fullCount || Math.round(number(row.displayCols) * number(row.perCol)));
+  const full = number(row.skuFull || row.rowFull || row.fullCount || Math.floor(number(row.displayCols) * number(row.perCol)));
   const trigger = Math.ceil(full * number(params?.triggerRate || 0.1));
   const receivable = Math.max(0, full - trigger);
   const inShelf = Math.min(number(row.carton), receivable);
@@ -221,7 +221,7 @@ function applyPlansAsPlacementRows(data, draft) {
           staticExternalL: number(p.staticExternalL),
           metrics: rowMetricsValue,
           sourceAdvice: "统一严格排柜",
-          sourceAction: "长宽横向占宽；卧柜堆叠/立柜不堆叠；除法四舍五入"
+          sourceAction: "长宽横向占宽；卧柜按柜体宽度堆叠/立柜不堆叠；除法按实际尺寸向下取整"
         });
       });
     }

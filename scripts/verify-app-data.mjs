@@ -22,7 +22,7 @@ const uniqueCount = rows => {
 };
 
 function calcSku(r, data) {
-  const full = num(r.skuFull) || num(r.rowFull) || Math.round(num(r.displayCols) * num(r.perCol));
+  const full = num(r.skuFull) || num(r.rowFull) || Math.floor(num(r.displayCols) * num(r.perCol));
   const trigger = Math.ceil(full * num(data.params?.triggerRate || 0.1));
   const receivable = Math.max(0, full - trigger);
   const inShelf = Math.min(num(r.carton), receivable);

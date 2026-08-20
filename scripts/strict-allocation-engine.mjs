@@ -256,11 +256,10 @@ function orientationOptions(product, cabinet) {
     seen.add(key);
     const heightAllowance = vertical ? 50 : 0;
     if (candidate.orientedDepth > cabinet.depth + EPSILON || candidate.orientedHeight > cabinet.height + heightAllowance + EPSILON) continue;
-    // Product dimensions include the business allowance. Capacity quotients
-    // therefore use four舍五入; cabinet columns themselves still use a
-    // physical-width floor elsewhere in the allocator.
-    const depthCount = Math.round(cabinet.depth / candidate.orientedDepth);
-    const stackCount = vertical ? 1 : Math.round(cabinet.height / candidate.orientedHeight);
+    // 卧柜/冰淇淋柜的纵深使用柜体宽度字段 cabinet.depth；所有物理除法
+    // 按实际尺寸向下取整，不能把放不下的商品计入容量。
+    const depthCount = Math.floor(cabinet.depth / candidate.orientedDepth);
+    const stackCount = vertical ? 1 : Math.floor(cabinet.height / candidate.orientedHeight);
     const perCol = depthCount * stackCount;
     if (!(perCol > 0 && candidate.faceWidth > 0)) continue;
     options.push({

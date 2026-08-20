@@ -44,10 +44,10 @@ const chest = runStrictAllocation({
 }, { maxIterations: 0, maxExpansions: 0 });
 const chestPlacement = chest.rows[0].placements[0];
 assert.equal(chestPlacement.orientation, "width-face");
-assert.equal(chestPlacement.depthCount, 3, "卧柜纵深数量必须四舍五入：697÷240=2.90→3");
-assert.equal(chestPlacement.stackCount, 23, "卧柜堆叠数量必须四舍五入：460÷20=23");
-assert.equal(chestPlacement.perCol, 69);
-assert.equal(chest.rows[0].fullCount, 138, "满陈必须等于柜内列数×单列容量：2列×69=138");
+assert.equal(chestPlacement.depthCount, 2, "卧柜纵深数量必须按实际尺寸向下取整：697÷240=2.90→2");
+assert.equal(chestPlacement.stackCount, 23, "卧柜堆叠数量必须按实际尺寸取整：460÷20=23");
+assert.equal(chestPlacement.perCol, 46);
+assert.equal(chest.rows[0].fullCount, 92, "满陈必须等于柜内列数×单列容量：2列×46=92");
 
 const chestToleranceProduct = { ...chestProduct, height: 500 };
 const chestTolerance = runStrictAllocation({
@@ -68,9 +68,9 @@ const uprightPlacement = upright.rows[0].placements[0];
 assert.equal(uprightPlacement.orientation, "width-face");
 assert.equal(uprightPlacement.orientedDepth, 20, "立柜必须用商品高作为纵深");
 assert.equal(uprightPlacement.orientedHeight, 240, "立柜宽做陈列面时商品长满足层高");
-assert.equal(uprightPlacement.depthCount, 27, "立柜纵深数量必须四舍五入：534÷20=26.7→27");
+assert.equal(uprightPlacement.depthCount, 26, "立柜纵深数量必须按实际尺寸向下取整：534÷20=26.7→26");
 assert.equal(uprightPlacement.stackCount, 1);
-assert.equal(uprightPlacement.perCol, 27);
+assert.equal(uprightPlacement.perCol, 26);
 
 const uprightToleranceProduct = { ...product, length: 300, width: 260, height: 50 };
 const uprightTolerance = runStrictAllocation({
@@ -101,11 +101,10 @@ const previous = runStrictAllocation({
     }]
   }
 }, { maxIterations: 0, maxExpansions: 0 });
-assert.equal(previous.rows[0].placements[0].perCol, 69, "历史底表单列容量不能覆盖新公式");
+assert.equal(previous.rows[0].placements[0].perCol, 46, "历史底表单列容量不能覆盖新公式");
 
 console.log(JSON.stringify({
-  chest: { depthCount: chestPlacement.depthCount, stackCount: chestPlacement.stackCount, perCol: chestPlacement.perCol },
+  chest: { cabinetWidth: 697, depthCount: chestPlacement.depthCount, stackCount: chestPlacement.stackCount, perCol: chestPlacement.perCol },
   upright: { orientedDepth: uprightPlacement.orientedDepth, depthCount: uprightPlacement.depthCount, stackCount: uprightPlacement.stackCount, perCol: uprightPlacement.perCol },
   previousRecalculatedPerCol: previous.rows[0].placements[0].perCol
 }, null, 2));
-

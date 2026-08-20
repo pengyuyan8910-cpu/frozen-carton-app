@@ -10,7 +10,7 @@ const round = (value, digits = 4) => Number(num(value).toFixed(digits));
 const skuKey = row => text(row?.barcode || row?.name);
 
 function externalMetrics(row, data) {
-  const full = num(row.skuFull) || num(row.rowFull) || Math.round(num(row.displayCols) * num(row.perCol));
+  const full = num(row.skuFull) || num(row.rowFull) || Math.floor(num(row.displayCols) * num(row.perCol));
   const trigger = Math.ceil(full * num(data.params?.triggerRate || 0.1));
   const receivable = Math.max(0, full - trigger);
   const inShelf = Math.min(num(row.carton), receivable);

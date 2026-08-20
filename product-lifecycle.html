@@ -701,6 +701,7 @@ function cabinetRows(store){
 function isIceProduct(p){return /雪糕|冰品|冰淇淋|甜筒|冰棒|冰杯/.test([p.name,p.category3,p.category4].join(" "))}
 function isIceCabinet(c){return /雪糕|冰品|冰淇淋/.test([c.kind,c.label].join(" "))}
 function orientationFor(p,c){
+ // 业务口径：卧柜/冰淇淋柜的纵深数量使用柜体宽度字段 c.depth，不使用柜体长度或柜体深。
  const L=num(p.length),W=num(p.width),H=num(p.height);
  const vertical=/立柜/.test(c.kind||c.label);
  const targetFace=num(p.faceWidth);
@@ -708,8 +709,8 @@ function orientationFor(p,c){
   ?[{face:L,depth:H,h:W,label:"长做陈列面"},{face:W,depth:H,h:L,label:"宽做陈列面"}]
   :[{face:L,depth:W,h:H,label:"长做陈列面"},{face:W,depth:L,h:H,label:"宽做陈列面"}];
  const fit=raw.filter(o=>o.face>0&&o.depth>0&&o.h>0&&(!c.depth||o.depth<=num(c.depth)+.1)&&(!c.height||o.h<=num(c.height)+.1)).map(o=>{
-  const depthCount=Math.round(num(c.depth||o.depth)/o.depth);
-  const stackCount=vertical?1:Math.round(num(c.height||o.h)/o.h);
+  const depthCount=Math.floor(num(c.depth||o.depth)/o.depth);
+  const stackCount=vertical?1:Math.floor(num(c.height||o.h)/o.h);
   return {...o,per:depthCount*stackCount};
  }).filter(o=>o.per>0).sort((a,b)=>b.per-a.per||(targetFace?Math.abs(a.face-targetFace)-Math.abs(b.face-targetFace):0)||a.face-b.face||a.depth-b.depth);
  return fit[0]||{face:0,depth:0,h:0,per:0,label:"尺寸不适配柜段"};

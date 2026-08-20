@@ -129,7 +129,7 @@ export function clonePlanogramModule(state, { sourceId, target, layout, idFactor
   clone.cabinetLabel = "待选区";
   clone.position = "待选区";
   clone.displayCols = 1;
-  clone.rowFull = Math.max(0, Math.round(clone.displayCols * (Number(source.perCol) || 0)));
+  clone.rowFull = Math.max(0, Math.floor(clone.displayCols * (Number(source.perCol) || 0)));
   clone.skuFull = undefined;
   clone.placements = [];
   clone.customPlacement = true;
@@ -155,4 +155,3 @@ export function deletePlanogramModule(state, { id, keyOf } = {}) {
   next.skus = (next.skus || []).filter((candidate) => candidate.id !== id);
   return { ok: true, state: next, row };
 }
-

@@ -144,7 +144,7 @@ function 风险类(v){const t=文(v);
 return t.includes("极高")?"risk-top":t.includes("高")?"risk-high":""}
 function 等级分(g){return {A:4,B:3,C:2,D:1}[文(g).toUpperCase()]||0}
 function 单品体积(r){return 数(r.volume)||数(r.length)*数(r.width)*数(r.height)/1e6}
-function 满陈(r){return Math.max(0,Math.round(数(r.displayCols)*数(r.perCol)))}
+function 满陈(r){return Math.max(0,Math.floor(数(r.displayCols)*数(r.perCol)))}
 function 同步同SKU满陈(r){
   if(!r||!r.store)return;
   const key=SKU键(r);if(!key)return;
@@ -511,6 +511,7 @@ r.customPlacement=true;
 切换("allocation");
 完成提示("空位方案已应用：排柜、柜段余量和外储测算已更新。")};
 function 柜型摆法(r,c,preferred="",strict=false){
+  // 业务口径：卧柜/冰淇淋柜的纵深数量使用柜体宽度字段 c.depth，不使用柜体长度或柜体深。
   const L=数(r?.length),W=数(r?.width),H=数(r?.height),D=数(c?.depth),CH=数(c?.height);
   const upright=/立柜/.test(文(c?.kind)+" "+文(c?.type)+" "+文(c?.label));
   if(!(L>0&&W>0&&H>0&&D>0&&CH>0))return null;
@@ -521,7 +522,7 @@ function 柜型摆法(r,c,preferred="",strict=false){
   const wanted=规范陈列面方向(preferred)||陈列面方向值(r)||(upright?"width":"length");
   const feasible=raw.filter(o=>o.face>0&&o.depth>0&&o.h>0&&o.depth<=D+0.001&&o.h<=CH+(upright?50:0)+0.001).map(o=>({
     ...o,
-    per:Math.round(D/o.depth)*(upright?1:Math.round(CH/o.h))
+    per:Math.floor(D/o.depth)*(upright?1:Math.floor(CH/o.h))
   })).filter(o=>o.per>0);
   if(strict)return feasible.find(o=>o.faceOrientation===wanted)||null;
   return feasible.find(o=>o.faceOrientation===wanted)||feasible.sort((a,b)=>b.per-a.per||a.face-b.face)[0]||null
@@ -1632,4 +1633,3 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
   }
   tryBind();
 })();
-

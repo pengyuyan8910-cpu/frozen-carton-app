@@ -72,9 +72,9 @@ export function buildPlanogramExportData({
   }
 
   const calculateRow = typeof calculate === "function" ? calculate : (row) => ({
-    full: Math.round(number(row.displayCols) * number(row.perCol)),
-    rowFull: Math.round(number(row.displayCols) * number(row.perCol)),
-    skuFull: Math.round(number(row.displayCols) * number(row.perCol)),
+    full: Math.floor(number(row.displayCols) * number(row.perCol)),
+    rowFull: Math.floor(number(row.displayCols) * number(row.perCol)),
+    skuFull: Math.floor(number(row.displayCols) * number(row.perCol)),
     trigger: 0,
     receivable: 0,
     external: 0,
