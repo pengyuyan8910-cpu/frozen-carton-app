@@ -95,6 +95,22 @@ export function recalculateLoadedPlanogram(state) {
 
   for (const row of state.skus) {
     const placements = Array.isArray(row.placements) ? row.placements : [];
+    const rowCabinet = cabinetMap.get(text(row.cabinetKey));
+    // A manual move can update the row's cabinetKey while leaving the legacy
+    // single placement pointing at the source cabinet. The row is authoritative
+    // for a single module, so repair that link before calculating capacity.
+    if (rowCabinet && placements.length === 1 && text(placements[0].cabinetKey) !== text(row.cabinetKey)) {
+      Object.assign(placements[0], {
+        cabinetKey: rowCabinet.key,
+        cabinetLabel: rowCabinet.label,
+        cabinetType: isVertical(rowCabinet) ? "vertical" : "chest",
+        cabinetKind: rowCabinet.kind || rowCabinet.type || "",
+        section: rowCabinet.position,
+        zone: rowCabinet.position,
+        position: rowCabinet.position,
+        layer: rowCabinet.position
+      });
+    }
     let primary = null;
     if (placements.length) {
       for (let index = 0; index < placements.length; index += 1) {

@@ -74,6 +74,7 @@ function 状态可用(st){return !!(st&&st.meta&&Array.isArray(st.stores)&&st.st
 function 读取本地(key){try{const raw=localStorage.getItem(key);if(!raw)return null;const st=应用状态补丁(JSON.parse(raw));if(!状态可用(st)){localStorage.removeItem(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);try{localStorage.removeItem(key)}catch(_){}return null}}
 function 安全保存本地(key,state){try{localStorage.setItem(key,JSON.stringify(状态补丁(state)));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
 function 刷新已加载陈列容量(state){const helper=window.LivePlanogramCapacity?.recalculateLoadedPlanogram;if(typeof helper==='function')helper(state);return state}
+function 刷新单SKU陈列容量(row){if(!row)return;刷新已加载陈列容量({params:状态.params,cabinets:状态.cabinets,skus:[row]})}
 function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};状态=清理计算缓存(result.state||initial);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);刷新已加载陈列容量(状态);草稿状态=状态;发布状态=状态;建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
 function 保存草稿(){安全保存本地(统一状态保存键,状态)}
 function 保存发布(){安全保存本地(统一状态保存键,状态)}
@@ -270,6 +271,7 @@ const r=状态.skus.find(x=>x.id===id);
  if(k==="cabinetKey"){const cabinet=targetCabinet;if(cabinet){r.cabinetLabel=cabinet.label;r.position=cabinet.position;Object.assign(r,targetLayout);if(r.inStaging)清除待选标记(r)}}
  if(k==="faceOrientation"&&targetLayout)Object.assign(r,targetLayout);
  if(k==="faceOrientation"&&!targetCabinet){r.faceWidth=v==="length"?数(r.length):数(r.width)}
+ if(["cabinetKey","faceOrientation"].includes(k))刷新单SKU陈列容量(r);
  if(["cabinetKey","faceOrientation","faceWidth","displayCols","perCol"].includes(k)){r.customPlacement=true;delete r.widthOverride}
  if(["cabinetKey","faceOrientation","displayCols","perCol"].includes(k))同步同SKU满陈(r)
  const 名={included:"纳入状态",selected:"选中标色",cabinetKey:"陈列柜段",faceOrientation:"陈列面方向",displayCols:"陈列列数",perCol:"单列容量",faceWidth:"单列占宽",currentStock:"当前库存",planCartons:"计划补货",name:"商品名称",barcode:"条码",grade:"等级",category3:"三级类目",carton:"箱规",dailyQty:"日销",volume:"体积"}[k]||k;
@@ -297,6 +299,7 @@ r[k]=v;
 if(k==="cabinetKey"){const cabinet=targetCabinet;if(cabinet){r.cabinetLabel=cabinet.label;r.position=cabinet.position;Object.assign(r,targetLayout)}}
 if(k==="faceOrientation"&&targetLayout)Object.assign(r,targetLayout);
 if(k==="faceOrientation"&&!targetCabinet){r.faceWidth=v==="length"?数(r.length):数(r.width)}
+if(["cabinetKey","faceOrientation"].includes(k))刷新单SKU陈列容量(r);
 if(["cabinetKey","faceOrientation","faceWidth","displayCols","perCol"].includes(k)){r.customPlacement=true;delete r.widthOverride}
 if(["cabinetKey","faceOrientation","displayCols","perCol"].includes(k))同步同SKU满陈(r)
 const 名={included:"纳入状态",selected:"选中标色",cabinetKey:"陈列柜段",faceOrientation:"陈列面方向",displayCols:"陈列列数",perCol:"单列容量",faceWidth:"单列占宽",currentStock:"当前库存",planCartons:"计划补货",name:"商品名称",barcode:"条码",grade:"等级",category3:"三级类目",carton:"箱规",dailyQty:"日销",volume:"体积"}[k]||k;
@@ -830,7 +833,7 @@ function 移至待选区(skuId,reason="手动移入待选区"){
 function 放入陈列柜段(r,target){
   const preferred=陈列面方向值(r);
   if(!应用目标柜型参数(r,target,preferred))return false;
-  r.cabinetKey=target.key;r.cabinetLabel=target.label;r.position=target.position;r.customPlacement=true;清除待选标记(r);同步同SKU满陈(r);标记变更(r,"陈列柜段、陈列面方向、单列容量、单列占宽","陈列图单品移动");return true
+  r.cabinetKey=target.key;r.cabinetLabel=target.label;r.position=target.position;r.customPlacement=true;清除待选标记(r);刷新单SKU陈列容量(r);同步同SKU满陈(r);标记变更(r,"陈列柜段、陈列面方向、单列容量、单列占宽","陈列图单品移动");return true
 }
 function 执行陈列图互换(r,occupant,source,target){
   const rSource={key:source.key,label:source.label,position:source.position};
@@ -842,6 +845,7 @@ function 执行陈列图互换(r,occupant,source,target){
   Object.assign(r,rLayout);Object.assign(occupant,occupantLayout);
   r.cabinetKey=oSource.key;r.cabinetLabel=oSource.label;r.position=oSource.position;r.customPlacement=true;清除待选标记(r);
   occupant.cabinetKey=rSource.key;occupant.cabinetLabel=rSource.label;occupant.position=rSource.position;occupant.customPlacement=true;清除待选标记(occupant);
+  刷新单SKU陈列容量(r);刷新单SKU陈列容量(occupant);
   if(sameCabinet)交换同柜陈列顺序(r,occupant);
   同步同SKU满陈(r);同步同SKU满陈(occupant);
   const fields="陈列柜段、陈列面方向、单列容量、单列占宽"+(sameCabinet?"、同柜陈列顺序":"");

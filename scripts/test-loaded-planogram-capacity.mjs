@@ -5,12 +5,15 @@ import { recalculateLoadedPlanogram } from "./live-planogram-capacity.mjs";
 const appSource = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const bootstrapSource = fs.readFileSync(new URL("../bootstrap.js", import.meta.url), "utf8");
 assert.match(appSource, /刷新已加载陈列容量\(状态\)/, "启动流程必须回填已加载陈列容量");
+assert.match(appSource, /function 刷新单SKU陈列容量\(row\)/, "换柜后必须立即重算当前SKU容量");
+assert.match(appSource, /刷新单SKU陈列容量\(r\)/, "陈列移动路径必须触发当前SKU容量重算");
 assert.match(bootstrapSource, /LivePlanogramCapacity/, "启动流程必须加载已加载陈列容量模块");
 
 const state = {
   params: { triggerRate: 0.1 },
   cabinets: [
     { key: "店__卧柜2505-柜1__分区1", kind: "卧柜", label: "卧柜2505-柜1", position: "分区1", length: 1988, depth: 697, height: 460 },
+    { key: "店__卧柜2505-柜2__分区1", kind: "卧柜", label: "卧柜2505-柜2", position: "分区1", length: 1988, depth: 697, height: 460 },
     { key: "店__立柜2250-柜1__第1层", kind: "立柜", label: "立柜2250-柜1", position: "第1层", length: 710, depth: 534, height: 250 }
   ],
   skus: [
@@ -84,6 +87,38 @@ const state = {
         fullCount: 24,
         widthUsed: 530
       }]
+    },
+    {
+      id: "moved-to-chest",
+      store: "店",
+      included: true,
+      name: "澳洲谷饲肥牛卷450g",
+      barcode: "1003",
+      length: 235,
+      width: 176,
+      height: 49,
+      volume: 1,
+      carton: 30,
+      cabinetKey: "店__卧柜2505-柜2__分区1",
+      cabinetLabel: "卧柜2505-柜2",
+      position: "分区1",
+      faceWidth: 176,
+      faceOrientation: "width",
+      displayCols: 1,
+      perCol: 10,
+      placements: [{
+        cabinetKey: "店__立柜2250-柜1__第1层",
+        orientation: "width-face",
+        faceWidth: 176,
+        orientedDepth: 49,
+        orientedHeight: 235,
+        depthCount: 10,
+        stackCount: 1,
+        perCol: 10,
+        displayCols: 1,
+        fullCount: 10,
+        widthUsed: 176
+      }]
     }
   ]
 };
@@ -92,6 +127,7 @@ const originalLocations = state.skus.map(row => [row.id, row.cabinetKey, row.pos
 const result = recalculateLoadedPlanogram(state);
 const chest = result.skus.find(row => row.id === "chest");
 const vertical = result.skus.find(row => row.id === "vertical");
+const movedToChest = result.skus.find(row => row.id === "moved-to-chest");
 
 assert.equal(chest.perCol, 46, "卧柜必须按柜体宽697÷产品长240=2，再乘高度堆叠23，得到46");
 assert.equal(chest.rowFull, 46);
@@ -102,6 +138,11 @@ assert.equal(vertical.perCol, 11, "立柜必须按柜体宽534÷产品高45向�
 assert.equal(vertical.rowFull, 22);
 assert.equal(vertical.placements[0].depthCount, 11);
 assert.equal(vertical.placements[0].stackCount, 1);
+assert.equal(movedToChest.perCol, 18, "行已换到卧柜时，不能继续读取旧立柜模块的10；应为697÷235=2乘460÷49=9，即18");
+assert.equal(movedToChest.placements[0].cabinetKey, "店__卧柜2505-柜2__分区1", "换柜后主模块必须同步到行的当前柜段");
+assert.equal(movedToChest.placements[0].depthCount, 2);
+assert.equal(movedToChest.placements[0].stackCount, 9);
+assert.equal(movedToChest.placements[0].perCol, 18);
 assert.deepEqual(result.skus.map(row => [row.id, row.cabinetKey, row.position]), originalLocations, "重算不得改变柜段和位置");
 assert.equal(Object.hasOwn(chest, "externalCountOverride"), false, "旧外储覆盖值不能继续遮蔽新满陈");
 assert.equal(Object.hasOwn(chest, "staticExternalOverride"), false);
