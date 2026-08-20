@@ -1,4 +1,4 @@
-﻿import fs from "node:fs";
+import fs from "node:fs";
 import path from "node:path";
 
 const text = v => String(v ?? "").trim();
@@ -503,4 +503,5 @@ export async function sourceToAppData(sourcePath, oldData = {}) {
   const raw = await readWorkbook(sourcePath);
   return sourceSheetsToAppData(raw.sheets || {}, oldData, sourceName);
 }
+
 
