@@ -1,7 +1,6 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_cloudfix_v1";
-  const RULE_VERSION = "20260820_physical_floor_v1";
-  const APP_VERSION = "20260820_cloudfix_v1";
+  const DATA_VERSION = "20260820_simplify_v5";
+  const RULE_VERSION = "20260820_physical_floor_v2";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
@@ -25,13 +24,14 @@
     window.DisplayModuleState = await import(`./scripts/display-module-state.mjs?v=${DATA_VERSION}`);
     window.PlanogramExcelExport = await import(`./scripts/planogram-excel-export.mjs?v=${DATA_VERSION}`);
     window.PlanogramStagingSearch = await import(`./scripts/planogram-staging-search.mjs?v=${DATA_VERSION}`);
+    window.LivePlanogramCapacity = await import(`./scripts/live-planogram-capacity.mjs?v=${RULE_VERSION}`);
     await import(`./scripts/strict-allocation-adapter.mjs?v=${RULE_VERSION}`);
     window.UnifiedStateMigration = await import(`./scripts/unified-state-migration.mjs?v=${DATA_VERSION}`);
     window.CloudStateGuard = await import(`./scripts/cloud-state-guard.mjs?v=${DATA_VERSION}`);
     const status = report?.passed === false ? "复核失败" : "复核通过";
     setNote(`${data.meta?.version || "当前版本"}｜底表：${version?.sourceName || data.meta?.source || "当前版"}｜${status}｜生成：${data.meta?.generatedAt || version?.generatedAt || ""}`);
     const app = document.createElement("script");
-    app.src = `app.js?v=${APP_VERSION}`;
+    app.src = `app.js?v=${RULE_VERSION}`;
     app.onload = () => { window.ProductLifecycle?.init?.(); };
     app.onerror = () => setNote("程序加载失败，请联系运营");
     document.body.appendChild(app);
@@ -42,3 +42,4 @@
     if (main) main.innerHTML = `<section class="panel load-error"><h2>数据加载失败</h2><p>小程序没有读取到已复核通过的最新数据，请确认 data/app-data.json 存在。</p><pre>${String(err.message || err)}</pre></section>`;
   }
 })();
+

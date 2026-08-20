@@ -73,7 +73,8 @@ return state;
 function 状态可用(st){return !!(st&&st.meta&&Array.isArray(st.stores)&&st.stores.length&&Array.isArray(st.skus)&&st.skus.length&&Array.isArray(st.cabinets)&&st.cabinets.length)}
 function 读取本地(key){try{const raw=localStorage.getItem(key);if(!raw)return null;const st=应用状态补丁(JSON.parse(raw));if(!状态可用(st)){localStorage.removeItem(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);try{localStorage.removeItem(key)}catch(_){}return null}}
 function 安全保存本地(key,state){try{localStorage.setItem(key,JSON.stringify(状态补丁(state)));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
-function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};状态=清理计算缓存(result.state||initial);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);草稿状态=状态;发布状态=状态;建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
+function 刷新已加载陈列容量(state){const helper=window.LivePlanogramCapacity?.recalculateLoadedPlanogram;if(typeof helper==='function')helper(state);return state}
+function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};状态=清理计算缓存(result.state||initial);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);刷新已加载陈列容量(状态);草稿状态=状态;发布状态=状态;建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
 function 保存草稿(){安全保存本地(统一状态保存键,状态)}
 function 保存发布(){安全保存本地(统一状态保存键,状态)}
 function 可编辑模式(){return true}
@@ -1666,3 +1667,4 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
   }
   tryBind();
 })();
+

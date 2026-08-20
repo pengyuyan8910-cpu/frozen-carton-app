@@ -1,4 +1,4 @@
-import Engine, {allocateStore, recalculatePlan, validatePlan, planSignature} from './strict-allocation-engine.mjs?v=20260820_physical_floor_v1';
+import Engine, {allocateStore, recalculatePlan, validatePlan, planSignature} from './strict-allocation-engine.mjs?v=20260820_physical_floor_v2';
 const text=v=>String(v??'').trim();
 function skuKey(r){return text(r?.skuKey)||text(r?.barcode)||text(r?.name)||text(r?.productKey)||text(r?.id)}
 function fallbackProductPool(data){const seen=new Set(),out=[];for(const r of data?.skus||[]){const key=skuKey(r);if(!key||seen.has(key))continue;seen.add(key);out.push({active:r.active!==false,name:r.name,barcode:r.barcode,grade:r.grade,rank:r.rank,category2:r.category2,category3:r.category3,category4:r.category4,scene:r.scene||r.sceneGroup,length:r.length,width:r.width,height:r.height,volume:r.volume,carton:r.carton,dailyQty:r.dailyQty,dailySales:r.dailySales,moq:r.moq,moqDays:r.moqDays,lifecycleStatus:r.lifecycleStatus})}return out}
@@ -7,3 +7,4 @@ export function runStrictAllocation(input,options={}){return allocateStore(input
 export function runStrictAllocationFromAppData(data,store,overrides={},options={}){return allocateStore(buildStrictInputFromAppData(data,store,overrides),options)}
 export{allocateStore,recalculatePlan,validatePlan,planSignature};
 const API={runStrictAllocation,runStrictAllocationFromAppData,buildStrictInputFromAppData,allocateStore,recalculatePlan,validatePlan,planSignature};if(typeof globalThis!=='undefined')globalThis.StrictAllocationAdapter=API;export default API;
+
