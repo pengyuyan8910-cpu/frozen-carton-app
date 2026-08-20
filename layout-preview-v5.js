@@ -758,32 +758,52 @@
     const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map(function (node) { return node.outerHTML; })
       .join('\n');
-    const bodyClass = document.body.className || '';
+    const titleNode = canvas.querySelector(':scope > .map-store-title');
+    const cabinetNodes = Array.from(canvas.querySelectorAll(':scope > .map-cabinet'));
+    const pages = cabinetNodes.map(function (cabinet, index) {
+      const title = index === 0 && titleNode ? titleNode.outerHTML : '';
+      return '<section class="pdf-cabinet-page">' + title + cabinet.outerHTML + '</section>';
+    }).join('');
+    const pageMarkup = pages || '<section class="pdf-cabinet-page">' + canvas.innerHTML + '</section>';
+    const printCanvas = '<div id="displayMapCanvas" class="display-map pdf-planogram">' + pageMarkup + '</div>';
     const printStyles = '<style>' +
       '@page{size:landscape;margin:8mm}' +
       'html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}' +
       'body{min-width:0!important}' +
-      '.display-map-shell,#displayMapCanvas{width:max-content!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important}' +
-      '.display-map-shell{display:block!important;width:100%!important;max-width:100%!important}' +
-      '#displayMapCanvas{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important}' +
-      '#displayMapCanvas>.map-cabinet{display:block!important;width:100%!important;break-before:page;page-break-before:always;break-inside:avoid;page-break-inside:avoid}' +
-      '#displayMapCanvas>.map-store-title+.map-cabinet{break-before:auto;page-break-before:auto}' +
+      '.display-map-shell{display:block!important;width:100%!important;max-width:100%!important;overflow:visible!important}' +
+      '#displayMapCanvas{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;overflow:visible!important}' +
+      '.pdf-cabinet-page{display:block!important;width:100%!important;height:calc(100vh - 16mm)!important;min-height:0!important;max-height:calc(100vh - 16mm)!important;overflow:hidden!important;break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always;padding:0!important;margin:0!important}' +
+      '.pdf-cabinet-page:last-child{break-after:auto;page-break-after:auto}' +
+      '.pdf-cabinet-page>.map-store-title{margin:0 0 6px!important}' +
+      '.pdf-cabinet-page>.map-cabinet{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;break-inside:avoid;page-break-inside:avoid}' +
       '.map-item{break-inside:avoid}' +
       '</style>';
+    const fitScript = '<script>' +
+      '(function(){' +
+      'function fit(){document.querySelectorAll(".pdf-cabinet-page").forEach(function(page){' +
+      'var cabinet=page.querySelector(".map-cabinet");if(!cabinet)return;' +
+      'var title=page.querySelector(".map-store-title");var titleHeight=title?title.offsetHeight+6:0;' +
+      'var available=page.clientHeight-titleHeight;var natural=cabinet.offsetHeight;' +
+      'if(available>0&&natural>available){var scale=available/natural;cabinet.style.transformOrigin="top left";cabinet.style.transform="scale("+scale+")";cabinet.style.width=(100/scale)+"%";}' +
+      '});}' +
+      'window.__fitPlanogramPages=fit;' +
+      'if(document.fonts&&document.fonts.ready){document.fonts.ready.then(fit).catch(fit);}else{setTimeout(fit,80);}' +
+      '})();' +
+      '<\\/script>';
     printWindow.document.open();
-    printWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>冻品门店陈列图</title>' + styles + printStyles + '</head><body class="' + bodyClass + '"><div class="display-map-shell">' + canvas.outerHTML + '</div></body></html>');
+    printWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>冻品门店陈列图</title>' + styles + printStyles + '</head><body><div class="display-map-shell">' + printCanvas + '</div>' + fitScript + '</body></html>');
     printWindow.document.close();
     let printed = false;
     const triggerPrint = function () {
       if (printed) return;
       printed = true;
+      if (typeof printWindow.__fitPlanogramPages === 'function') printWindow.__fitPlanogramPages();
       printWindow.focus();
       printWindow.print();
     };
-    printWindow.addEventListener('load', function () { setTimeout(triggerPrint, 120); }, { once: true });
-    setTimeout(triggerPrint, 700);
+    printWindow.addEventListener('load', function () { setTimeout(triggerPrint, 220); }, { once: true });
+    setTimeout(triggerPrint, 900);
   }
-
   async function exportExcelPlanogram() {
     const button = document.getElementById('exportDisplayMapBtn');
     const originalText = button?.textContent || '导出Excel陈列图';
