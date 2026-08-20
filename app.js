@@ -1488,7 +1488,7 @@ async function cloudSignIn() {
   if (error) return cloudNote(translateCloudError(error.message), true);
   const verified = await refreshCloudAccount();
   if (!verified) return cloudNote('登录凭证已保存，但当前无法验证云端连接；请稍后重试。', true);
-  cloudNote('登录成功，请先初始化当前页面第1版或确认后拉取。');
+  cloudNote('登录成功。负责人首次直接保存，其他协作者请先拉取云端数据。');
 }
 async function cloudSignOut() {
   await cloudClient.auth.signOut();
@@ -1502,22 +1502,11 @@ async function requireCloudSession() {
   return session;
 }
 
-async function initializeCloudFromCurrent() {
-  if (!ensureCloudClient()) return cloudNote('云端组件加载失败，请刷新页面后重试。', true);
-  if (!await requireCloudSession()) return;
-  cloudNote('正在以当前页面初始化云端第1版...');
-  const payload = cloudCopyState(状态);
-  确保产品池(payload);
-  安全保存本地(CLOUD_ROLLBACK_KEY, 状态);
-  const updatedAt = new Date().toISOString();
-  let result = await cloudClient.from('carton_documents').update({ payload, doc_revision: 1, updated_at: updatedAt }).eq('id', 'main').select('doc_revision,updated_at').maybeSingle();
-  if (!result.error && !result.data) result = await cloudClient.from('carton_documents').insert({ id: 'main', payload, doc_revision: 1, updated_at: updatedAt }).select('doc_revision,updated_at').single();
-  if (result.error) return cloudNote(translateCloudError(result.error.message), true);
-  docRevision = 1;
-  cloudBaseData = structuredClone(payload);
-  cloudBaseline = window.CloudStateGuard?.createCloudBaseline?.(payload, 1) || { initialized: true, cloudRevision: 1 };
-  try { localStorage.setItem(CLOUD_BASELINE_KEY, JSON.stringify(cloudBaseline)); } catch (_) {}
-  cloudNote('已用当前页面初始化为云端第1版；旧云端数据未拉取。');
+async function readCloudDocument() {
+  return cloudClient.from('carton_documents')
+    .select('payload,doc_revision,updated_at')
+    .eq('id', 'main')
+    .maybeSingle();
 }
 
 /* --- 拉取云端数据 --- */
@@ -1525,16 +1514,15 @@ async function pullCloudData() {
   if (!ensureCloudClient()) return cloudNote('云端组件加载失败，请刷新页面后重试。', true);
   if (!await requireCloudSession()) return;
   cloudNote('正在读取云端版本...');
-  const { data, error } = await cloudClient.from('carton_documents').select('payload,doc_revision,updated_at').eq('id', 'main').maybeSingle();
+  const { data, error } = await readCloudDocument();
   if (error) return cloudNote(translateCloudError(error.message), true);
-  if (!data) return cloudNote('云端尚未初始化。请先以当前页面初始化第1版。');
-  const decision = window.CloudStateGuard?.evaluateCloudPull?.({ baseline: cloudBaseline, remote: data }) || { action: cloudBaseline ? 'confirm-required' : 'initialize-current' };
-  if (decision.action === 'initialize-current') return cloudNote('当前页面尚未初始化为云端第1版，请点击“以当前页面初始化第1版”；本次未拉取旧云端数据。', true);
+  if (!data) return cloudNote('云端尚未建立，请由负责人先保存当前页面。');
+  const decision = window.CloudStateGuard?.evaluateCloudPull?.({ baseline: cloudBaseline, remote: data }) || { action: cloudBaseline?.initialized ? 'confirm-required' : 'first-pull' };
   if (decision.action === 'stale-rejected') return cloudNote(云端基线保护说明 + '。云端版本早于当前页面基线，本次未覆盖。', true);
   if (decision.action === 'unavailable') return cloudNote('无法读取云端版本，本次未改变当前页面。', true);
   if (decision.action === 'unchanged') { docRevision = data.doc_revision; return cloudNote('云端与当前页面一致，无需拉取。'); }
   if (!data.payload || !Array.isArray(data.payload.skus) || !data.payload.skus.length) return cloudNote('云端数据结构异常，本次未改变当前页面。', true);
-  const ok = window.confirm('检测到云端第 ' + data.doc_revision + ' 版与当前页面不同。确认后才会应用云端数据，是否继续？');
+  const ok = decision.action === 'first-pull' || window.confirm('检测到云端第 ' + data.doc_revision + ' 版与当前页面不同。确认后才会应用云端数据，是否继续？');
   if (!ok) return cloudNote('已取消拉取，当前页面未改变。');
   const cloudState = 清理计算缓存(structuredClone(data.payload));
   确保产品池(cloudState);
@@ -1549,7 +1537,7 @@ async function pullCloudData() {
   cloudBaseline = window.CloudStateGuard?.createCloudBaseline?.(cloudState, docRevision) || { initialized: true, cloudRevision: docRevision };
   try { localStorage.setItem(CLOUD_BASELINE_KEY, JSON.stringify(cloudBaseline)); } catch (_) {}
   渲染全部();
-  cloudNote('已确认并应用云端第 ' + docRevision + ' 版。');
+  cloudNote((decision.action === 'first-pull' ? '已拉取云端最新第 ' : '已确认并应用云端第 ') + docRevision + ' 版。');
 }
 
 /* --- 保存至云端 --- */
@@ -1599,14 +1587,18 @@ async function saveCloudDocument(payload, expectedRevision) {
 
 async function pushCloudData() {
   if (!await requireCloudSession()) return;
-  if (!cloudBaseline?.initialized) return cloudNote('请先点击“以当前页面初始化第1版”，' + 云端基线保护说明 + '。', true);
+  if (!cloudBaseline?.initialized) {
+    const remote = await readCloudDocument();
+    if (remote.error) return cloudNote(translateCloudError(remote.error.message), true);
+    if (remote.data) return cloudNote('当前页面尚未拉取云端最新版本，请先点击“拉取云端数据”。', true);
+  }
   cloudNote('正在保存至云端...');
   保存();
   const payload = cloudCopyState(状态);
   const lifecycle = window.ProductLifecycle?.getState?.();
   if (lifecycle && !payload.lifecycle) payload.lifecycle = structuredClone(lifecycle);
   确保产品池(payload);
-  const expectedRevision = Number(cloudBaseline.cloudRevision || docRevision || 0);
+  const expectedRevision = Number(cloudBaseline?.cloudRevision || docRevision || 0);
   const { data, error } = await saveCloudDocument(payload, expectedRevision);
   if (error) { if (error.code === 'P0001') return cloudNote('云端版本已更新，本次没有写入。请先拉取并确认差异。', true); return cloudNote(translateCloudError(error.message), true); }
   const row = Array.isArray(data) ? data[0] : data;
@@ -1663,7 +1655,6 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
     on('cloudResendBtn', function(){ withCloudSdk(cloudResendVerification); });
     on('cloudSignInBtn', function(){ withCloudSdk(cloudSignIn); });
     on('cloudSignOutBtn', function(){ withCloudSdk(cloudSignOut); });
-    on('cloudInitializeBtn', function(){ withCloudSdk(initializeCloudFromCurrent); });
     on('cloudPullBtn', function(){ withCloudSdk(pullCloudData); });
     on('cloudPushBtn', function(){ withCloudSdk(pushCloudData); });
     var dialog = document.getElementById('cloudDialog');
@@ -1671,4 +1662,3 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
   }
   tryBind();
 })();
-

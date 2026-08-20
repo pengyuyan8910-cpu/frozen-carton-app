@@ -66,7 +66,7 @@
   </main>
   <script src="product-lifecycle-bridge.js?v=20260811_planogram_reclaim_v5"></script><script src="lifecycle-host-mode.js?v=20260811_planogram_reclaim_v5"></script>
 <script type="module" src="scripts/strict-allocation-engine.mjs?v=20260820_physical_floor_v2"></script><script type="module" src="scripts/strict-allocation-adapter.mjs?v=20260820_physical_floor_v2"></script>
-  <script src="bootstrap.js?v=20260820_physical_floor_v2"></script>
+  <script src="bootstrap.js?v=20260820_cloudflow_v2"></script>
 <script src="layout-preview-v5.js?v=20260820_planogram_export_pdf_v6"></script>
 <script src="store-product-view.js?v=20260819_lifecycle_rounding_v6"></script>
 
@@ -101,9 +101,8 @@
   </section>
   <section class="cloud-section">
     <h3>2. 拉取与保存</h3>
-    <p>首次使用请先以当前页面初始化云端第1版。后续拉取只会先提示版本差异，确认后才应用，不会自动覆盖当前页面。</p>
+    <p>首次由负责人保存当前页面建立云端第1版；其他协作者直接拉取。后续修改后直接保存，拉取只会在确认后应用版本差异，不会自动覆盖当前页面。</p>
     <div class="cloud-actions">
-      <button id="cloudInitializeBtn" class="cloud-btn" type="button">以当前页面初始化第1版</button>
       <button id="cloudPullBtn" class="cloud-btn" type="button">拉取云端数据</button>
       <button id="cloudPushBtn" class="cloud-btn-primary" type="button">保存至云端</button>
     </div>
@@ -114,18 +113,3 @@
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

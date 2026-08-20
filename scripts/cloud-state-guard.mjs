@@ -17,7 +17,7 @@ export function shouldInitializeCloud(baseline) {
 
 export function evaluateCloudPull({ baseline, remote }) {
   if (!remote) return { action: 'unavailable' };
-  if (shouldInitializeCloud(baseline)) return { action: 'initialize-current' };
+  if (shouldInitializeCloud(baseline)) return { action: 'first-pull' };
   const revision = Math.max(0, Math.trunc(Number(remote.doc_revision) || 0));
   const currentRevision = Math.max(0, Math.trunc(Number(baseline.cloudRevision) || 0));
   if (revision < currentRevision) return { action: 'stale-rejected' };
