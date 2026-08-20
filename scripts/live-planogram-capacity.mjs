@@ -131,7 +131,8 @@ export function recalculateLoadedPlanogram(state) {
     }
 
     if (!primary) continue;
-    row.faceOrientation = primary.orientation;
+    // Capacity follows the saved module orientation, but rehydration must not
+    // rewrite the row's existing direction field. That field is user layout data.
     row.faceWidth = primary.faceWidth;
     row.perCol = primary.perCol;
     row.rowFull = Math.max(0, Math.floor(number(row.displayCols)) * primary.perCol);

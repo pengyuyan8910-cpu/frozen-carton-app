@@ -1,6 +1,6 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_cloudflow_v2";
-  const RULE_VERSION = "20260820_physical_floor_v2";
+  const DATA_VERSION = "20260820_cloudflow_v3_global_capacity";
+  const RULE_VERSION = "20260820_physical_floor_v3_global_capacity";
   const APP_VERSION = "20260820_cloudflow_v2";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
