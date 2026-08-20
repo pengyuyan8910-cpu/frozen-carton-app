@@ -20,6 +20,7 @@ assert.match(layout, /displayMapCanvas/, "PDF必须基于当前陈列图画布")
 assert.match(layout, /printWindow\.print\(\)/, "PDF导出必须打开浏览器打印/另存为PDF流程");
 
 assert.match(layout, /#displayMapCanvas>\\.map-cabinet\\{[^}]*break-before:page/, "PDF必须让每个柜子从新页面开始");
+assert.match(layout, /#displayMapCanvas\\{display:block!important;width:100%!important;min-width:0!important/, "PDF打印副本必须关闭陈列图多列布局");
 assert.match(layout, /#displayMapCanvas>\\.map-cabinet\\{[^}]*break-inside:avoid/, "PDF必须尽量保持同一个柜子不被拆页");
 assert.match(layout, /#displayMapCanvas>\\.map-store-title\\+\\.map-cabinet\\{[^}]*break-before:auto/, "PDF首个柜子不能因为分页规则产生空白首页");
 
