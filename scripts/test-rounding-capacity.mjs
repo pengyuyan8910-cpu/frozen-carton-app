@@ -108,3 +108,4 @@ console.log(JSON.stringify({
   upright: { orientedDepth: uprightPlacement.orientedDepth, depthCount: uprightPlacement.depthCount, stackCount: uprightPlacement.stackCount, perCol: uprightPlacement.perCol },
   previousRecalculatedPerCol: previous.rows[0].placements[0].perCol
 }, null, 2));
+
