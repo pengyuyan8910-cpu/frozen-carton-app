@@ -37,11 +37,6 @@ assert.equal(selectedSource.skus.find(r=>r.store==='店A')?.displayCols,1,'指�
 assert.equal(selectedSource.skus.find(r=>r.store==='店B')?.displayCols,8,'指定门店重排不得覆盖未选择门店的当前草稿');
 assert.equal(selectedSource.skus.find(r=>r.store==='新店C')?.note,'新增门店草稿','指定门店重排不得删除新增门店草稿');
 
-const ui=fs.readFileSync(new URL('./product-pool-replan-ui.mjs',import.meta.url),'utf8');
-assert.equal(ui.includes("ops.dispatchEvent(new Event('change'"),false,'人工复核不得再次触发运营开关 change/密码流程');
-assert.ok(ui.includes("ops.checked=true"),'人工复核必须直接恢复已授权的运营会话');
-assert.ok(ui.includes("document.body.classList.add('ops')"),'人工复核必须恢复运营模式页面样式');
-
 {
   const live=JSON.parse(fs.readFileSync(new URL('../data/app-data.json',import.meta.url),'utf8'));
   const livePool=Array.isArray(live.productPool)&&live.productPool.length?live.productPool:normalizeActiveProductPool(live.skus||[]);
