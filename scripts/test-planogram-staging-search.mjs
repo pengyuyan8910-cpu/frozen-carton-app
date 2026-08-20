@@ -14,3 +14,4 @@ assert.deepEqual(filterPlanogramStagingRows(rows, "火锅食材").map((row) => r
 assert.deepEqual(filterPlanogramStagingRows(rows, "不存在").map((row) => row.id), [], "无匹配时应返回空列表");
 
 console.log("planogram staging search tests passed");
+
