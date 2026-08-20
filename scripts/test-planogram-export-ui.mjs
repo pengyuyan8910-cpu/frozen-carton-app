@@ -23,6 +23,8 @@ assert.match(layout, /#displayMapCanvas>\\.map-cabinet\\{[^}]*break-before:page/
 assert.match(layout, /#displayMapCanvas\\{display:block!important;width:100%!important;min-width:0!important/, "PDF打印副本必须关闭陈列图多列布局");
 assert.match(layout, /pdf-cabinet-page/, "PDF必须为每个柜子建立独立页面容器");
 assert.match(layout, /__fitPlanogramPages/, "PDF超高柜子必须在页面内缩放后打印");
+assert.match(layout, /pdf-cabinet-content/, "PDF缩放必须作用于完整柜子内容，不能裁掉后续层位");
+assert.match(layout, /height:194mm/, "PDF页面容器必须使用稳定的横向页面高度");
 assert.match(layout, /#displayMapCanvas>\\.map-cabinet\\{[^}]*break-inside:avoid/, "PDF必须尽量保持同一个柜子不被拆页");
 assert.match(layout, /#displayMapCanvas>\\.map-store-title\\+\\.map-cabinet\\{[^}]*break-before:auto/, "PDF首个柜子不能因为分页规则产生空白首页");
 
