@@ -1256,7 +1256,8 @@ let cloudBaseline = null;
 try { cloudBaseline = JSON.parse(localStorage.getItem(CLOUD_BASELINE_KEY) || 'null'); } catch (_) { cloudBaseline = null; }
 if (cloudBaseline?.cloudRevision) docRevision = Number(cloudBaseline.cloudRevision) || 0;
 const CLOUD_SESSION_KEY = 'frozen_carton_cloud_session_v1';
-const CLOUD_REQUEST_TIMEOUT_MS = 10000;
+const CLOUD_REQUEST_TIMEOUT_MS = 30000;
+const CLOUD_REQUEST_RETRIES = 1;
 
 function cloudReadSession() {
   try {
@@ -1288,24 +1289,39 @@ async function cloudRestRequest(path, options = {}) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(body);
   }
-  const controller = typeof AbortController === 'function' ? new AbortController() : null;
-  const timeout = controller ? setTimeout(() => controller.abort(), CLOUD_REQUEST_TIMEOUT_MS) : null;
-  try {
-    const request = { ...options, headers, body };
-    if (controller) request.signal = controller.signal;
-    const response = await fetch(`${SUPABASE_URL}${path}`, request);
-    const text = await response.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
-    if (!response.ok) {
-      return { data: null, error: { code: data?.code || data?.error_code || String(response.status), message: data?.msg || data?.message || data?.error_description || data?.error || `HTTP ${response.status}` } };
+  const isReadRequest = String(options.method || 'GET').toUpperCase() === 'GET';
+  const maxAttempts = isReadRequest ? 1 + CLOUD_REQUEST_RETRIES : 1;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const controller = typeof AbortController === 'function' ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), CLOUD_REQUEST_TIMEOUT_MS) : null;
+    try {
+      const request = { ...options, headers, body };
+      if (controller) request.signal = controller.signal;
+      const response = await fetch(`${SUPABASE_URL}${path}`, request);
+      const text = await response.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (_) { data = text; }
+      if (!response.ok) {
+        const error = { code: data?.code || data?.error_code || String(response.status), message: data?.msg || data?.message || data?.error_description || data?.error || `HTTP ${response.status}` };
+        if (isReadRequest && attempt < maxAttempts - 1 && response.status >= 500) {
+          await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)));
+          continue;
+        }
+        return { data: null, error };
+      }
+      return { data, error: null };
+    } catch (error) {
+      const normalized = { code: error?.name === 'AbortError' ? 'CLOUD_TIMEOUT' : 'FETCH_FAILED', message: error?.name === 'AbortError' ? 'Cloud request timeout' : (error?.message || 'Failed to fetch') };
+      if (isReadRequest && attempt < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, 600 * (attempt + 1)));
+        continue;
+      }
+      return { data: null, error: normalized };
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
-    return { data, error: null };
-  } catch (error) {
-    return { data: null, error: { code: error?.name === 'AbortError' ? 'CLOUD_TIMEOUT' : 'FETCH_FAILED', message: error?.name === 'AbortError' ? 'Cloud request timeout' : (error?.message || 'Failed to fetch') } };
-  } finally {
-    if (timeout) clearTimeout(timeout);
   }
+  return { data: null, error: { code: 'FETCH_FAILED', message: 'Failed to fetch' } };
 }
 
 function createCloudRestQuery(table) {
@@ -1337,6 +1353,12 @@ function createCloudRestClient() {
   return {
     auth: {
       async getSession() { return { data: { session: cloudReadSession() }, error: null }; },
+      async getUser() {
+        const session = cloudReadSession();
+        if (!session?.access_token) return { data: { user: null }, error: null };
+        const result = await cloudRestRequest('/auth/v1/user', { method: 'GET' });
+        return result.error ? result : { data: { user: result.data }, error: null };
+      },
       async signInWithPassword({ email, password }) {
         const result = await cloudRestRequest('/auth/v1/token?grant_type=password', { method: 'POST', body: { email, password }, skipAuth: true });
         if (!result.error) result.data = cloudWriteSession(result.data);
@@ -1425,9 +1447,19 @@ async function refreshCloudAccount() {
   if (!ensureCloudClient()) { cloudAccountNote('云端组件未配置。请先创建 Supabase 项目，然后将 URL 和 Key 填入 app.js 中的 SUPABASE_URL 和 SUPABASE_ANON_KEY。', true); return null; }
   try {
     const { data: { session } } = await cloudClient.auth.getSession();
-    if (session && session.user) cloudAccountNote('已登录：' + session.user.email + '。');
-    else cloudAccountNote('尚未登录云端协作账号。');
-    return session;
+    if (!session || !session.user) { cloudAccountNote('尚未登录云端协作账号。'); return null; }
+    const verified = await cloudClient.auth.getUser();
+    if (verified.error) {
+      const message = translateCloudError(verified.error.message);
+      if (String(verified.error.code) === '401' || String(verified.error.code) === '403' || message.includes('登录已过期')) {
+        try { localStorage.removeItem(CLOUD_SESSION_KEY); } catch (_) {}
+      }
+      cloudAccountNote(message, true);
+      return null;
+    }
+    const user = verified.data?.user || session.user;
+    cloudAccountNote('已登录：' + (user.email || session.user.email || '当前账号') + '。');
+    return { ...session, user };
   } catch (e) { cloudAccountNote('云端连接失败：' + (e.message || '未知错误'), true); return null; }
 }
 
@@ -1449,7 +1481,8 @@ async function cloudSignIn() {
   const email = q('#cloudEmail').value.trim(), pwd = q('#cloudPassword').value;
   const { error } = await cloudClient.auth.signInWithPassword({ email, password: pwd });
   if (error) return cloudNote(translateCloudError(error.message), true);
-  await refreshCloudAccount();
+  const verified = await refreshCloudAccount();
+  if (!verified) return cloudNote('登录凭证已保存，但当前无法验证云端连接；请稍后重试。', true);
   cloudNote('登录成功，请先初始化当前页面第1版或确认后拉取。');
 }
 async function cloudSignOut() {
