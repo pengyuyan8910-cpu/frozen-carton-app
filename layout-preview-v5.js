@@ -763,9 +763,11 @@
       '@page{size:landscape;margin:8mm}' +
       'html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}' +
       'body{min-width:0!important}' +
-      '#displayMapCanvas>.map-cabinet{break-before:page;page-break-before:always;break-inside:avoid;page-break-inside:avoid}' +
-      '#displayMapCanvas>#displayMapCanvas>.map-store-title+.map-cabinet{break-before:auto;page-break-before:auto}' +
       '.display-map-shell,#displayMapCanvas{width:max-content!important;max-width:none!important;height:auto!important;max-height:none!important;overflow:visible!important}' +
+      '.display-map-shell{display:block!important;width:100%!important;max-width:100%!important}' +
+      '#displayMapCanvas{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important}' +
+      '#displayMapCanvas>.map-cabinet{display:block!important;width:100%!important;break-before:page;page-break-before:always;break-inside:avoid;page-break-inside:avoid}' +
+      '#displayMapCanvas>.map-store-title+.map-cabinet{break-before:auto;page-break-before:auto}' +
       '.map-item{break-inside:avoid}' +
       '</style>';
     printWindow.document.open();
