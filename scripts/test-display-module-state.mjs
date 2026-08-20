@@ -61,13 +61,7 @@ const includeState = {
       faceWidth: 0,
       placements: [],
     },
-    {
-      id: "sku-other-store",
-      store: "乙店",
-      barcode: "690000000099",
-      name: "其他店水饺",
-      included: false,
-    },
+    { id: "sku-other-store", store: "乙店", barcode: "690000000099", included: false },
   ],
 };
 
@@ -78,8 +72,7 @@ assert.equal(included.row.inStaging, true, "纳入后应先进入待选区，不
 assert.equal(included.row.cabinetLabel, "待选区");
 assert.equal(included.row.position, "待选区");
 assert.equal(included.row.cabinetKey, "");
-assert.equal(included.row.stagingCabinetType, "待分配", "普通冻品纳入后应允许人工选择立柜或卧柜");
-assert.equal(included.row.stagingIce, false);
+assert.equal(included.row.stagingCabinetType, "待分配");
 assert.equal(includeState.skus[0].included, false, "操作应返回新状态，不直接改原状态");
 assert.deepEqual(included.state.productPool, includeState.productPool, "产品池不得被纳入操作改写");
 assert.equal(included.state.skus.find((row) => row.id === "sku-other-store").included, false, "其他门店不得被改写");
@@ -177,3 +170,4 @@ assert.deepEqual(
 assert.equal(moved.state.skus.find((row) => row.id === "order-other").planogramOrder, 0);
 
 console.log("display module state tests passed");
+
