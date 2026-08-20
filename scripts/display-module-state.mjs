@@ -35,6 +35,35 @@ export function sameStoreSkuCabinetSegment(state, row, targetKey, { keyOf } = {}
   ));
 }
 
+export function includePlanogramSku(state, { id } = {}) {
+  const source = (state?.skus || []).find((row) => row.id === id);
+  if (!source) return { ok: false, reason: "未找到要纳入的SKU" };
+  if (source.included !== false) return { ok: false, reason: "该SKU已经纳入当前门店" };
+
+  const next = structuredClone(state);
+  const row = next.skus.find((candidate) => candidate.id === id);
+  row.included = true;
+  row.inStaging = true;
+  row.stagingCabinetType = row.ice === true ? "冰淇淋柜" : "待分配";
+  row.stagingIce = row.ice === true;
+  row.stagingFrom = null;
+  row.cabinetKey = "";
+  row.cabinetLabel = "待选区";
+  row.position = "待选区";
+  row.displayCols = 0;
+  row.perCol = 0;
+  row.faceWidth = 0;
+  row.rowFull = 0;
+  row.skuFull = 0;
+  row.placements = [];
+  row.customPlacement = true;
+  row.modifiedFields = [...new Set([...(row.modifiedFields || []), "纳入状态", "陈列柜段"])];
+  row.changeNote = "陈列图纳入SKU";
+  row.sourceAdvice = "待选区手动分配";
+  row.sourceAction = "陈列图纳入";
+  return { ok: true, state: next, row };
+}
+
 function orderValue(row) {
   const value = Number(row?.planogramOrder);
   return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;

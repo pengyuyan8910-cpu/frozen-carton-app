@@ -948,6 +948,18 @@ function 陈列图下架SKU(id){
   const r=状态.skus.find(x=>x.id===id);if(!r)return;
   r.included=false;r.inStaging=false;r.customPlacement=true;标记变更(r,"纳入状态","陈列图下架SKU");保存();当前.陈列图选中SKU="";渲染全部();完成提示("已下架SKU：柜段余量和门店外储容量已同步更新。");
 }
+function 陈列图纳入SKU(id){
+  const row=状态.skus.find(x=>x.id===id&&x.store===门店名());
+  const helper=window.DisplayModuleState?.includePlanogramSku;
+  if(!row||!helper){alert("未找到可纳入的当前门店SKU，请刷新页面后重试。");return}
+  const result=helper(状态,{id});
+  if(!result.ok){alert("无法纳入："+result.reason);return}
+  状态.skus=result.state.skus;
+  当前.陈列图筛选="staging";
+  当前.陈列图选中SKU=result.row.id;
+  保存();渲染全部();
+  完成提示("SKU已纳入当前门店，并进入待选区。请手动拖到可用柜段后再保存。");
+}
 function 渲染陈列图右侧(){
   const el=q("#displayMapMonitor");if(!el)return;
   const store=门店名(),summary=门店汇总(store),stagedRows=待选SKU(store),stagedQuery=文(q("#displayStagingSearch")?.value);
@@ -968,7 +980,7 @@ function 渲染陈列图右侧(){
   const stagedItemsHtml=staged.map(r=>'<span class="map-item staging-item" data-sku-id="'+逃(r.id)+'" style="'+陈列图商品样式(r)+'">'+陈列图商品标签(r)+'</span>').join('');
   const stagedHtml='<section id="displayStagingZone" class="staging-zone"><h3>待选区</h3><div class="pool-search staging-search"><input id="displayStagingSearch" type="search" value="'+逃(stagedQuery)+'" placeholder="搜索品名、条码、类目"></div><p>临时释放原柜段空间。待选商品拖回可用柜段并清空待选区后，才能完成保存。</p><div class="staging-items">'+(stagedItemsHtml||'<span class="map-empty">暂无待分配商品</span>')+(stagedItemsHtml?'<span class="map-empty staging-search-empty" hidden>没有匹配的待选SKU</span>':'')+'</div></section>';
   const list=陈列图池列表(store);
-  const listHtml='<div class="pool-search"><input id="displayMapPoolSearch" type="search" placeholder="搜索品名、条码、二级/三级类目"></div><div class="pool-list">'+(list.map(r=>{const location=r.inStaging?'待选区':(r.included?柜名(r)+' '+柜位(r):'未纳入'),moduleCount=同SKU陈列模块(r).length;const status=r.inStaging?'待分配':(r.included?(moduleCount>1?'架内模块 '+moduleCount+' 个':'架内'):'未纳入');return '<article class="pool-item '+(r.id===当前.陈列图选中SKU?'selected':'')+'"><button type="button" class="pool-item-main" data-map-select="'+逃(r.id)+'"><span>'+逃(r.name)+'</span><small>'+逃(r.barcode||'无条码')+' ｜ '+逃(r.category4||r.category3)+'</small><small class="pool-location">'+逃(location)+'</small></button><div class="pool-item-side"><span class="tag '+分级(r.grade)+'">'+逃(r.grade||'')+'</span><em>'+status+'</em></div>'+(r.included?'<button type="button" class="pool-locate" data-map-locate="'+逃(r.id)+'">定位</button>':'')+(moduleCount>1?'<button type="button" class="pool-delete danger-mini" data-map-delete-module="'+逃(r.id)+'">删除模块</button>':'')+'</article>'}).join('')||'<div class="empty">没有匹配的SKU</div>')+'</div>';
+  const listHtml='<div class="pool-search"><input id="displayMapPoolSearch" type="search" placeholder="搜索品名、条码、二级/三级类目"></div><div class="pool-list">'+(list.map(r=>{const location=r.inStaging?'待选区':(r.included?柜名(r)+' '+柜位(r):'未纳入'),moduleCount=同SKU陈列模块(r).length;const status=r.inStaging?'待分配':(r.included?(moduleCount>1?'架内模块 '+moduleCount+' 个':'架内'):'未纳入');return '<article class="pool-item '+(r.id===当前.陈列图选中SKU?'selected':'')+'"><button type="button" class="pool-item-main" data-map-select="'+逃(r.id)+'"><span>'+逃(r.name)+'</span><small>'+逃(r.barcode||'无条码')+' ｜ '+逃(r.category4||r.category3)+'</small><small class="pool-location">'+逃(location)+'</small></button><div class="pool-item-side"><span class="tag '+分级(r.grade)+'">'+逃(r.grade||'')+'</span><em>'+status+'</em></div>'+(可编辑模式()&&!r.included&&!文(r.status).includes("淘汰")?'<button type="button" class="pool-locate pool-include" data-map-include="'+逃(r.id)+'">纳入</button>':'')+(r.included?'<button type="button" class="pool-locate" data-map-locate="'+逃(r.id)+'">定位</button>':'')+(moduleCount>1?'<button type="button" class="pool-delete danger-mini" data-map-delete-module="'+逃(r.id)+'">删除模块</button>':'')+'</article>'}).join('')||'<div class="empty">没有匹配的SKU</div>')+'</div>';
   const stageHost=q('#displayStagingHost'); if(stageHost)stageHost.innerHTML='';
   el.innerHTML=selectedHtml+stagedHtml+'<section class="side-summary external-summary-card"><div class="side-card-title"><span>外储空间监测</span><small>随陈列数据实时联动</small></div><div class="external-summary-grid"><div><span>动态P95</span><strong>'+格(summary.p95,1)+'L</strong></div><div><span>建议外储</span><strong class="'+(summary.suggested>数(状态.params.externalCapL)?'bad':'ok')+'">'+格(summary.suggested,0)+'L</strong></div><div><span>容量上限</span><strong>'+格(状态.params.externalCapL,0)+'L</strong></div></div></section><section class="side-pool"><div class="side-card-title"><span>商品信息栏</span><small>点击商品后在上方查看</small></div>'+tabsHtml+listHtml+'</section>';
   qa("[data-map-pool]").forEach(b=>b.onclick=()=>{当前.陈列图筛选=b.dataset.mapPool;渲染陈列图右侧()});
@@ -977,6 +989,7 @@ function 渲染陈列图右侧(){
   qa("[data-map-delete-module]").forEach(b=>b.onclick=e=>{e.stopPropagation();删除陈列模块(b.dataset.mapDeleteModule)});
   qa("[data-map-clone]").forEach(b=>b.onclick=e=>{e.stopPropagation();分身SKU到陈列图(b.dataset.mapClone)});
   qa("[data-map-down]").forEach(b=>b.onclick=()=>陈列图下架SKU(b.dataset.mapDown));
+  qa("[data-map-include]").forEach(b=>b.onclick=e=>{e.stopPropagation();陈列图纳入SKU(b.dataset.mapInclude)});
   const search=q("#displayMapPoolSearch");if(search)search.oninput=()=>渲染陈列图右侧();
   const stagingSearch=q("#displayStagingSearch");if(stagingSearch){
     const applyStagingSearch=()=>{

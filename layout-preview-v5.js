@@ -70,6 +70,24 @@
     return { full, trigger, receivable, inShelf, external, vol, staticVol, risk };
   }
 
+  function displayDirection(row) {
+    try {
+      if (typeof 陈列面方向值 === 'function') {
+        return 陈列面方向值(row) === 'length' ? '长做陈列面' : '宽做陈列面';
+      }
+    } catch (_) {}
+    const value = String(row?.faceOrientation || '').trim();
+    if (value === 'length' || value === '长做陈列面' || value === '长') return '长做陈列面';
+    if (value === 'width' || value === '宽做陈列面' || value === '宽') return '宽做陈列面';
+    const face = number(row?.faceWidth);
+    const length = number(row?.length);
+    const width = number(row?.width);
+    if (face > 0 && length > 0 && width > 0) {
+      return Math.abs(face - length) <= Math.abs(face - width) ? '长做陈列面' : '宽做陈列面';
+    }
+    return '';
+  }
+
   function rowWidth(row) {
     try {
       if (typeof SKU占用宽度 === 'function') return SKU占用宽度(row);
@@ -371,6 +389,7 @@
 
     hooksInstalled = true;
     bindExportButton();
+    bindPdfExportButton();
     syncCategoryPicker();
     applyPoolFilter();
     trimPlanogramSpace();
@@ -591,14 +610,11 @@
           const calc = rowCalc(row);
           const width = rowWidth(row);
           const span = Math.max(1, Math.round(width / BASE_WIDTH_MM));
-          const carton = Math.max(1, number(row.carton || 1));
-          const maxBoxes = Math.max(0, Math.floor(number(calc.full) / carton));
           const value = [
             row.name || '未命名商品',
             row.barcode || '无条码',
-            [row.category3, row.category4].filter(Boolean).join(' / '),
             format(row.displayCols, 0) + '列｜单列' + format(row.perCol, 1) + '｜满陈' + format(calc.full, 0),
-            '最多' + maxBoxes + '箱｜占宽' + format(width, 0) + 'mm｜外储' + format(calc.external, 0) + '件'
+            '陈列面：' + displayDirection(row) + '｜占宽' + format(width, 0) + 'mm｜外储' + format(calc.external, 0) + '件'
           ].filter(Boolean).join('\n');
           writeMergedBlock(sheet, rowStart, rowEnd, col, col + span - 1, value, fillForRow(row, calc), 'FF24332D', true);
           col += span;
@@ -728,6 +744,86 @@
     alert(message);
   }
 
+  function exportPdfPlanogram() {
+    const canvas = document.getElementById('displayMapCanvas');
+    if (!canvas || !canvas.innerText.trim()) {
+      alert('请先生成陈列图');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('PDF导出窗口被浏览器拦截，请允许本站打开新窗口后重试。');
+      return;
+    }
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(function (node) { return node.outerHTML; })
+      .join('\n');
+    const titleNode = canvas.querySelector(':scope > .map-store-title');
+    const cabinetNodes = Array.from(canvas.querySelectorAll(':scope > .map-cabinet'));
+    const pages = cabinetNodes.map(function (cabinet, index) {
+      const title = index === 0 && titleNode ? titleNode.outerHTML : '';
+      return '<section class="pdf-cabinet-page"><div class="pdf-cabinet-content">' + title + cabinet.outerHTML + '</div></section>';
+    }).join('');
+    const pageMarkup = pages || '<section class="pdf-cabinet-page"><div class="pdf-cabinet-content">' + canvas.innerHTML + '</div></section>';
+    const printCanvas = '<div id="displayMapCanvas" class="display-map pdf-planogram">' + pageMarkup + '</div>';
+    const printStyles = '<style>' +
+      '@page{size:landscape;margin:8mm}' +
+      'html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:visible!important}' +
+      'body{min-width:0!important}' +
+      '.display-map-shell{display:block!important;width:100%!important;max-width:100%!important;overflow:visible!important}' +
+      '#displayMapCanvas{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;height:auto!important;overflow:visible!important}' +
+      '.pdf-cabinet-page{display:block!important;width:100%!important;height:194mm!important;min-height:194mm!important;max-height:194mm!important;overflow:hidden!important;break-inside:avoid;page-break-inside:avoid;break-after:page;page-break-after:always;padding:0!important;margin:0!important}' +
+      '.pdf-cabinet-page:last-child{break-after:auto;page-break-after:auto}' +
+      '.pdf-cabinet-content{display:block!important;width:100%!important;transform-origin:top left!important}' +
+      '.pdf-cabinet-content>.map-cabinet{display:block!important;width:100%!important;max-width:100%!important;margin:0!important;break-inside:avoid;page-break-inside:avoid}' +
+      '.map-item{break-inside:avoid}' +
+      '</style>';
+    printWindow.document.open();
+    printWindow.document.write('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>冻品门店陈列图</title>' + styles + printStyles + '</head><body><div class="display-map-shell">' + printCanvas + '</div></body></html>');
+    printWindow.document.close();
+    const fitPrintPages = function () {
+      if (printWindow.closed) return;
+      const pages = printWindow.document.querySelectorAll('.pdf-cabinet-page');
+      pages.forEach(function (page) {
+        const content = page.querySelector('.pdf-cabinet-content');
+        if (!content) return;
+        content.style.transform = 'none';
+        content.style.width = '100%';
+        content.style.height = 'auto';
+        const availableHeight = page.clientHeight;
+        const availableWidth = page.clientWidth;
+        const naturalHeight = content.scrollHeight;
+        const naturalWidth = content.scrollWidth;
+        if (availableHeight > 0 && availableWidth > 0 && naturalHeight > 0 && naturalWidth > 0) {
+          const scale = Math.min(1, availableHeight / naturalHeight, availableWidth / naturalWidth);
+          content.style.transformOrigin = 'top left';
+          content.style.transform = 'scale(' + scale + ')';
+          content.style.width = (100 / scale) + '%';
+          content.style.height = (naturalHeight * scale) + 'px';
+        }
+      });
+    };
+    let printed = false;
+    const triggerPrint = function () {
+      if (printed || printWindow.closed) return;
+      fitPrintPages();
+      const firstPage = printWindow.document.querySelector('.pdf-cabinet-page');
+      if (firstPage && firstPage.clientHeight === 0) {
+        setTimeout(triggerPrint, 120);
+        return;
+      }
+      printed = true;
+      printWindow.focus();
+      printWindow.print();
+    };
+    printWindow.addEventListener('load', function () {
+      if (printWindow.document.fonts && printWindow.document.fonts.ready) {
+        printWindow.document.fonts.ready.then(fitPrintPages).catch(function () {});
+      }
+      setTimeout(triggerPrint, 260);
+    }, { once: true });
+    setTimeout(triggerPrint, 1000);
+  }
   async function exportExcelPlanogram() {
     const button = document.getElementById('exportDisplayMapBtn');
     const originalText = button?.textContent || '导出Excel陈列图';
@@ -787,6 +883,18 @@
       exportExcelPlanogram();
     };
     button.dataset.excelExportBound = 'true';
+    return true;
+  }
+
+  function bindPdfExportButton() {
+    const button = document.getElementById('exportDisplayMapPdfBtn');
+    if (!button) return false;
+    button.onclick = function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      exportPdfPlanogram();
+    };
+    button.dataset.pdfExportBound = 'true';
     return true;
   }
 
