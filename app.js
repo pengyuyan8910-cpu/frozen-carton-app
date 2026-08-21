@@ -86,7 +86,7 @@ function 保存草稿(){安全保存本地(统一状态保存键,状态)}
 function 保存发布(){安全保存本地(统一状态保存键,状态)}
 function 可编辑模式(){return true}
 function 切换数据源(){草稿状态=状态;发布状态=状态;window.ProductLifecycle?.syncData?.(状态);清空业务快照()}
-function 保存(){清空业务快照();草稿状态=状态;发布状态=状态;安全保存本地(统一状态保存键,状态);window.ProductLifecycle?.syncData?.(状态)}
+function 保存(){清空业务快照();草稿状态=状态;发布状态=状态;const saved=安全保存本地(统一状态保存键,状态);window.ProductLifecycle?.syncData?.(状态);return saved}
 function 标记待同步(){}
 初始化统一状态();
 window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);window.ProductLifecycle?.syncData?.(状态);
@@ -1378,7 +1378,8 @@ let cloudBaseline = null;
 try { cloudBaseline = JSON.parse(localStorage.getItem(CLOUD_BASELINE_KEY) || 'null'); } catch (_) { cloudBaseline = null; }
 if (cloudBaseline?.cloudRevision) docRevision = Number(cloudBaseline.cloudRevision) || 0;
 const CLOUD_SESSION_KEY = 'frozen_carton_cloud_session_v1';
-const CLOUD_REQUEST_TIMEOUT_MS = 30000;
+const CLOUD_READ_TIMEOUT_MS = 30000;
+const CLOUD_WRITE_TIMEOUT_MS = 120000;
 const CLOUD_REQUEST_RETRIES = 1;
 
 function cloudReadSession() {
@@ -1415,7 +1416,8 @@ async function cloudRestRequest(path, options = {}) {
   const maxAttempts = isReadRequest ? 1 + CLOUD_REQUEST_RETRIES : 1;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const controller = typeof AbortController === 'function' ? new AbortController() : null;
-    const timeout = controller ? setTimeout(() => controller.abort(), CLOUD_REQUEST_TIMEOUT_MS) : null;
+    const timeoutMs = options.timeoutMs ?? (isReadRequest ? CLOUD_READ_TIMEOUT_MS : CLOUD_WRITE_TIMEOUT_MS);
+    const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
     try {
       const request = { ...options, headers, body };
       if (controller) request.signal = controller.signal;
@@ -1667,6 +1669,28 @@ function cloudCopyState(st) {
   return JSON.parse(JSON.stringify(stable));
 }
 
+function cloudProtectCurrentPage() {
+  if (!保存()) return false;
+  try {
+    const rollback = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      dataSignature: 数据签名,
+      state: 状态补丁(状态),
+    };
+    localStorage.setItem(CLOUD_ROLLBACK_KEY, JSON.stringify(rollback));
+    return true;
+  } catch (error) {
+    console.warn('云端保存前的本地回退快照写入失败，已停止云端保存', error);
+    return false;
+  }
+}
+
+function cloudSaveFailure(error) {
+  const message = translateCloudError(error?.message || 'Failed to fetch');
+  return cloudNote(message + ' 当前页面数据已安全保存到本机，云端未覆盖当前页面。', true);
+}
+
 function cloudRevisionConflict() {
   return { code: 'P0001', message: 'CONFLICT: cloud data changed; merge the latest revision first.' };
 }
@@ -1703,21 +1727,21 @@ async function saveCloudDocument(payload, expectedRevision) {
 }
 
 async function pushCloudData() {
-  if (!await requireCloudSession()) return;
+  if (!cloudProtectCurrentPage()) return cloudNote('本机保存失败，未尝试云端保存；当前页面仍在内存中，请不要刷新。', true);
+  if (!await requireCloudSession()) return cloudNote('请先登录云端协作账号。当前页面数据已安全保存到本机。', true);
   if (!cloudBaseline?.initialized) {
     const remote = await readCloudDocument();
-    if (remote.error) return cloudNote(translateCloudError(remote.error.message), true);
+    if (remote.error) return cloudSaveFailure(remote.error);
     if (remote.data) return cloudNote('当前页面尚未拉取云端最新版本，请先点击“拉取云端数据”。', true);
   }
-  cloudNote('正在保存至云端...');
-  保存();
+  cloudNote('正在保存至云端（大文档可能需要一些时间）...');
   const payload = cloudCopyState(状态);
   const lifecycle = window.ProductLifecycle?.getState?.();
   if (lifecycle && !payload.lifecycle) payload.lifecycle = structuredClone(lifecycle);
   确保产品池(payload);
   const expectedRevision = Number(cloudBaseline?.cloudRevision || docRevision || 0);
   const { data, error } = await saveCloudDocument(payload, expectedRevision);
-  if (error) { if (error.code === 'P0001') return cloudNote('云端版本已更新，本次没有写入。请先拉取并确认差异。', true); return cloudNote(translateCloudError(error.message), true); }
+  if (error) { if (error.code === 'P0001') return cloudNote('云端版本已更新，本次没有写入；当前页面数据已安全保存到本机。请先拉取并确认差异。', true); return cloudSaveFailure(error); }
   const row = Array.isArray(data) ? data[0] : data;
   docRevision = Number(row?.doc_revision || expectedRevision + 1);
   cloudBaseData = structuredClone(payload);
