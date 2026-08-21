@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { applyDimensionUpdates, groupRefrigerators, validateDimensionUpdates } from './refrigerator-module.mjs';
+import { applyDimensionUpdates, createRefrigeratorSection, groupRefrigerators, validateDimensionUpdates, validateNewSection } from './refrigerator-module.mjs';
 
 const data = JSON.parse(fs.readFileSync(new URL('../data/app-data.json', import.meta.url), 'utf8'));
 const groups = groupRefrigerators(data.cabinets, '三山星悦广场生活馆');
@@ -42,4 +42,27 @@ assert.deepEqual(validateDimensionUpdates([{ key: target.key, length: 0, depth: 
   errors: [`${target.key}：长、宽/深、高必须大于0`],
 }, '非正尺寸必须被拦截');
 
+const added = createRefrigeratorSection(
+  chest,
+  { position: '分区3', length: 360, depth: 697, height: 204 },
+  data.cabinets,
+  originalTarget,
+);
+assert.equal(added.ok, true, '完整的新分区资料必须允许创建');
+assert.equal(added.cabinet.store, chest.store, '新增分区必须归属原门店');
+assert.equal(added.cabinet.label, chest.label, '新增分区必须归属原冰箱');
+assert.deepEqual(
+  { position: added.cabinet.position, length: added.cabinet.length, depth: added.cabinet.depth, height: added.cabinet.height },
+  { position: '分区3', length: 360, depth: 697, height: 204 },
+  '新增分区必须保存用户填写的分区和尺寸',
+);
+const expanded = groupRefrigerators([...data.cabinets, added.cabinet], chest.store).find(group => group.label === chest.label);
+assert.equal(expanded.sections.length, 3, '新增分区必须加入原冰箱而不是创建第二台冰箱');
+assert.ok(expanded.sections.some(section => section.key === added.cabinet.key), '新增分区必须有唯一柜段标识');
+assert.deepEqual(validateNewSection({ position: '分区3', length: 360, depth: 0, height: 204 }), {
+  ok: false,
+  errors: ['分区3：分区名称、长、宽/深、高必须大于0'],
+}, '分区尺寸不完整时必须禁止创建');
+
 console.log('refrigerator module checks passed');
+

@@ -76,4 +76,62 @@ export function applyDimensionUpdates(cabinets = [], updates = []) {
   });
 }
 
-export default { refrigeratorId, groupRefrigerators, validateDimensionUpdates, applyDimensionUpdates };
+export function validateNewSection(draft = {}) {
+  const position = text(draft?.position);
+  if (!position || !(number(draft?.length) > 0 && number(draft?.depth) > 0 && number(draft?.height) > 0)) {
+    return { ok: false, errors: [`${position || '新增分区'}：分区名称、长、宽/深、高必须大于0`] };
+  }
+  return { ok: true, errors: [] };
+}
+
+export function createRefrigeratorSection(group = {}, draft = {}, existingCabinets = [], template = {}) {
+  const valid = validateNewSection(draft);
+  if (!valid.ok) return valid;
+  const store = text(group?.store);
+  const label = text(group?.label);
+  const position = text(draft.position);
+  const baseKey = `${store}__${label}__${position}`;
+  const usedKeys = new Set((Array.isArray(existingCabinets) ? existingCabinets : []).map(cabinet => text(cabinet?.key)));
+  let key = baseKey;
+  let suffix = 2;
+  while (usedKeys.has(key)) key = `${baseKey}__${suffix++}`;
+  const base = template && typeof template === 'object' ? template : {};
+  const length = number(draft.length);
+  const depth = number(draft.depth);
+  const height = number(draft.height);
+  const cabinet = {
+    ...base,
+    id: `new_cab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    store,
+    key,
+    label,
+    position,
+    rawPosition: text(draft.rawPosition) || position,
+    rawNo: text(group?.rawNo) || text(base.rawNo),
+    kind: text(group?.kind) || text(base.kind),
+    type: text(group?.type) || text(base.type),
+    length,
+    depth,
+    height,
+    sourceUsed: 0,
+    sourceLeft: length,
+    used: 0,
+    over: false,
+    left: length,
+    leftWidth: length,
+    usedWidth: 0,
+    items: [],
+    itemSummary: [],
+  };
+  return { ok: true, cabinet };
+}
+
+export default {
+  refrigeratorId,
+  groupRefrigerators,
+  validateDimensionUpdates,
+  applyDimensionUpdates,
+  validateNewSection,
+  createRefrigeratorSection,
+};
+

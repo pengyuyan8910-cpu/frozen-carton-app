@@ -1091,6 +1091,7 @@ function 导出陈列图Excel(){
 }
 function 清空新品试算(){["newSkuName","newSkuBarcode","newSkuGrade","newSkuCategory","newSkuLength","newSkuWidth","newSkuHeight","newSkuVolume","newSkuCarton","newSkuDaily","newSkuCols","newSkuPerCol"].forEach(id=>{const el=q("#"+id);if(!el)return;el.value=""});const grade=q("#newSkuGrade");if(grade)grade.value="A";const carton=q("#newSkuCarton");if(carton)carton.value="1";const daily=q("#newSkuDaily");if(daily)daily.value="0";const cols=q("#newSkuCols");if(cols)cols.value="1";const box=q("#newSkuPositionSuggestions");if(box)box.innerHTML='<div class="empty">新品试算区已清空，请重新填写新品尺寸后试算。</div>';window.新品试算方案缓存={}}function 渲染逻辑(){q("#logicRules").innerHTML=(状态.rules.length?状态.rules.map(r=>"<p>"+Object.values(r).filter(Boolean).map(逃).join("：")+"</p>").join(""):"<p>当前版本采用10%触发，外储容量上限754L。</p>")}
 let 冰箱尺寸预览=null;
+let 冰箱新增分区草稿=[];
 function 冰箱尺寸更新(){
   const updates=[];
   qa("[data-fridge-dimension]").forEach(el=>{
@@ -1099,10 +1100,44 @@ function 冰箱尺寸更新(){
     const cabinet=状态.cabinets.find(c=>c.key===key);
     if(cabinet&&数(el.value)!==数(cabinet[field])){
       const found=updates.find(x=>x.key===key);
-      if(found)found.values[field]=数(el.value);else updates.push({key,values:{length:数(cabinet.length),depth:数(cabinet.depth),height:数(cabinet.height),[field]:数(el.value)}});
+      if(found)found[field]=数(el.value);
+      else updates.push({key,length:数(cabinet.length),depth:数(cabinet.depth),height:数(cabinet.height),[field]:数(el.value)});
     }
   });
   return updates;
+}
+function 冰箱组(groupId){return window.RefrigeratorModule.groupRefrigerators(状态.cabinets).find(group=>group.id===groupId)||null}
+function 冰箱默认新增分区(group){
+  const last=group?.sections?.[group.sections.length-1]||{};
+  const vertical=/立柜/.test([group?.kind,group?.type,group?.label].map(文).join(" "));
+  return{groupId:group.id,position:vertical?"第"+(group.sections.length+1)+"层":"分区"+(group.sections.length+1),length:数(last.length),depth:数(last.depth),height:数(last.height)};
+}
+function 冰箱新增分区更新(){
+  return 冰箱新增分区草稿.map(item=>{
+    const read=(field,fallback)=>{const selector=field==="position"?"[data-fridge-new-position]":"[data-fridge-new-dimension='"+field+"']";const el=qa(selector).find(x=>x.dataset.fridgeNewGroup===item.groupId);return el?(field==="position"?文(el.value):数(el.value)):fallback};
+    return{...item,position:read("position",item.position),length:read("length",item.length),depth:read("depth",item.depth),height:read("height",item.height)};
+  });
+}
+window.添加冰箱分区=groupId=>{
+  const group=冰箱组(groupId);if(!group)return;
+  冰箱新增分区草稿=冰箱新增分区更新();
+  if(!冰箱新增分区草稿.some(item=>item.groupId===groupId))冰箱新增分区草稿.push(冰箱默认新增分区(group));
+  冰箱尺寸预览=null;渲染冰箱模块();
+  setTimeout(()=>qa("[data-fridge-new-position]").find(el=>el.dataset.fridgeNewGroup===groupId)?.focus(),0);
+};
+window.取消冰箱分区=groupId=>{冰箱新增分区草稿=冰箱新增分区草稿.filter(item=>item.groupId!==groupId);冰箱尺寸预览=null;渲染冰箱模块()};
+function 冰箱新增分区结果(){
+  const drafts=冰箱新增分区更新(),sections=[],errors=[];
+  for(const draft of drafts){
+    const group=冰箱组(draft.groupId);
+    if(!group){errors.push("未找到新增分区所属冰箱");continue}
+    const valid=window.RefrigeratorModule.validateNewSection(draft);
+    if(!valid.ok){errors.push(...valid.errors);continue}
+    const template=状态.cabinets.find(c=>c.key===group.sections[0]?.key)||{};
+    const created=window.RefrigeratorModule.createRefrigeratorSection(group,draft,状态.cabinets,template);
+    if(created.ok)sections.push(created.cabinet);else errors.push(...created.errors);
+  }
+  return{drafts,sections,errors};
 }
 function 冰箱尺寸受影响行(updates){
   const keys=new Set(updates.map(x=>x.key));
@@ -1120,27 +1155,30 @@ function 冰箱尺寸联动结果(updates){
 }
 function 渲染冰箱联动结果(result){
   const el=q("#refrigeratorImpact");if(!el)return;
-  if(!result){el.innerHTML='<div class="help">修改尺寸后点击“预览联动”，系统会只检查受影响商品。</div>';return}
+  if(!result){el.innerHTML='<div class="help">修改尺寸或添加分区后点击“预览联动”，系统会只检查受影响商品。</div>';return}
   const issues=result.rows.filter(x=>x.issue),changes=result.rows.filter(x=>x.before!==x.after),lines=[];
-  if(!result.updates.length)lines.push("当前没有检测到尺寸变化。");
+  if(!result.updates.length&&!result.newSections?.length)lines.push("当前没有检测到尺寸变化或新增分区。");
+  else if(result.newSections?.length)lines.push("待新增 "+result.newSections.length+" 个分区；"+(result.updates.length?"已检测 "+result.updates.length+" 个分区尺寸变化，":"")+"受影响陈列行 "+result.rows.length+" 条。保存后不会移动柜段、顺序、列数或陈列方向。");
   else lines.push("已检测 "+result.updates.length+" 个分区尺寸变化，受影响陈列行 "+result.rows.length+" 条。保存后不会移动柜段、顺序、列数或陈列方向。");
   if(changes.length)lines.push("满陈变化："+changes.slice(0,12).map(x=>逃(x.row.name||x.row.barcode)+" "+x.before+"→"+x.after).join("；")+(changes.length>12?"；其余 "+(changes.length-12)+" 条":""));
+  if(result.newSections?.length)lines.push("新增分区："+result.newSections.map(c=>逃(c.store+" / "+c.label+" / "+c.position)).join("；"));
   if(issues.length)lines.push("不适配："+issues.slice(0,8).map(x=>逃(x.row.name||x.row.barcode)+"（"+x.issue+"）").join("；"));
   el.className="refrigerator-impact "+(issues.length?"bad":"ok");el.innerHTML=lines.map(x=>"<div>"+x+"</div>").join("");
 }
 window.预览冰箱尺寸=()=>{
-  const updates=冰箱尺寸更新();
-  const invalid=window.RefrigeratorModule.validateDimensionUpdates(updates);
-  if(!invalid.ok){冰箱尺寸预览={updates,nextCabinets:状态.cabinets,rows:[],errors:invalid.errors};const el=q("#refrigeratorImpact");if(el){el.className="refrigerator-impact bad";el.innerHTML=invalid.errors.map(x=>"<div>"+逃(x)+"</div>").join("")}return false}
-  冰箱尺寸预览=冰箱尺寸联动结果(updates);渲染冰箱联动结果(冰箱尺寸预览);return true;
+  const updates=冰箱尺寸更新(),invalid=window.RefrigeratorModule.validateDimensionUpdates(updates),newResult=冰箱新增分区结果();
+  const errors=[...(invalid.ok?[]:invalid.errors),...newResult.errors];
+  if(errors.length){冰箱尺寸预览={updates,nextCabinets:状态.cabinets,rows:[],newSections:[],errors};const el=q("#refrigeratorImpact");if(el){el.className="refrigerator-impact bad";el.innerHTML=errors.map(x=>"<div>"+逃(x)+"</div>").join("")}return false}
+  冰箱尺寸预览=冰箱尺寸联动结果(updates);冰箱尺寸预览.newDrafts=newResult.drafts;冰箱尺寸预览.newSections=newResult.sections;渲染冰箱联动结果(冰箱尺寸预览);return true;
 };
 window.应用冰箱尺寸=()=>{
   if(!window.预览冰箱尺寸())return;
-  const result=冰箱尺寸预览;if(!result||!result.updates.length){完成提示("没有需要保存的冰箱尺寸变化。");return}
+  const result=冰箱尺寸预览;if(!result||(!result.updates.length&&!result.newSections?.length)){完成提示("没有需要保存的冰箱尺寸或新增分区变化。");return}
   状态.cabinets=window.RefrigeratorModule.applyDimensionUpdates(状态.cabinets,result.updates);
+  if(result.newSections?.length)状态.cabinets.push(...result.newSections);
   刷新已加载陈列容量(状态);
   for(const item of result.rows){const live=状态.skus.find(x=>x.id===item.row.id);if(!live)continue;if(item.issue){live.perCol=0;live.rowFull=0;live.capacityStatus="冰箱尺寸不适配";live.capacityIssue=item.issue}else{delete live.capacityStatus;delete live.capacityIssue}}
-  冰箱尺寸预览=null;保存();当前.页面="refrigerator";渲染全部();完成提示("冰箱尺寸已保存，并已联动重算受影响SKU满陈；现有陈列位置和顺序未改变。");
+  冰箱新增分区草稿=[];冰箱尺寸预览=null;保存();当前.页面="refrigerator";渲染全部();完成提示(result.newSections?.length?"冰箱尺寸已保存，并已新增分区；现有陈列位置和顺序未改变。":"冰箱尺寸已保存，并已联动重算受影响SKU满陈；现有陈列位置和顺序未改变。");
 };
 function 渲染冰箱模块(){
   const host=q("#refrigeratorTable");if(!host)return;
@@ -1152,9 +1190,13 @@ function 渲染冰箱模块(){
   if(!groups.length){host.innerHTML='<div class="empty">没有匹配的冰箱分区数据。</div>';return}
   const usage=new Map(柜段使用().map(c=>[c.key,c]));
   host.innerHTML=groups.map(g=>{
+    const drafts=冰箱新增分区草稿.filter(item=>item.groupId===g.id);
     const rows=g.sections.map(s=>{const c=usage.get(s.key)||s;return'<tr><td>'+逃(s.position)+'</td><td><input data-fridge-dimension="length" data-cabinet-key="'+逃(s.key)+'" type="number" min="1" step="0.1" value="'+逃(s.length)+'"></td><td><input data-fridge-dimension="depth" data-cabinet-key="'+逃(s.key)+'" type="number" min="1" step="0.1" value="'+逃(s.depth)+'"></td><td><input data-fridge-dimension="height" data-cabinet-key="'+逃(s.key)+'" type="number" min="1" step="0.1" value="'+逃(s.height)+'"></td><td>'+格(c.used,1)+'mm</td><td class="'+(c.left<0?"bad":"")+'">'+格(c.left,1)+'mm</td></tr>'}).join("");
-    return'<article class="refrigerator-card"><div class="refrigerator-card-head"><div><h3>'+逃(g.label)+'</h3><p>'+逃(g.store)+' · '+g.sections.length+' 个分区/层</p></div><div class="refrigerator-card-actions"><button type="button" onclick="预览冰箱尺寸()">预览联动</button><button type="button" class="primary" onclick="应用冰箱尺寸()">保存并联动</button></div></div><div class="refrigerator-sections"><table><thead><tr><th>分区/层</th><th>长 mm</th><th>宽/深 mm</th><th>高 mm</th><th>已用宽度</th><th>剩余宽度</th></tr></thead><tbody>'+rows+'</tbody></table></div></article>';
+    const newRows=drafts.map(d=>'<tr class="refrigerator-new-section"><td><input data-fridge-new-group="'+逃(d.groupId)+'" data-fridge-new-position type="text" value="'+逃(d.position)+'" aria-label="新增分区名称"></td><td><input data-fridge-new-group="'+逃(d.groupId)+'" data-fridge-new-dimension="length" type="number" min="1" step="0.1" value="'+逃(d.length)+'" aria-label="新增分区长度"></td><td><input data-fridge-new-group="'+逃(d.groupId)+'" data-fridge-new-dimension="depth" type="number" min="1" step="0.1" value="'+逃(d.depth)+'" aria-label="新增分区宽度或深度"></td><td><input data-fridge-new-group="'+逃(d.groupId)+'" data-fridge-new-dimension="height" type="number" min="1" step="0.1" value="'+逃(d.height)+'" aria-label="新增分区高度"></td><td colspan="2"><button type="button" data-cancel-refrigerator-section="'+逃(d.groupId)+'">取消新增</button></td></tr>').join("");
+    return'<article class="refrigerator-card"><div class="refrigerator-card-head"><div><h3>'+逃(g.label)+'</h3><p>'+逃(g.store)+' · '+(g.sections.length+drafts.length)+' 个分区/层'+(drafts.length?'（含待新增）':'')+'</p></div><div class="refrigerator-card-actions"><button type="button" data-add-refrigerator-section="'+逃(g.id)+'">添加分区</button><button type="button" onclick="预览冰箱尺寸()">预览联动</button><button type="button" class="primary" onclick="应用冰箱尺寸()">保存并联动</button></div></div><div class="refrigerator-sections"><table><thead><tr><th>分区/层</th><th>长 mm</th><th>宽/深 mm</th><th>高 mm</th><th>已用宽度</th><th>剩余宽度</th></tr></thead><tbody>'+rows+newRows+'</tbody></table></div></article>';
   }).join("");
+  qa("[data-add-refrigerator-section]").forEach(btn=>btn.addEventListener("click",()=>window.添加冰箱分区(btn.dataset.addRefrigeratorSection)));
+  qa("[data-cancel-refrigerator-section]").forEach(btn=>btn.addEventListener("click",()=>window.取消冰箱分区(btn.dataset.cancelRefrigeratorSection)));
   if(!q("#refrigeratorImpact"))host.insertAdjacentHTML("beforebegin",'<div id="refrigeratorImpact" class="refrigerator-impact"></div>');渲染冰箱联动结果(冰箱尺寸预览);
 }
 function 切换(id){提交当前编辑();当前.页面=id;
@@ -1182,8 +1224,8 @@ window.addEventListener("store-sku:action",e=>{const d=e.detail||{};if(!d.store|
 if(el)el.addEventListener("input",渲染全部),el.addEventListener("change",渲染全部)});
 q("#displayMapCategoryFilter")?.addEventListener("change",e=>{当前.陈列图四级=e.target.value;渲染陈列图()});
 q("#displayMapZoom")?.addEventListener("change",e=>{当前.陈列图缩放=数(e.target.value)||100;渲染陈列图()});
-q("#refrigeratorStoreFilter")?.addEventListener("change",()=>{冰箱尺寸预览=null;渲染冰箱模块()});
-q("#refrigeratorSearch")?.addEventListener("input",()=>渲染冰箱模块());
+q("#refrigeratorStoreFilter")?.addEventListener("change",()=>{冰箱新增分区草稿=冰箱新增分区更新();冰箱尺寸预览=null;渲染冰箱模块()});
+q("#refrigeratorSearch")?.addEventListener("input",()=>{冰箱新增分区草稿=冰箱新增分区更新();渲染冰箱模块()});
 if(q("#manualAddSkuBtn"))q("#manualAddSkuBtn").onclick=()=>手动新增SKU();
 if(q("#generateSuggestBtn"))q("#generateSuggestBtn").onclick=()=>渲染建议();
 if(q("#trialNewSkuBtn"))q("#trialNewSkuBtn").onclick=()=>试算新品位置();
@@ -1737,3 +1779,4 @@ function mergeListByKey(baseList, localList, remoteList, keyField, label, confli
   }
   tryBind();
 })();
+
