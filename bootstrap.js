@@ -1,7 +1,7 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260820_cloudflow_v3_global_capacity";
+  const DATA_VERSION = "20260821_refrigerator_module_v1";
   const RULE_VERSION = "20260820_physical_floor_v3_global_capacity";
-  const APP_VERSION = "20260820_cloudflow_v2";
+  const APP_VERSION = "20260821_refrigerator_module_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
@@ -25,6 +25,7 @@
     window.DisplayModuleState = await import(`./scripts/display-module-state.mjs?v=${DATA_VERSION}`);
     window.PlanogramExcelExport = await import(`./scripts/planogram-excel-export.mjs?v=${DATA_VERSION}`);
     window.PlanogramStagingSearch = await import(`./scripts/planogram-staging-search.mjs?v=${DATA_VERSION}`);
+    window.RefrigeratorModule = await import(`./scripts/refrigerator-module.mjs?v=${DATA_VERSION}`);
     window.LivePlanogramCapacity = await import(`./scripts/live-planogram-capacity.mjs?v=${RULE_VERSION}`);
     await import(`./scripts/strict-allocation-adapter.mjs?v=${RULE_VERSION}`);
     window.UnifiedStateMigration = await import(`./scripts/unified-state-migration.mjs?v=${DATA_VERSION}`);

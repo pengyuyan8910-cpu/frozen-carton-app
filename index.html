@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <title>冻品整箱到店统一小程序</title>
-  <link rel="stylesheet" href="styles.css?v=20260820_planogram_excel_v1">
+  <link rel="stylesheet" href="styles.css?v=20260821_refrigerator_module_v1">
   <link rel="stylesheet" href="layout-preview.css?v=20260819_lifecycle_rounding_v6">
   <link rel="stylesheet" href="layout-preview-v2.css?v=20260819_lifecycle_rounding_v6">
   <link rel="stylesheet" href="layout-preview-v3.css?v=20260819_lifecycle_rounding_v6">
@@ -31,6 +31,7 @@
     <button class="active" data-view="goods">商品明细</button>
     <button data-view="risk">周转风险</button>
     <button data-view="allocation">排柜调整</button>
+    <button data-view="refrigerator">冰箱管理</button>
     <button data-view="newstore">新增门店测算</button>
     <button data-view="displaymap">陈列图</button>
     <button data-view="lifecycle">产品生命周期管理</button>
@@ -47,6 +48,8 @@
     <section id="risk" class="view"><section class="panel"><div class="panel-title controls"><h2>外储周转风险</h2><input id="riskSearch" type="search" placeholder="搜索门店、商品、类目"><select id="riskFilter"><option value="">全部风险</option></select></div><div id="riskTable" class="table-wrap"></div></section></section>
     <section id="replenish" class="view legacy-hidden" aria-hidden="true"><div id="replenishCards"></div><div id="replenishTable"></div></section>
     <section id="allocation" class="view"><section class="panel"><div class="panel-title controls"><h2>排柜调整</h2><input id="allocationSearch" type="search" placeholder="搜索商品、条码、类目"><input id="allocationCabinetSearch" type="search" placeholder="搜索陈列柜段"><select id="allocationSceneFilter"><option value="">全部场景</option></select><select id="allocationTypeFilter"><option value="">全部冰柜类型</option></select><select id="allocationCabNoFilter"><option value="">全部陈列柜</option></select><select id="allocationPosFilter"><option value="">全部位置</option></select><button id="removeExcludedBtn" type="button">删除未纳入SKU</button></div><div class="help">筛选方式：商品搜索查商品/条码/类目；陈列柜段搜索查“立柜3m-柜1 第4层”这类位置；右侧下拉可按冰柜类型、陈列柜、具体位置筛选。可改字段：纳入、商品、等级、类目、条码、箱规、日销、体积、陈列柜段、陈列面方向、陈列列数、单列容量、单列占宽。修改后陈列图、补货测算和外储数据会联动。</div><div id="allocationTable" class="table-wrap"></div></section></section>
+
+    <section id="refrigerator" class="view"><section class="panel refrigerator-panel"><div class="panel-title controls"><div><h2>冰箱管理</h2><p class="planogram-subtitle">记录各店冰箱的实际分区/层尺寸；保存后只重算受影响商品的满陈和外储，不自动改变现有陈列。</p></div><div class="toolbar"><select id="refrigeratorStoreFilter" aria-label="筛选门店"></select><input id="refrigeratorSearch" type="search" placeholder="搜索冰箱型号、柜号"></div></div><div class="help">修改长、宽/深、高后先点击“预览联动”，确认受影响 SKU 和不适配提示，再点击“保存并联动”。当前陈列位置、顺序、列数和陈列方向不会被自动移动或重排。</div><div id="refrigeratorImpact" class="refrigerator-impact"></div><div id="refrigeratorTable" class="refrigerator-grid"></div></section></section>
 
     <section id="newstore" class="view"><section class="panel"><div class="panel-title"><h2>新增门店测算</h2></div><div class="help">按实际冰柜录入配置，每行一个冰柜或一组同型号冰柜。格式：冰柜类型, 型号/名称, 数量, 内径尺寸。卧柜/冰淇淋柜尺寸可写“1988*697*459+360*697*199”；立柜可写“门数=4,层数=6,710*534*250”，系统只用第1-5层陈列，第6层为存储位。系统会先生成柜段，再按当前产品池、10%触发、754L外储、四级类目集中、柜段不超宽进行严格测算。</div><div class="trial-box"><h3>门店与冰柜配置</h3><div class="trial-grid"><label>门店名称<input id="newStoreName" type="text" placeholder="如：某某生活馆"></label><label>门店类型<input id="newStoreType" type="text" value="新店"></label><label>外储上限L<input id="newStoreExternalCap" type="number" min="0" step="1" value="754"></label><button id="loadStoreExampleBtn" type="button">填入示例</button><button id="trialStoreBtn" type="button">严格测算新增门店</button><button id="applyStoreBtn" type="button">追加到当前页面</button></div><textarea id="newStoreCabinetConfig" placeholder="例：
 卧柜,2500,3,1988*697*459+360*697*199
@@ -66,7 +69,7 @@
   </main>
   <script src="product-lifecycle-bridge.js?v=20260811_planogram_reclaim_v5"></script><script src="lifecycle-host-mode.js?v=20260811_planogram_reclaim_v5"></script>
 <script type="module" src="scripts/strict-allocation-engine.mjs?v=20260820_physical_floor_v2"></script><script type="module" src="scripts/strict-allocation-adapter.mjs?v=20260820_physical_floor_v2"></script>
-  <script src="bootstrap.js?v=20260820_cloudflow_v2"></script>
+  <script src="bootstrap.js?v=20260821_refrigerator_module_v1"></script>
 <script src="layout-preview-v5.js?v=20260820_planogram_export_pdf_v6"></script>
 <script src="store-product-view.js?v=20260819_lifecycle_rounding_v6"></script>
 
