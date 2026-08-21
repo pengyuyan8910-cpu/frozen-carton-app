@@ -1627,6 +1627,12 @@ async function readCloudDocument() {
     .eq('id', 'main')
     .maybeSingle();
 }
+async function readCloudDocumentMeta() {
+  return cloudClient.from('carton_documents')
+    .select('doc_revision,updated_at')
+    .eq('id', 'main')
+    .maybeSingle();
+}
 
 /* --- 拉取云端数据 --- */
 async function pullCloudData() {
@@ -1641,7 +1647,10 @@ async function pullCloudData() {
   if (decision.action === 'unavailable') return cloudNote('无法读取云端版本，本次未改变当前页面。', true);
   if (decision.action === 'unchanged') { docRevision = data.doc_revision; return cloudNote('云端与当前页面一致，无需拉取。'); }
   if (!data.payload || !Array.isArray(data.payload.skus) || !data.payload.skus.length) return cloudNote('云端数据结构异常，本次未改变当前页面。', true);
-  const ok = decision.action === 'first-pull' || window.confirm('检测到云端第 ' + data.doc_revision + ' 版与当前页面不同。确认后才会应用云端数据，是否继续？');
+  const prompt = decision.action === 'first-pull'
+    ? '云端已有第 ' + data.doc_revision + ' 版数据。确认后会用云端数据替换当前页面，当前页面未保存的陈列调整可能丢失，是否继续？'
+    : '检测到云端第 ' + data.doc_revision + ' 版与当前页面不同。确认后才会应用云端数据，是否继续？';
+  const ok = window.confirm(prompt);
   if (!ok) return cloudNote('已取消拉取，当前页面未改变。');
   const cloudState = 清理计算缓存(structuredClone(data.payload));
   确保产品池(cloudState);
@@ -1729,17 +1738,21 @@ async function saveCloudDocument(payload, expectedRevision) {
 async function pushCloudData() {
   if (!cloudProtectCurrentPage()) return cloudNote('本机保存失败，未尝试云端保存；当前页面仍在内存中，请不要刷新。', true);
   if (!await requireCloudSession()) return cloudNote('请先登录云端协作账号。当前页面数据已安全保存到本机。', true);
+  let expectedRevision = Number(cloudBaseline?.cloudRevision || docRevision || 0);
   if (!cloudBaseline?.initialized) {
-    const remote = await readCloudDocument();
+    const remote = await readCloudDocumentMeta();
     if (remote.error) return cloudSaveFailure(remote.error);
-    if (remote.data) return cloudNote('当前页面尚未拉取云端最新版本，请先点击“拉取云端数据”。', true);
+    if (remote.data) {
+      const ok = window.confirm('当前云端已有第 ' + remote.data.doc_revision + ' 版。确定后将以当前页面覆盖云端，但不会拉取或改动当前页面，是否继续？');
+      if (!ok) return cloudNote('已取消云端保存，当前页面未改变。');
+      expectedRevision = Number(remote.data.doc_revision) || 0;
+    }
   }
   cloudNote('正在保存至云端（大文档可能需要一些时间）...');
   const payload = cloudCopyState(状态);
   const lifecycle = window.ProductLifecycle?.getState?.();
   if (lifecycle && !payload.lifecycle) payload.lifecycle = structuredClone(lifecycle);
   确保产品池(payload);
-  const expectedRevision = Number(cloudBaseline?.cloudRevision || docRevision || 0);
   const { data, error } = await saveCloudDocument(payload, expectedRevision);
   if (error) { if (error.code === 'P0001') return cloudNote('云端版本已更新，本次没有写入；当前页面数据已安全保存到本机。请先拉取并确认差异。', true); return cloudSaveFailure(error); }
   const row = Array.isArray(data) ? data[0] : data;
