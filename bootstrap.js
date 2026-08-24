@@ -1,7 +1,7 @@
 (async function loadFrozenCartonData(){
   const DATA_VERSION = "20260821_refrigerator_module_v1";
   const RULE_VERSION = "20260820_physical_floor_v3_global_capacity";
-  const APP_VERSION = "20260821_refrigerator_module_v1";
+  const APP_VERSION = "20260824_cloud_local_protection_v2";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {

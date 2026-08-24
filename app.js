@@ -1679,20 +1679,23 @@ function cloudCopyState(st) {
 }
 
 function cloudProtectCurrentPage() {
+  // 旧版这里保存过完整回退副本；先清理这份重复缓存，避免它阻塞主状态保存。
+  try { localStorage.removeItem(CLOUD_ROLLBACK_KEY); } catch (_) {}
   if (!保存()) return false;
   try {
+    // 主状态已经写入统一本地存储；回退记录只保存指针，不能再复制整份大文档。
     const rollback = {
-      version: 1,
+      version: 2,
       savedAt: new Date().toISOString(),
       dataSignature: 数据签名,
-      state: 状态补丁(状态),
+      storageKey: 统一状态保存键,
     };
     localStorage.setItem(CLOUD_ROLLBACK_KEY, JSON.stringify(rollback));
-    return true;
   } catch (error) {
-    console.warn('云端保存前的本地回退快照写入失败，已停止云端保存', error);
-    return false;
+    // 主状态已成功保存；回退标记只是辅助信息，不能因此阻断云端保存。
+    console.warn('云端保存前的本地回退标记写入失败，已保留统一本地状态', error);
   }
+  return true;
 }
 
 function cloudSaveFailure(error) {
