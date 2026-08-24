@@ -77,8 +77,11 @@ if(patch.frozen_carton_replan_draft_v2)state.frozen_carton_replan_draft_v2=struc
 return state;
 }
 function 状态可用(st){return !!(st&&st.meta&&Array.isArray(st.stores)&&st.stores.length&&Array.isArray(st.skus)&&st.skus.length&&Array.isArray(st.cabinets)&&st.cabinets.length)}
-function 读取本地(key){try{const raw=localStorage.getItem(key);if(!raw)return null;const st=应用状态补丁(JSON.parse(raw));if(!状态可用(st)){localStorage.removeItem(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);try{localStorage.removeItem(key)}catch(_){}return null}}
-function 安全保存本地(key,state){try{localStorage.setItem(key,JSON.stringify(状态补丁(state)));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
+function 读取本地原值(key){const cached=window.FrozenCartonLocalStore?.getSync?.(key);if(cached!==undefined)return cached;try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):null}catch(e){console.warn("读取本地值失败",e);return null}}
+function 写入本地值(key,value){if(window.FrozenCartonLocalStore?.queueSet?.(key,value))return true;try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){console.warn("写入本地值失败",e);return false}}
+function 删除本地值(key){if(window.FrozenCartonLocalStore?.queueRemove?.(key))return true;try{localStorage.removeItem(key);return true}catch(e){console.warn("删除本地值失败",e);return false}}
+function 读取本地(key){try{const raw=读取本地原值(key);if(raw===null||raw===undefined)return null;const st=应用状态补丁(typeof raw==="string"?JSON.parse(raw):raw);if(!状态可用(st)){删除本地值(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);删除本地值(key);return null}}
+function 安全保存本地(key,state){const patch=状态补丁(state);if(window.FrozenCartonLocalStore?.queueSet?.(key,patch))return true;try{localStorage.setItem(key,JSON.stringify(patch));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
 function 刷新已加载陈列容量(state){const helper=window.LivePlanogramCapacity?.recalculateLoadedPlanogram;if(typeof helper==='function')helper(state);return state}
 function 刷新单SKU陈列容量(row){if(!row)return;刷新已加载陈列容量({params:状态.params,cabinets:状态.cabinets,skus:[row]})}
 function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};状态=清理计算缓存(result.state||initial);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);刷新已加载陈列容量(状态);草稿状态=状态;发布状态=状态;建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
@@ -1256,7 +1259,7 @@ if(!incoming.skus||!incoming.cabinets)throw new Error("缺少必要数据");
 保存();
 渲染全部();
 完成提示("导入完成：方案已载入并重新计算。")}catch(e){alert("导入失败："+e.message)}};
-q("#restoreBtn").onclick=()=>{if(confirm("确认恢复初始数据？当前本地修改会被清空。")){localStorage.removeItem(统一状态保存键);状态=初始状态();草稿状态=状态;发布状态=状态;
+q("#restoreBtn").onclick=()=>{if(confirm("确认恢复初始数据？当前本地修改会被清空。")){删除本地值(统一状态保存键);状态=初始状态();草稿状态=状态;发布状态=状态;
 建立基准(状态);当前.页面="goods";清空新品试算();window.全店上新缓存={};window.新增门店测算缓存=null;渲染全部();完成提示("恢复完成：已清除本地修改、产品池临时导入、新门店草稿、新品全店方案、标色和同步草稿，并退出到绿色门店页面。")}};
 
 // === 2026-07-09 严格新增门店 + 陈列图可移动补强 ===
@@ -1374,8 +1377,7 @@ let cloudBaseData = null;
 const CLOUD_BASELINE_KEY = 'frozen_carton_cloud_baseline_v1';
 const CLOUD_ROLLBACK_KEY = 'frozen_carton_cloud_rollback_v1';
 const 云端基线保护说明 = '旧云端数据不得覆盖当前页面';
-let cloudBaseline = null;
-try { cloudBaseline = JSON.parse(localStorage.getItem(CLOUD_BASELINE_KEY) || 'null'); } catch (_) { cloudBaseline = null; }
+let cloudBaseline = 读取本地原值(CLOUD_BASELINE_KEY) || null;
 if (cloudBaseline?.cloudRevision) docRevision = Number(cloudBaseline.cloudRevision) || 0;
 const CLOUD_SESSION_KEY = 'frozen_carton_cloud_session_v1';
 const CLOUD_READ_TIMEOUT_MS = 30000;
@@ -1383,10 +1385,7 @@ const CLOUD_WRITE_TIMEOUT_MS = 120000;
 const CLOUD_REQUEST_RETRIES = 1;
 
 function cloudReadSession() {
-  try {
-    const raw = localStorage.getItem(CLOUD_SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch (_) { return null; }
+  try { return 读取本地原值(CLOUD_SESSION_KEY) || null; } catch (_) { return null; }
 }
 
 function cloudWriteSession(data) {
@@ -1399,7 +1398,7 @@ function cloudWriteSession(data) {
     expires_at: Math.floor(Date.now() / 1000) + Number(data.expires_in || 3600),
     user: data.user || null,
   };
-  try { localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(session)); } catch (_) {}
+  写入本地值(CLOUD_SESSION_KEY, session);
   return session;
 }
 
@@ -1499,7 +1498,7 @@ function createCloudRestClient() {
       },
       async signOut() {
         const result = await cloudRestRequest('/auth/v1/logout', { method: 'POST' });
-        try { localStorage.removeItem(CLOUD_SESSION_KEY); } catch (_) {}
+        删除本地值(CLOUD_SESSION_KEY);
         return result;
       },
     },
@@ -1576,7 +1575,7 @@ async function refreshCloudAccount() {
     if (verified.error) {
       const message = translateCloudError(verified.error.message);
       if (String(verified.error.code) === '401' || String(verified.error.code) === '403' || message.includes('登录已过期')) {
-        try { localStorage.removeItem(CLOUD_SESSION_KEY); } catch (_) {}
+        删除本地值(CLOUD_SESSION_KEY);
       }
       cloudAccountNote(message, true);
       return null;
@@ -1634,6 +1633,15 @@ async function readCloudDocumentMeta() {
     .maybeSingle();
 }
 
+async function 等待本地持久化() {
+  const flush = window.FrozenCartonLocalStore?.flush;
+  if (typeof flush !== 'function') return true;
+  try { await flush(); return true; } catch (error) {
+    console.warn('IndexedDB 本地持久化失败', error);
+    return false;
+  }
+}
+
 /* --- 拉取云端数据 --- */
 async function pullCloudData() {
   if (!ensureCloudClient()) return cloudNote('云端组件加载失败，请刷新页面后重试。', true);
@@ -1654,16 +1662,18 @@ async function pullCloudData() {
   if (!ok) return cloudNote('已取消拉取，当前页面未改变。');
   const cloudState = 清理计算缓存(structuredClone(data.payload));
   确保产品池(cloudState);
-  window.ProductLifecycle?.hydrateState?.(cloudState.lifecycle || null, cloudState);
+  if (!安全保存本地(统一状态保存键, cloudState) || !await 等待本地持久化()) {
+    return cloudNote('本机存储失败，本次未应用云端数据，当前页面未改变。', true);
+  }
   状态 = cloudState;
   草稿状态 = 状态;
   发布状态 = 状态;
-  安全保存本地(统一状态保存键, 状态);
+  window.ProductLifecycle?.hydrateState?.(cloudState.lifecycle || null, cloudState);
   window.ProductLifecycle?.syncData?.(状态);
   docRevision = Number(data.doc_revision) || 0;
   cloudBaseData = structuredClone(cloudState);
   cloudBaseline = window.CloudStateGuard?.createCloudBaseline?.(cloudState, docRevision) || { initialized: true, cloudRevision: docRevision };
-  try { localStorage.setItem(CLOUD_BASELINE_KEY, JSON.stringify(cloudBaseline)); } catch (_) {}
+  写入本地值(CLOUD_BASELINE_KEY, cloudBaseline);
   渲染全部();
   cloudNote((decision.action === 'first-pull' ? '已拉取云端最新第 ' : '已确认并应用云端第 ') + docRevision + ' 版。');
 }
@@ -1678,10 +1688,11 @@ function cloudCopyState(st) {
   return JSON.parse(JSON.stringify(stable));
 }
 
-function cloudProtectCurrentPage() {
+async function cloudProtectCurrentPage() {
   // 旧版这里保存过完整回退副本；先清理这份重复缓存，避免它阻塞主状态保存。
-  try { localStorage.removeItem(CLOUD_ROLLBACK_KEY); } catch (_) {}
+  删除本地值(CLOUD_ROLLBACK_KEY);
   if (!保存()) return false;
+  if (!await 等待本地持久化()) return false;
   try {
     // 主状态已经写入统一本地存储；回退记录只保存指针，不能再复制整份大文档。
     const rollback = {
@@ -1690,7 +1701,8 @@ function cloudProtectCurrentPage() {
       dataSignature: 数据签名,
       storageKey: 统一状态保存键,
     };
-    localStorage.setItem(CLOUD_ROLLBACK_KEY, JSON.stringify(rollback));
+    写入本地值(CLOUD_ROLLBACK_KEY, rollback);
+    await 等待本地持久化();
   } catch (error) {
     // 主状态已成功保存；回退标记只是辅助信息，不能因此阻断云端保存。
     console.warn('云端保存前的本地回退标记写入失败，已保留统一本地状态', error);
@@ -1739,7 +1751,7 @@ async function saveCloudDocument(payload, expectedRevision) {
 }
 
 async function pushCloudData() {
-  if (!cloudProtectCurrentPage()) return cloudNote('本机保存失败，未尝试云端保存；当前页面仍在内存中，请不要刷新。', true);
+  if (!await cloudProtectCurrentPage()) return cloudNote('本机保存失败，未尝试云端保存；当前页面仍在内存中，请不要刷新。', true);
   if (!await requireCloudSession()) return cloudNote('请先登录云端协作账号。当前页面数据已安全保存到本机。', true);
   let expectedRevision = Number(cloudBaseline?.cloudRevision || docRevision || 0);
   if (!cloudBaseline?.initialized) {
@@ -1762,7 +1774,7 @@ async function pushCloudData() {
   docRevision = Number(row?.doc_revision || expectedRevision + 1);
   cloudBaseData = structuredClone(payload);
   cloudBaseline = window.CloudStateGuard?.createCloudBaseline?.(payload, docRevision) || { initialized: true, cloudRevision: docRevision };
-  try { localStorage.setItem(CLOUD_BASELINE_KEY, JSON.stringify(cloudBaseline)); } catch (_) {}
+  写入本地值(CLOUD_BASELINE_KEY, cloudBaseline);
   安全保存本地(统一状态保存键, 状态);
   window.ProductLifecycle?.syncData?.(状态);
   cloudNote('已保存当前页面至云端第 ' + docRevision + ' 版。');

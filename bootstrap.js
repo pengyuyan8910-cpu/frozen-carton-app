@@ -1,7 +1,7 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260821_refrigerator_module_v1";
+  const DATA_VERSION = "20260824_indexeddb_local_state_v1";
   const RULE_VERSION = "20260820_physical_floor_v3_global_capacity";
-  const APP_VERSION = "20260824_cloud_local_protection_v2";
+  const APP_VERSION = "20260824_indexeddb_local_state_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
@@ -11,6 +11,16 @@
   };
   try {
     setNote("正在读取最新底表数据…");
+    const localStateModule = await import(`./scripts/local-state-store.mjs?v=${DATA_VERSION}`);
+    window.FrozenCartonLocalStore = localStateModule.createLocalStateStore();
+    await window.FrozenCartonLocalStore.preload([
+      "frozen_carton_unified_scene_state_v2",
+      "frozen_carton_unified_scene_draft_v1",
+      "frozen_carton_unified_scene_published_v1",
+      "frozen_carton_cloud_baseline_v1",
+      "frozen_carton_cloud_session_v1",
+      "frozen_carton_cloud_rollback_v1",
+    ]);
     const [data, report, version] = await Promise.all([
       loadJson("data/app-data.json"),
       loadJson("data/verify-report.json").catch(() => ({})),

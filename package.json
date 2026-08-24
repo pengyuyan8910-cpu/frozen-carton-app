@@ -12,7 +12,7 @@
     "generate-new-store-draft": "node scripts/generate-new-store-draft.mjs",
     "test:new-store-routing": "node scripts/test-new-store-routing.mjs",
     "test:cloud-sync-loading": "node scripts/test-cloud-sync-loading.mjs",
-    "test:simplification": "node scripts/test-simplification-contract.mjs && node scripts/test-unified-state-migration.mjs && node scripts/test-cloud-state-guard.mjs && node scripts/test-cloud-local-protection.mjs && node scripts/test-data-preservation.mjs",
+    "test:simplification": "node scripts/test-simplification-contract.mjs && node scripts/test-unified-state-migration.mjs && node scripts/test-cloud-state-guard.mjs && node scripts/test-cloud-local-protection.mjs && node scripts/test-indexeddb-local-store.mjs && node scripts/test-data-preservation.mjs",
     "test:refrigerator": "node scripts/test-refrigerator-module.mjs && node scripts/test-refrigerator-capacity-link.mjs && node scripts/test-refrigerator-app-contract.mjs"
   },
   "dependencies": {
