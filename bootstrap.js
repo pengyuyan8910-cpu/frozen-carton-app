@@ -1,7 +1,7 @@
 (async function loadFrozenCartonData(){
-  const DATA_VERSION = "20260825_planogram_staging_drop_v1";
+  const DATA_VERSION = "20260825_planogram_shelf_to_staging_v1";
   const RULE_VERSION = "20260825_planogram_projection_v1";
-  const APP_VERSION = "20260825_planogram_staging_drop_v1";
+  const APP_VERSION = "20260825_planogram_shelf_to_staging_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {
@@ -55,5 +55,6 @@
     if (main) main.innerHTML = `<section class="panel load-error"><h2>数据加载失败</h2><p>小程序没有读取到已复核通过的最新数据，请确认 data/app-data.json 存在。</p><pre>${String(err.message || err)}</pre></section>`;
   }
 })();
+
 
 
