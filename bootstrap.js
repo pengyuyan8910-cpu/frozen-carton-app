@@ -1,7 +1,7 @@
 (async function loadFrozenCartonData(){
   const DATA_VERSION = "20260825_planogram_projection_v1";
   const RULE_VERSION = "20260825_planogram_projection_v1";
-  const APP_VERSION = "20260825_planogram_projection_v1";
+  const APP_VERSION = "20260825_planogram_cache_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
   const loadJson = async file => {

@@ -125,7 +125,9 @@ function 刷新陈列联动(){
   });
 }
 let 业务快照缓存=null;
-function 清空业务快照(){业务快照缓存=null}
+let 柜段使用缓存=null;
+function 清空柜段使用缓存(){柜段使用缓存=null}
+function 清空业务快照(){业务快照缓存=null;清空柜段使用缓存()}
 function SKU键(r){const values=[文(r?.barcode),文(r?.name),文(r?.productKey),文(r?.productName)].filter(Boolean);return values.find(v=>/^\d{8,18}$/.test(v))||values[0]||""}
 function 产品主键(item){return window.ProductLifecycle?.getCanonicalProductKey?.(item)||SKU键(item)}
 function 创建业务快照(){
@@ -189,7 +191,7 @@ function 建立基准(state){if(!state)return;for(const r of state.skus||[]){con
 function 柜段占用明细(r){const out=new Map();const baseKey=r._baseCabinetKey||r.cabinetKey;const baseWidth=基准宽度(r);const newWidth=r.included?SKU占用宽度(r):0;if(r._baseIncluded!==false&&baseKey)out.set(baseKey,(out.get(baseKey)||0)-baseWidth);if(r.included&&r.cabinetKey)out.set(r.cabinetKey,(out.get(r.cabinetKey)||0)+newWidth);return out}
 function 陈列图基础行(store){const seen=new Set();return 纳入SKU(store).filter(r=>{if(r.inStaging)return false;const duplicateKey=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(duplicateKey&&seen.has(duplicateKey))return false;if(duplicateKey)seen.add(duplicateKey);return true})}
 function 陈列图行投影(store){const rows=陈列图基础行(store),helper=window.PlanogramProjection?.buildPlanogramRows;return helper?helper(rows,store):rows}
-function 柜段使用(){const stores=[...new Set(状态.cabinets.map(c=>c.store).filter(Boolean))],rows=stores.flatMap(store=>陈列图行投影(store)),helper=window.PlanogramProjection?.buildCabinetUsage;if(helper)return[...helper(状态.cabinets,rows).values()];const map=new Map(状态.cabinets.map(c=>[c.key,{...c,used:0,items:[]}]));for(const r of rows){const c=map.get(r.cabinetKey);if(!c)continue;const used=SKU占用宽度(r);c.used+=used;c.items.push({id:r.sourceRowId||r.id,name:r.name,used,cols:数(r.displayCols)})}for(const c of map.values()){c.used=Number(Math.max(0,c.used).toFixed(1));c.left=Number((数(c.length)-c.used).toFixed(1));c.over=c.left<-.5}return[...map.values()]}function 门店汇总(store){
+function 柜段使用(){if(柜段使用缓存)return 柜段使用缓存;const stores=[...new Set(状态.cabinets.map(c=>c.store).filter(Boolean))],rows=stores.flatMap(store=>陈列图行投影(store)),helper=window.PlanogramProjection?.buildCabinetUsage;if(helper){柜段使用缓存=[...helper(状态.cabinets,rows).values()];return 柜段使用缓存}const map=new Map(状态.cabinets.map(c=>[c.key,{...c,used:0,items:[]}]));for(const r of rows){const c=map.get(r.cabinetKey);if(!c)continue;const used=SKU占用宽度(r);c.used+=used;c.items.push({id:r.sourceRowId||r.id,name:r.name,used,cols:数(r.displayCols)})}for(const c of map.values()){c.used=Number(Math.max(0,c.used).toFixed(1));c.left=Number((数(c.length)-c.used).toFixed(1));c.over=c.left<-.5}柜段使用缓存=[...map.values()];return 柜段使用缓存}function 门店汇总(store){
  const snapshot=业务快照();if(snapshot.summaries.has(store))return snapshot.summaries.get(store);
  const rows=纳入SKU(store),groups=new Map();
  for(const row of rows){const key=产品主键(row);if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
