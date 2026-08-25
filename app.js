@@ -40,7 +40,7 @@ const 逃=v=>文(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"
 const 本地保存字段=["included","status","grade","rank","category2","category3","category4","name","barcode","length","width","height","volume","carton","dailyQty","dailySales","moq","moqDays","cabinetKey","cabinetLabel","position","planogramOrder","displayCols","perCol","faceWidth","faceOrientation","currentStock","planCartons","sourceAdvice","sourceAction","note","customPlacement","placements","modifiedFields","changeNote","selected","rowFull","skuFull","externalOwner","externalCountOverride","staticExternalOverride","avgExternalOverride","inStaging","stagingCabinetType","stagingIce","stagingFrom","placementCloneOf","placementCloneType"];
 const 本地保存柜体字段=["length","depth","height"];
 function 值相同(a,b){return JSON.stringify(a??null)===JSON.stringify(b??null)}
-function 状态补丁(state){
+function 状态补丁(state,options={}){
 const init=初始状态();
 const initSkuMap=new Map((init.skus||[]).map(r=>[r.id,r]));
 const currentIds=new Set((state.skus||[]).map(r=>r.id));
@@ -56,7 +56,8 @@ const cabinetUpdates=[];
 for(const cabinet of state.cabinets||[]){const base=initCabinetMap.get(cabinet.key);if(!base)continue;const values={};for(const field of 本地保存柜体字段){if(!值相同(cabinet[field],base[field]))values[field]=cabinet[field]}if(Object.keys(values).length)cabinetUpdates.push({key:cabinet.key,values})}
 const productPool=确保产品池(state);
 const lifecycle=state.lifecycle&&typeof state.lifecycle==="object"?JSON.parse(JSON.stringify(state.lifecycle)):null;
-return {_patchVersion:4,_dataSignature:数据签名,skus,newSkus,deletedIds,newStores,newCabinets,cabinetUpdates,productPool,lifecycle,
+const allowedRemovedSkuIds=[...new Set([...(Array.isArray(state?._allowedRemovedSkuIds)?state._allowedRemovedSkuIds:[]),...(Array.isArray(options.allowedRemovedSkuIds)?options.allowedRemovedSkuIds:[])].map(x=>文(x)).filter(Boolean))];
+return {_patchVersion:5,_dataSignature:数据签名,skus,newSkus,deletedIds,allowedRemovedSkuIds,newStores,newCabinets,cabinetUpdates,productPool,lifecycle,
   productPoolRevision:state.productPoolRevision||"",productPoolChangeLog:state.productPoolChangeLog||[],productPoolStaging:state.productPoolStaging||[],
   frozen_carton_replan_draft_v2:state.frozen_carton_replan_draft_v2||null};
 }
@@ -64,6 +65,8 @@ function 应用状态补丁(patch){
 if(!patch||patch._dataSignature!==数据签名)return null;
 if(!patch._patchVersion)return patch;
 const state=初始状态();
+const persistedAllowed=Array.isArray(patch.allowedRemovedSkuIds)?patch.allowedRemovedSkuIds:(Number(patch._patchVersion||0)<5?(patch.deletedIds||[]):[]);
+state._allowedRemovedSkuIds=[...new Set(persistedAllowed.map(x=>文(x)).filter(Boolean))];
 const del=new Set(patch.deletedIds||[]);
 state.skus=(state.skus||[]).filter(r=>!del.has(r.id));
 state.stores=[...(state.stores||[]),...(patch.newStores||[])];
@@ -87,7 +90,7 @@ function 读取本地原值(key){const cached=window.FrozenCartonLocalStore?.get
 function 写入本地值(key,value){if(window.FrozenCartonLocalStore?.queueSet?.(key,value))return true;try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){console.warn("写入本地值失败",e);return false}}
 function 删除本地值(key){if(window.FrozenCartonLocalStore?.queueRemove?.(key))return true;try{localStorage.removeItem(key);return true}catch(e){console.warn("删除本地值失败",e);return false}}
 function 读取本地(key){try{const raw=读取本地原值(key);if(raw===null||raw===undefined)return null;const st=应用状态补丁(typeof raw==="string"?JSON.parse(raw):raw);if(!状态可用(st)){删除本地值(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);删除本地值(key);return null}}
-function 安全保存本地(key,state,options={}){window.__dataGuardLastViolation=null;if(状态保护器&&!options.allowExternalReplace){const check=状态保护器.validate(state,{referenceState:最近安全状态,allowedRemovedSkuIds:[...本次允许删除SKU]});if(!check.ok){window.__dataGuardLastViolation=check;console.error("数据保护拦截：",check.errors);return false}}const patch=状态补丁(state);if(window.FrozenCartonLocalStore?.queueSet?.(key,patch))return true;try{localStorage.setItem(key,JSON.stringify(patch));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
+function 安全保存本地(key,state,options={}){window.__dataGuardLastViolation=null;const allowedRemovedSkuIds=[...new Set([...(Array.isArray(state?._allowedRemovedSkuIds)?state._allowedRemovedSkuIds:[]),...[...本次允许删除SKU],...(Array.isArray(options.allowedRemovedSkuIds)?options.allowedRemovedSkuIds:[])].map(x=>文(x)).filter(Boolean))];if(状态保护器&&!options.allowExternalReplace){const check=状态保护器.validate(state,{referenceState:最近安全状态,allowedRemovedSkuIds});if(!check.ok){window.__dataGuardLastViolation=check;console.error("数据保护拦截：",check.errors);return false}}if(allowedRemovedSkuIds.length)state._allowedRemovedSkuIds=allowedRemovedSkuIds;const patch=状态补丁(state,{allowedRemovedSkuIds});if(window.FrozenCartonLocalStore?.queueSet?.(key,patch))return true;try{localStorage.setItem(key,JSON.stringify(patch));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
 function 刷新已加载陈列容量(state){const helper=window.LivePlanogramCapacity?.recalculateLoadedPlanogram;if(typeof helper==='function')helper(state);return state}
 function 刷新单SKU陈列容量(row){if(!row)return;刷新已加载陈列容量({params:状态.params,cabinets:状态.cabinets,skus:[row]})}
 function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};const loaded=result.state||initial;const repaired=window.PlanogramProjection?.repairDuplicateSkuIds?.(loaded,initial)||loaded;状态=清理计算缓存(repaired);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);刷新已加载陈列容量(状态);草稿状态=状态;发布状态=状态;最近安全状态=structuredClone(状态);建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
