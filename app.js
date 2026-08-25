@@ -187,7 +187,9 @@ function 初始SKU行(id){return (初始数据.skus||[]).find(x=>x.id===id)}
 function 初始SKU宽度(r){return Math.max(0,数(r.displayCols)*数(r.faceWidth))}
 function 建立基准(state){if(!state)return;for(const r of state.skus||[]){const b=初始SKU行(r.id);r._baseIncluded=b?!!b.included:false;r._baseCabinetKey=b?b.cabinetKey:r.cabinetKey;r._baseDisplayCols=b?数(b.displayCols):0;r._baseFaceWidth=b?数(b.faceWidth):数(r.faceWidth);r._baseWidth=b?初始SKU宽度(b):0}state._baselineReady=true}
 function 柜段占用明细(r){const out=new Map();const baseKey=r._baseCabinetKey||r.cabinetKey;const baseWidth=基准宽度(r);const newWidth=r.included?SKU占用宽度(r):0;if(r._baseIncluded!==false&&baseKey)out.set(baseKey,(out.get(baseKey)||0)-baseWidth);if(r.included&&r.cabinetKey)out.set(r.cabinetKey,(out.get(r.cabinetKey)||0)+newWidth);return out}
-function 柜段使用(){const map=new Map(状态.cabinets.map(c=>[c.key,{...c,used:0,items:[]}]));const seen=new Set();for(const r of 状态.skus){if(r.included===false||产品已淘汰完成(r))continue;const duplicateKey=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(duplicateKey&&seen.has(duplicateKey))continue;if(duplicateKey)seen.add(duplicateKey);const c=map.get(r.cabinetKey);if(!c)continue;const used=SKU占用宽度(r);c.used+=used;c.items.push({id:r.id,name:r.name,used,cols:数(r.displayCols)})}for(const c of map.values()){c.used=Number(Math.max(0,c.used).toFixed(1));c.left=Number((数(c.length)-c.used).toFixed(1));c.over=c.left<-.5}return[...map.values()]}function 门店汇总(store){
+function 陈列图基础行(store){const seen=new Set();return 纳入SKU(store).filter(r=>{if(r.inStaging)return false;const duplicateKey=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(duplicateKey&&seen.has(duplicateKey))return false;if(duplicateKey)seen.add(duplicateKey);return true})}
+function 陈列图行投影(store){const rows=陈列图基础行(store),helper=window.PlanogramProjection?.buildPlanogramRows;return helper?helper(rows,store):rows}
+function 柜段使用(){const stores=[...new Set(状态.cabinets.map(c=>c.store).filter(Boolean))],rows=stores.flatMap(store=>陈列图行投影(store)),helper=window.PlanogramProjection?.buildCabinetUsage;if(helper)return[...helper(状态.cabinets,rows).values()];const map=new Map(状态.cabinets.map(c=>[c.key,{...c,used:0,items:[]}]));for(const r of rows){const c=map.get(r.cabinetKey);if(!c)continue;const used=SKU占用宽度(r);c.used+=used;c.items.push({id:r.sourceRowId||r.id,name:r.name,used,cols:数(r.displayCols)})}for(const c of map.values()){c.used=Number(Math.max(0,c.used).toFixed(1));c.left=Number((数(c.length)-c.used).toFixed(1));c.over=c.left<-.5}return[...map.values()]}function 门店汇总(store){
  const snapshot=业务快照();if(snapshot.summaries.has(store))return snapshot.summaries.get(store);
  const rows=纳入SKU(store),groups=new Map();
  for(const row of rows){const key=产品主键(row);if(!key)continue;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row)}
@@ -1029,7 +1031,7 @@ function 渲染陈列余量监控(){渲染陈列图();}
 function 渲染陈列图(){
   if(!q('#displayMapCanvas'))return;
   const store=门店名(),type4=当前.陈列图四级||"";
-  const rows=陈列图排序(纳入SKU(store).filter(r=>!r.inStaging&&(!type4||文(r.category4)===type4)));
+  const rows=陈列图排序(陈列图行投影(store).filter(r=>!type4||文(r.category4)===type4));
   const cabs=状态.cabinets.filter(c=>c.store===store);
   const usage=new Map(柜段使用().filter(c=>c.store===store).map(c=>[c.key,c]));
   const byLabel=new Map();for(const c of cabs){if(!byLabel.has(c.label))byLabel.set(c.label,[]);byLabel.get(c.label).push(c)}
@@ -1040,10 +1042,10 @@ function 渲染陈列图(){
   for(const [label,segments] of byLabel){
     const kind=文(segments[0]?.kind);
     html+='<div class="map-cabinet"><h3>'+逃(label)+' <span>'+逃(kind)+'</span></h3><div class="map-grid '+(kind.includes("立柜")?"vertical":"chest")+'">';
-    const 生成商品卡=r=>'<span class="map-item '+(r.id===当前.陈列图选中SKU?'map-selected':'')+' '+((r.modifiedFields&&r.modifiedFields.length)?'data-changed':'')+'" data-sku-id="'+逃(r.id)+'" style="'+陈列图商品样式(r)+'" title="点击查看信息；当前页面可直接拖动">'+陈列图商品标签(r)+'</span>';
+    const 生成商品卡=r=>'<span class="map-item '+((r.sourceRowId||r.id)===当前.陈列图选中SKU?'map-selected':'')+' '+((r.modifiedFields&&r.modifiedFields.length)?'data-changed':'')+'" data-sku-id="'+逃(r.sourceRowId||r.id)+'" style="'+陈列图商品样式(r)+'" title="点击查看信息；当前页面可直接拖动">'+陈列图商品标签(r)+'</span>';
     if(kind.includes("立柜")){
       for(let i=1;i<=6;i++){
-        const pos='第'+i+'层',seg=segments.find(c=>c.position===pos),items=i===6?[]:陈列图排序(rows.filter(r=>柜名(r)===label&&柜位(r)===pos)),disabled=!柜段可陈列(seg);
+        const pos='第'+i+'层',seg=segments.find(c=>c.position===pos),items=i===6?[]:陈列图排序(rows.filter(r=>r.cabinetKey===seg?.key)),disabled=!柜段可陈列(seg);
         const layerClass='map-layer'+(i===6?' storage-true':'')+(disabled&&i!==6?' reserved-true':'');
         html+='<div class="'+layerClass+'"'+(seg&&i!==6?' data-cab-key="'+逃(seg.key)+'" title="'+(disabled?'其他品类预留位，不可放入冻品':'当前页面可编辑时可拖放单个商品')+'"':'')+'>'+陈列图柜段监控(seg,usage,i===6,disabled)+'<div class="layer-products">';
         if(i===6)html+='<span class="map-item storage">存储位，不陈列SKU</span>';
@@ -1052,7 +1054,7 @@ function 渲染陈列图(){
       }
     }else{
       for(const seg of segments.sort((a,b)=>文(a.position).localeCompare(文(b.position),'zh-CN'))){
-        const items=陈列图排序(rows.filter(r=>柜名(r)===label&&柜位(r)===seg.position)),disabled=!柜段可陈列(seg);
+        const items=陈列图排序(rows.filter(r=>r.cabinetKey===seg.key)),disabled=!柜段可陈列(seg);
         html+='<div class="map-layer'+(disabled?' reserved-true':'')+'" data-cab-key="'+逃(seg.key)+'" title="'+(disabled?'预留位，不可放入冻品':'当前页面可编辑时可拖放单个商品')+'">'+陈列图柜段监控(seg,usage,false,disabled)+'<div class="layer-products">'+(items.map(生成商品卡).join('')||(disabled?'<span class="map-empty">预留</span>':'<span class="map-empty">空</span>'))+'</div></div>';
       }
     }
