@@ -10,13 +10,20 @@ function productKey(row, keyOf) {
   return text((keyOf || defaultKey)(row));
 }
 
+export function isPlanogramSkuIncluded(row) {
+  if (!row) return false;
+  if (row.included === true) return true;
+  if (row.included === false) return false;
+  return Boolean(text(row.cabinetKey) || row.inStaging === true);
+}
+
 export function sameStoreSkuModules(state, row, { keyOf } = {}) {
   if (!state || !row) return [];
   const key = productKey(row, keyOf);
   if (!key) return [];
   return (state.skus || []).filter((candidate) => (
     candidate.store === row.store &&
-    candidate.included !== false &&
+    isPlanogramSkuIncluded(candidate) &&
     productKey(candidate, keyOf) === key
   ));
 }
@@ -28,7 +35,7 @@ export function sameStoreSkuCabinetSegment(state, row, targetKey, { keyOf } = {}
   return (state.skus || []).some((candidate) => (
     candidate.id !== row.id &&
     candidate.store === row.store &&
-    candidate.included !== false &&
+    isPlanogramSkuIncluded(candidate) &&
     !candidate.inStaging &&
     candidate.cabinetKey === targetKey &&
     productKey(candidate, keyOf) === key
@@ -38,7 +45,7 @@ export function sameStoreSkuCabinetSegment(state, row, targetKey, { keyOf } = {}
 export function includePlanogramSku(state, { id } = {}) {
   const source = (state?.skus || []).find((row) => row.id === id);
   if (!source) return { ok: false, reason: "未找到要纳入的SKU" };
-  if (source.included !== false) return { ok: false, reason: "该SKU已经纳入当前门店" };
+  if (isPlanogramSkuIncluded(source)) return { ok: false, reason: "该SKU已经纳入当前门店" };
 
   const next = structuredClone(state);
   const row = next.skus.find((candidate) => candidate.id === id);
@@ -80,7 +87,7 @@ export function movePlanogramModule(state, { sourceId, targetId } = {}) {
   const target = (state?.skus || []).find((row) => row.id === targetId);
   if (!source || !target) return { ok: false, reason: "未找到要移动的陈列模块" };
   if (source.id === target.id) return { ok: false, reason: "不能移动到商品自身位置" };
-  if (source.included === false || target.included === false || source.inStaging || target.inStaging) {
+  if (!isPlanogramSkuIncluded(source) || !isPlanogramSkuIncluded(target) || source.inStaging || target.inStaging) {
     return { ok: false, reason: "待选区商品不能执行同柜位置移动" };
   }
   if (!source.cabinetKey || source.store !== target.store || source.cabinetKey !== target.cabinetKey) {
@@ -90,7 +97,7 @@ export function movePlanogramModule(state, { sourceId, targetId } = {}) {
   const next = structuredClone(state);
   const rows = orderedCabinetRows((next.skus || []).filter((row) => (
     row.store === source.store &&
-    row.included !== false &&
+    isPlanogramSkuIncluded(row) &&
     !row.inStaging &&
     row.cabinetKey === source.cabinetKey
   )));
@@ -107,7 +114,7 @@ export function movePlanogramModule(state, { sourceId, targetId } = {}) {
 
 export function clonePlanogramModule(state, { sourceId, target, layout, idFactory, keyOf } = {}) {
   const source = (state?.skus || []).find((row) => row.id === sourceId);
-  if (!source || source.included === false || source.inStaging) {
+  if (!source || !isPlanogramSkuIncluded(source) || source.inStaging) {
     return { ok: false, reason: "只能从当前已陈列模块创建新模块" };
   }
   const sourceCabinet = (state?.cabinets || []).find((cabinet) => cabinet.key === source.cabinetKey);

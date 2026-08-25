@@ -138,7 +138,7 @@ function 创建业务快照(){
  for(const row of 状态.skus||[]){
   if(!storeRows.has(row.store))storeRows.set(row.store,[]);storeRows.get(row.store).push(row);
   const active=bridge?.isActiveProduct?.(row)??[文(row.barcode),文(row.name)].some(value=>activeKeys.has(value));
-  if(row.included!==false&&active){if(!includedRows.has(row.store))includedRows.set(row.store,[]);includedRows.get(row.store).push(row)}
+  if(SKU已纳入(row)&&active){if(!includedRows.has(row.store))includedRows.set(row.store,[]);includedRows.get(row.store).push(row)}
  }
  return{state:状态,products,activeKeys,storeRows,includedRows,summaries:new Map()}
 }
@@ -959,7 +959,7 @@ function 陈列图池SKU(store){
   if(type==="staging")return rows.filter(r=>r.inStaging);
   return rows;
 }
-function SKU已纳入(r){return r?.included!==false}
+function SKU已纳入(r){return window.DisplayModuleState?.isPlanogramSkuIncluded?.(r)??(r?.included===true||Boolean(文(r?.cabinetKey)||r?.inStaging===true))}
 function 陈列图池列表(store){
   const filter=文(q("#displayMapPoolSearch")?.value);
   return 陈列图池SKU(store).filter(r=>!filter||[r.name,r.barcode,r.category2,r.category3,r.category4].some(v=>文(v).includes(filter))).sort((a,b)=>等级分(b.grade)-等级分(a.grade)||数(a.rank)-数(b.rank)||文(a.name).localeCompare(文(b.name),"zh-CN"));
