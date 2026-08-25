@@ -816,6 +816,14 @@ function 清除陈列图拖放样式(){
   qa(".map-layer.drop-ok,.map-layer.drop-bad").forEach(x=>x.classList.remove("drop-ok","drop-bad"));
   qa(".monitor-card.drag-ok,.monitor-card.drag-bad").forEach(x=>x.classList.remove("drag-ok","drag-bad"));
   qa(".map-item.swap-ok,.map-item.reorder-ok,.map-item.stage-ok,.map-item.drop-bad").forEach(x=>x.classList.remove("swap-ok","reorder-ok","stage-ok","drop-bad"));
+  qa(".staging-zone.drag-over").forEach(x=>x.classList.remove("drag-over"));
+}
+function 陈列图拖动行(id,store=门店名()){
+  const key=文(id),currentStore=文(store);
+  return 状态.skus.find(x=>x.id===key&&(!currentStore||x.store===currentStore))||null;
+}
+function 陈列图拖动来源柜段(r,key=""){
+  return 状态.cabinets.find(c=>c.key===文(key))||陈列图来源柜段(r);
 }
 function 标示陈列图可放位置(r){
   清除陈列图拖放样式();
@@ -829,15 +837,15 @@ function 标示陈列图可放位置(r){
     if(card.dataset.cabKey!==r.cabinetKey)card.classList.add(check.ok?"drag-ok":"drag-bad");
   });
   qa(".map-item[data-sku-id]").forEach(card=>{
-    const occupant=状态.skus.find(x=>x.id===card.dataset.skuId);
+    const occupant=陈列图拖动行(card.dataset.skuId);
     if(!occupant||occupant.id===r.id||occupant.inStaging)return;
     const plan=陈列图落位策略(r,occupant.cabinetKey,occupant.id);
     card.classList.add(plan.ok?(plan.mode==="reorder"?"reorder-ok":plan.mode==="swap"?"swap-ok":plan.mode==="stage"?"stage-ok":"drop-ok"):"drop-bad");
   });
 }
 function 清除待选标记(r){delete r.inStaging;delete r.stagingCabinetType;delete r.stagingIce;delete r.stagingFrom}
-function 移至待选区(skuId,reason="手动移入待选区"){
-  const r=状态.skus.find(x=>x.id===skuId);const source=陈列图来源柜段(r);
+function 移至待选区(skuId,reason="手动移入待选区",store=门店名(),sourceKey=""){
+  const r=陈列图拖动行(skuId,store),source=陈列图拖动来源柜段(r,sourceKey);
   if(!r||r.inStaging)return false;
   if(!source){alert("无法识别该商品原柜段");return false}
   r.inStaging=true;r.stagingCabinetType=冰柜类型(source);r.stagingIce=是否冰品柜段(source);r.stagingFrom={key:source.key,label:source.label,position:source.position};
@@ -867,7 +875,7 @@ function 执行陈列图互换(r,occupant,source,target){
   标记变更(r,fields,"陈列图直接互换");标记变更(occupant,fields,"陈列图直接互换");return true;
 }
 function 处理陈列图拖放(skuId,targetKey,targetSkuId=""){
-  const r=状态.skus.find(x=>x.id===skuId);const plan=陈列图落位策略(r,targetKey,targetSkuId);
+  const r=陈列图拖动行(skuId);const plan=陈列图落位策略(r,targetKey,targetSkuId);
   if(!plan.ok){alert("无法移动："+plan.reason);return}
   if(plan.mode==="reorder"&&!移动同柜陈列位置(r,plan.occupant)){alert("无法移动：同柜位置更新失败，请刷新后重试");return}
   if(plan.mode==="move"&&!放入陈列柜段(r,plan.target)){alert("无法移动：目标柜段没有可行的长宽摆法");return}
@@ -916,23 +924,29 @@ function 绑定陈列图拖拽(){
     item.draggable=ops;
     item.addEventListener("click",e=>{if(e.target.closest("input,button"))return;当前.陈列图选中SKU=item.dataset.skuId;渲染陈列图右侧()});
     if(!ops)return;
-    item.addEventListener("dragstart",e=>{const r=状态.skus.find(x=>x.id===item.dataset.skuId);if(!r){e.preventDefault();return}window.__陈列图拖动SKU=r.id;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",r.id);item.classList.add("dragging");标示陈列图可放位置(r)});
-    item.addEventListener("dragend",()=>{item.classList.remove("dragging");window.__陈列图拖动SKU="";清除陈列图拖放样式()});
-    item.addEventListener("dragover",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");if(!id||id===item.dataset.skuId)return;const r=状态.skus.find(x=>x.id===id);const target=状态.skus.find(x=>x.id===item.dataset.skuId);if(!r||!target||target.inStaging)return;const plan=陈列图落位策略(r,target.cabinetKey,target.id);if(plan.ok){e.preventDefault();e.dataTransfer.dropEffect="move"}});
-    item.addEventListener("drop",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");if(!id||id===item.dataset.skuId)return;const target=状态.skus.find(x=>x.id===item.dataset.skuId);if(!target||target.inStaging)return;e.preventDefault();e.stopPropagation();处理陈列图拖放(id,target.cabinetKey,target.id)});
+    item.addEventListener("dragstart",e=>{const r=陈列图拖动行(item.dataset.skuId);if(!r){e.preventDefault();return}window.__陈列图拖动SKU=r.id;window.__陈列图拖动源柜段=item.dataset.cabKey||r.cabinetKey||"";e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",r.id);item.classList.add("dragging");标示陈列图可放位置(r)});
+    item.addEventListener("dragend",()=>{item.classList.remove("dragging");window.__陈列图拖动SKU="";window.__陈列图拖动源柜段="";清除陈列图拖放样式()});
+    item.addEventListener("dragover",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");if(!id||id===item.dataset.skuId)return;const r=陈列图拖动行(id);const target=陈列图拖动行(item.dataset.skuId);if(!r||!target||target.inStaging)return;const plan=陈列图落位策略(r,target.cabinetKey,target.id);if(plan.ok){e.preventDefault();e.dataTransfer.dropEffect="move"}});
+    item.addEventListener("drop",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");if(!id||id===item.dataset.skuId)return;const target=陈列图拖动行(item.dataset.skuId);if(!target||target.inStaging)return;e.preventDefault();e.stopPropagation();处理陈列图拖放(id,target.cabinetKey,target.id)});
   });
   qa(".map-layer[data-cab-key]").forEach(layer=>{
-    layer.addEventListener("dragover",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");const r=状态.skus.find(x=>x.id===id);const check=陈列图目标校验(r,layer.dataset.cabKey);if(check.ok){e.preventDefault();e.dataTransfer.dropEffect="move"}});
+    layer.addEventListener("dragover",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");const r=陈列图拖动行(id);const check=陈列图目标校验(r,layer.dataset.cabKey);if(check.ok){e.preventDefault();e.dataTransfer.dropEffect="move"}});
     layer.addEventListener("drop",e=>{e.preventDefault();处理陈列图拖放(window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain"),layer.dataset.cabKey)});
     layer.addEventListener("click",()=>{当前.陈列图选中柜段=layer.dataset.cabKey;渲染陈列余量监控()});
   });
   qa(".monitor-card[data-cab-key]").forEach(card=>{
-    card.addEventListener("dragover",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");const r=状态.skus.find(x=>x.id===id);const check=陈列图目标校验(r,card.dataset.cabKey);if(check.ok){e.preventDefault();e.dataTransfer.dropEffect="move"}});
+    card.addEventListener("dragover",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");const r=陈列图拖动行(id);const check=陈列图目标校验(r,card.dataset.cabKey);if(check.ok){e.preventDefault();e.dataTransfer.dropEffect="move"}});
     card.addEventListener("drop",e=>{e.preventDefault();处理陈列图拖放(window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain"),card.dataset.cabKey)});
     card.addEventListener("click",()=>{当前.陈列图选中柜段=card.dataset.cabKey;qa(".map-layer").forEach(x=>x.classList.toggle("monitor-selected",x.dataset.cabKey===card.dataset.cabKey));渲染陈列余量监控()});
   });
   const stage=q("#displayStagingZone");
-  if(stage&&ops){stage.addEventListener("dragover",e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");const r=状态.skus.find(x=>x.id===id);if(r&&!r.inStaging&&r.store===门店名()){e.preventDefault();e.dataTransfer.dropEffect="move"}});stage.addEventListener("drop",e=>{e.preventDefault();const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");if(移至待选区(id,"陈列图手动移入待选区")){保存();渲染全部();完成提示("已移入待选区：原柜段余量已释放。请将待选商品拖到新的可用柜段后再同步门店页面。")}})}
+  if(stage&&ops){
+    const accept=e=>{const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain"),r=陈列图拖动行(id);if(!r||r.inStaging||r.store!==门店名())return false;e.preventDefault();e.dataTransfer.dropEffect="move";stage.classList.add("drag-over");return true};
+    stage.addEventListener("dragenter",accept);
+    stage.addEventListener("dragover",accept);
+    stage.addEventListener("dragleave",e=>{if(!stage.contains(e.relatedTarget))stage.classList.remove("drag-over")});
+    stage.addEventListener("drop",e=>{e.preventDefault();stage.classList.remove("drag-over");const id=window.__陈列图拖动SKU||e.dataTransfer.getData("text/plain");if(移至待选区(id,"陈列图手动移入待选区",门店名(),window.__陈列图拖动源柜段)){保存();渲染全部();完成提示("已移入待选区：原柜段余量已释放。请将待选商品拖到新的可用柜段后再同步门店页面。")}})
+  }
 }
 function 定位到陈列图商品(id){
   const canvas=q("#displayMapCanvas");
@@ -1047,7 +1061,7 @@ function 渲染陈列图(){
   for(const [label,segments] of byLabel){
     const kind=文(segments[0]?.kind);
     html+='<div class="map-cabinet"><h3>'+逃(label)+' <span>'+逃(kind)+'</span></h3><div class="map-grid '+(kind.includes("立柜")?"vertical":"chest")+'">';
-    const 生成商品卡=r=>'<span class="map-item '+((r.sourceRowId||r.id)===当前.陈列图选中SKU?'map-selected':'')+' '+((r.modifiedFields&&r.modifiedFields.length)?'data-changed':'')+'" data-sku-id="'+逃(r.sourceRowId||r.id)+'" style="'+陈列图商品样式(r)+'" title="点击查看信息；当前页面可直接拖动">'+陈列图商品标签(r)+'</span>';
+    const 生成商品卡=r=>'<span class="map-item '+((r.sourceRowId||r.id)===当前.陈列图选中SKU?'map-selected':'')+' '+((r.modifiedFields&&r.modifiedFields.length)?'data-changed':'')+'" data-sku-id="'+逃(r.sourceRowId||r.id)+'" data-cab-key="'+逃(r.cabinetKey||'')+'" draggable="true" style="'+陈列图商品样式(r)+'" title="点击查看信息；当前页面可直接拖动">'+陈列图商品标签(r)+'</span>';
     if(kind.includes("立柜")){
       for(let i=1;i<=6;i++){
         const pos='第'+i+'层',seg=segments.find(c=>c.position===pos),items=i===6?[]:陈列图排序(rows.filter(r=>r.cabinetKey===seg?.key)),disabled=!柜段可陈列(seg);
