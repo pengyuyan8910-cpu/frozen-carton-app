@@ -1,5 +1,6 @@
 const DEFAULT_DB_NAME = 'frozen-carton-local-state-v1';
 const OBJECT_STORE = 'records';
+const MIRROR_MARKER = '__frozenCartonLocalMirror_v1';
 
 const clone = value => {
   if (value === undefined) return undefined;
@@ -11,6 +12,12 @@ function parseLegacy(value) {
   if (value === null || value === undefined) return undefined;
   if (typeof value !== 'string') return clone(value);
   try { return JSON.parse(value); } catch (_) { return value; }
+}
+
+function parseMirror(value) {
+  const parsed = parseLegacy(value);
+  if (!parsed || typeof parsed !== 'object' || parsed[MIRROR_MARKER] !== true) return null;
+  return parsed.deleted ? { deleted: true } : { value: clone(parsed.value) };
 }
 
 function requestResult(request) {
@@ -30,6 +37,26 @@ export function createLocalStateStore({ indexedDB: indexedDBApi = globalThis.ind
   const warn = error => {
     if (typeof window !== 'undefined') {
       window.__storageWarnings = (window.__storageWarnings || []).concat(String(error?.message || error));
+    }
+  };
+
+  const writeMirror = (key, value) => {
+    try {
+      storage?.setItem?.(key, JSON.stringify({ [MIRROR_MARKER]: true, value: clone(value) }));
+      return true;
+    } catch (error) {
+      warn(error);
+      return false;
+    }
+  };
+
+  const writeDeleteMirror = key => {
+    try {
+      storage?.setItem?.(key, JSON.stringify({ [MIRROR_MARKER]: true, deleted: true }));
+      return true;
+    } catch (error) {
+      warn(error);
+      return false;
     }
   };
 
@@ -75,13 +102,21 @@ export function createLocalStateStore({ indexedDB: indexedDBApi = globalThis.ind
       warn(error);
       stored = undefined;
     }
-    if (stored !== undefined) {
-      sync.set(key, clone(stored));
-      try { storage?.removeItem?.(key); } catch (error) { warn(error); }
-      return;
-    }
     let legacyValue = null;
     try { legacyValue = storage?.getItem?.(key) ?? null; } catch (error) { warn(error); }
+    const mirror = parseMirror(legacyValue);
+    if (mirror?.deleted) {
+      sync.delete(key);
+      return;
+    }
+    if (mirror) {
+      sync.set(key, clone(mirror.value));
+      return;
+    }
+    if (stored !== undefined) {
+      sync.set(key, clone(stored));
+      return;
+    }
     const parsed = parseLegacy(legacyValue);
     if (parsed === undefined) return;
     if (!indexedDBDisabled) {
@@ -118,16 +153,16 @@ export function createLocalStateStore({ indexedDB: indexedDBApi = globalThis.ind
   function queueSet(key, value) {
     const next = clone(value);
     sync.set(key, next);
+    writeMirror(key, next);
     return queue(async () => {
       if (indexedDBDisabled) {
-        storage?.setItem?.(key, JSON.stringify(next));
+        writeMirror(key, next);
         return;
       }
       try { await writeDb(key, next); } catch (error) {
         indexedDBDisabled = true;
         try {
-          if (!storage?.setItem) throw error;
-          storage.setItem(key, JSON.stringify(next));
+          if (!writeMirror(key, next)) throw error;
         } catch (fallbackError) {
           fallbackError.cause = error;
           throw fallbackError;
@@ -138,13 +173,13 @@ export function createLocalStateStore({ indexedDB: indexedDBApi = globalThis.ind
 
   function queueRemove(key) {
     sync.delete(key);
+    writeDeleteMirror(key);
     return queue(async () => {
-      if (indexedDBDisabled) { storage?.removeItem?.(key); return; }
+      if (indexedDBDisabled) { writeDeleteMirror(key); return; }
       try { await deleteDb(key); } catch (error) {
         indexedDBDisabled = true;
         try {
-          if (!storage?.removeItem) throw error;
-          storage.removeItem(key);
+          if (!writeDeleteMirror(key)) throw error;
         } catch (fallbackError) {
           fallbackError.cause = error;
           throw fallbackError;
