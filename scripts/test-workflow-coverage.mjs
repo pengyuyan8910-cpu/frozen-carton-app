@@ -25,6 +25,7 @@ for (const [name, source] of [['update-data.yml', updateData], ['generate-new-st
 assert.match(replan, /- "app\.js"|- 'app\.js'/, 'app.js 变化必须触发统一严格引擎回归测试');
 assert.match(replan, /- "index\.html"|- 'index\.html'/, 'index.html 变化必须触发统一严格引擎回归测试');
 assert.match(replan, /npm run test:new-store-routing/, '主回归 CI 必须执行新增门店统一严格引擎回归测试');
+assert.match(replan, /test-new-store-sku-identity.mjs/, '主回归 CI 必须包含新增门店SKU主键隔离回归测试');
 assert.match(replan, /npm run refresh-data/, '主回归 CI 必须用当前正式Excel跑一次32店底表转换与复核');
 assert.match(replan, /NEW_STORE_CONFIG_PATH:\s*data\/new-store\/新增门店配置\.json[\s\S]*npm run generate-new-store-draft/, '主回归 CI 必须用标准配置真实生成一次新增门店草稿');
 assert.match(replan, /npm run test:replan/, '主回归 CI 必须执行产品池重排回归测试');

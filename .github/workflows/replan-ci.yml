@@ -14,6 +14,8 @@ on:
       - "scripts/replan-workbook.mjs"
       - "scripts/xlsx-lite.mjs"
       - "scripts/test-new-store-routing.mjs"
+      - "scripts/test-new-store-module-normalization.mjs"
+      - "scripts/test-new-store-sku-identity.mjs"
       - "scripts/test-workflow-coverage.mjs"
       - "scripts/test-*-replan*.mjs"
       - ".github/workflows/replan-ci.yml"

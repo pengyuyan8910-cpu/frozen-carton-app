@@ -34,15 +34,15 @@ const result = normalizeNewStorePlanogramRows(source);
 
 assert.equal(result.length, 2, "一个多柜段 SKU 应拆成两个独立模块行");
 assert.deepEqual(result.map(row => row.id), [
-  "strict_6937506895554::module::1",
-  "strict_6937506895554::module::2",
+  "newstore_测试新增门店__strict_6937506895554::module::1",
+  "newstore_测试新增门店__strict_6937506895554::module::2",
 ]);
 assert.deepEqual(result.map(row => row.cabinetKey), ["cab_chest_2", "cab_vertical_3"]);
 assert.deepEqual(result.map(row => row.placements.length), [1, 1]);
 assert.deepEqual(result.map(row => row.displayCols), [1, 3]);
 assert.deepEqual(result.map(row => row.faceWidth), [235, 176]);
-assert.equal(result[0].sourceRowId, "strict_6937506895554");
-assert.equal(result[1].sourceRowId, "strict_6937506895554");
+assert.equal(result[0].sourceRowId, "newstore_测试新增门店__strict_6937506895554");
+assert.equal(result[1].sourceRowId, "newstore_测试新增门店__strict_6937506895554");
 assert.equal(source[0].placements.length, 2, "不能改写严格测算缓存原行");
 
 console.log("new-store-module-normalization: passed");

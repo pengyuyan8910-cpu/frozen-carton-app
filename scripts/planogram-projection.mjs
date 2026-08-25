@@ -3,10 +3,73 @@ function number(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function text(value) {
+  return String(value ?? "").trim();
+}
+
+function scopedNewStoreSkuId(row, index, multiple) {
+  const store = text(row?.store) || "新增门店";
+  const base = text(row?.id) || `row_${index + 1}`;
+  return `newstore_${store}__${base}${multiple ? `::module::${index + 1}` : ""}`;
+}
+
+function updateSkuReferences(row, oldId, newId) {
+  for (const field of ["sourceRowId", "placementCloneOf", "skuId", "rowId"]) {
+    if (row?.[field] === oldId) row[field] = newId;
+  }
+  for (const placement of Array.isArray(row?.placements) ? row.placements : []) {
+    for (const field of ["sourceRowId", "placementCloneOf", "skuId", "rowId"]) {
+      if (placement?.[field] === oldId) placement[field] = newId;
+    }
+  }
+}
+
+/**
+ * Repairs duplicate row IDs already present in a saved current-page state.
+ * It changes identity only; all store/product/planogram fields are retained.
+ */
+export function repairDuplicateSkuIds(state, baselineState = {}) {
+  const next = typeof structuredClone === "function"
+    ? structuredClone(state || {})
+    : JSON.parse(JSON.stringify(state || {}));
+  const rows = Array.isArray(next.skus) ? next.skus : [];
+  const counts = new Map();
+  for (const row of rows) {
+    const id = text(row?.id);
+    if (id) counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  const baselineRows = Array.isArray(baselineState?.skus) ? baselineState.skus : [];
+  const baselineById = new Map(baselineRows.filter(row => text(row?.id)).map(row => [text(row.id), row]));
+  const used = new Set(rows.filter(row => (counts.get(text(row?.id)) || 0) === 1).map(row => text(row.id)).filter(Boolean));
+  const preserved = new Set();
+
+  for (const row of rows) {
+    const oldId = text(row?.id);
+    if (!oldId || (counts.get(oldId) || 0) <= 1) continue;
+    const baseline = baselineById.get(oldId);
+    const isBaselineRow = baseline && text(row?.store) === text(baseline?.store) && !preserved.has(oldId);
+    const isFirstNewRow = !baseline && !preserved.has(oldId);
+    if (isBaselineRow || isFirstNewRow) {
+      preserved.add(oldId);
+      used.add(oldId);
+      continue;
+    }
+    const store = text(row?.store) || "新增门店";
+    let nextId = `newstore_${store}__${oldId}`;
+    let suffix = 2;
+    while (used.has(nextId)) nextId = `newstore_${store}__${oldId}__${suffix++}`;
+    row.id = nextId;
+    updateSkuReferences(row, oldId, nextId);
+    used.add(nextId);
+  }
+  return next;
+}
+
 function placementRow(row, placement, index, multiple) {
   const next = { ...row, ...(placement || {}) };
-  next.sourceRowId = row.sourceRowId || row.id;
-  next.id = multiple ? `${row.id}::module::${index + 1}` : row.id;
+  const sourceId = scopedNewStoreSkuId(row, 0, false);
+  next.sourceRowId = sourceId;
+  next.id = multiple ? `${sourceId}::module::${index + 1}` : sourceId;
   next.placements = placement ? [{ ...placement }] : [];
   next.cabinetKey = placement?.cabinetKey || row.cabinetKey || "";
   next.cabinetLabel = placement?.cabinetLabel || row.cabinetLabel || "";
@@ -101,4 +164,4 @@ export function buildCabinetUsage(cabinets, rows) {
   return usage;
 }
 
-export default { buildPlanogramRows, buildCabinetUsage };
+export default { buildPlanogramRows, buildCabinetUsage, normalizeNewStorePlanogramRows, repairDuplicateSkuIds };
