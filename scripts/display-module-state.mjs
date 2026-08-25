@@ -42,13 +42,13 @@ export function sameStoreSkuCabinetSegment(state, row, targetKey, { keyOf } = {}
   ));
 }
 
-export function includePlanogramSku(state, { id } = {}) {
-  const source = (state?.skus || []).find((row) => row.id === id);
+export function includePlanogramSku(state, { id, store } = {}) {
+  const source = (state?.skus || []).find((row) => row.id === id && (!text(store) || row.store === store));
   if (!source) return { ok: false, reason: "未找到要纳入的SKU" };
   if (isPlanogramSkuIncluded(source)) return { ok: false, reason: "该SKU已经纳入当前门店" };
 
   const next = structuredClone(state);
-  const row = next.skus.find((candidate) => candidate.id === id);
+  const row = next.skus.find((candidate) => candidate.id === id && (!text(store) || candidate.store === store));
   row.included = true;
   row.inStaging = true;
   row.stagingCabinetType = row.ice === true ? "冰淇淋柜" : "待分配";
