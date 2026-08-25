@@ -1,4 +1,5 @@
-const 初始数据=window.UNIFIED_CARTON_DATA;
+function 冻结底表(value){if(!value||typeof value!=="object"||Object.isFrozen(value))return value;Object.freeze(value);for(const child of Object.values(value))冻结底表(child);return value}
+const 初始数据=冻结底表(structuredClone(window.UNIFIED_CARTON_DATA||{}));
 const 复核报告=window.UNIFIED_CARTON_REPORT||{};
 const 统一状态保存键="frozen_carton_unified_scene_state_v2";
 const 旧草稿保存键="frozen_carton_unified_scene_draft_v1";
@@ -23,6 +24,11 @@ function 初始状态(){const st=清理交互痕迹(初始数据);同步横向�
 let 草稿状态=null;
 let 发布状态=null;
 let 状态=初始状态();
+const 状态保护器=window.StateIntegrityGuard?.createStateIntegrityGuard?.(初始数据)||null;
+let 最近安全状态=null;
+const 本次允许删除SKU=new Set();
+function 允许本次删除SKU(ids=[]){for(const id of ids)if(id)本次允许删除SKU.add(String(id))}
+function 恢复最近安全状态(){if(!最近安全状态)return false;状态=structuredClone(最近安全状态);草稿状态=状态;发布状态=状态;window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);return true}
 let 当前={门店:"",页面:"goods",定位SKU:"",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
 let 同步请求中=false;
 const 格=(v,d=1)=>{const n=数(v);
@@ -81,15 +87,15 @@ function 读取本地原值(key){const cached=window.FrozenCartonLocalStore?.get
 function 写入本地值(key,value){if(window.FrozenCartonLocalStore?.queueSet?.(key,value))return true;try{localStorage.setItem(key,JSON.stringify(value));return true}catch(e){console.warn("写入本地值失败",e);return false}}
 function 删除本地值(key){if(window.FrozenCartonLocalStore?.queueRemove?.(key))return true;try{localStorage.removeItem(key);return true}catch(e){console.warn("删除本地值失败",e);return false}}
 function 读取本地(key){try{const raw=读取本地原值(key);if(raw===null||raw===undefined)return null;const st=应用状态补丁(typeof raw==="string"?JSON.parse(raw):raw);if(!状态可用(st)){删除本地值(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);删除本地值(key);return null}}
-function 安全保存本地(key,state){const patch=状态补丁(state);if(window.FrozenCartonLocalStore?.queueSet?.(key,patch))return true;try{localStorage.setItem(key,JSON.stringify(patch));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
+function 安全保存本地(key,state,options={}){window.__dataGuardLastViolation=null;if(状态保护器&&!options.allowExternalReplace){const check=状态保护器.validate(state,{referenceState:最近安全状态,allowedRemovedSkuIds:[...本次允许删除SKU]});if(!check.ok){window.__dataGuardLastViolation=check;console.error("数据保护拦截：",check.errors);return false}}const patch=状态补丁(state);if(window.FrozenCartonLocalStore?.queueSet?.(key,patch))return true;try{localStorage.setItem(key,JSON.stringify(patch));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
 function 刷新已加载陈列容量(state){const helper=window.LivePlanogramCapacity?.recalculateLoadedPlanogram;if(typeof helper==='function')helper(state);return state}
 function 刷新单SKU陈列容量(row){if(!row)return;刷新已加载陈列容量({params:状态.params,cabinets:状态.cabinets,skus:[row]})}
-function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};状态=清理计算缓存(result.state||initial);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);刷新已加载陈列容量(状态);草稿状态=状态;发布状态=状态;建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
-function 保存草稿(){安全保存本地(统一状态保存键,状态)}
-function 保存发布(){安全保存本地(统一状态保存键,状态)}
+function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};状态=清理计算缓存(result.state||initial);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);刷新已加载陈列容量(状态);草稿状态=状态;发布状态=状态;最近安全状态=structuredClone(状态);建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
+function 保存草稿(){const saved=安全保存本地(统一状态保存键,状态);if(saved)最近安全状态=structuredClone(状态);return saved}
+function 保存发布(){const saved=安全保存本地(统一状态保存键,状态);if(saved)最近安全状态=structuredClone(状态);return saved}
 function 可编辑模式(){return true}
 function 切换数据源(){草稿状态=状态;发布状态=状态;window.ProductLifecycle?.syncData?.(状态);清空业务快照()}
-function 保存(){清空业务快照();草稿状态=状态;发布状态=状态;const saved=安全保存本地(统一状态保存键,状态);window.ProductLifecycle?.syncData?.(状态);return saved}
+function 保存(){清空业务快照();草稿状态=状态;发布状态=状态;const saved=安全保存本地(统一状态保存键,状态);if(!saved&&window.__dataGuardLastViolation){const errors=window.__dataGuardLastViolation.errors||[];恢复最近安全状态();alert("检测到未授权的数据结构变化，已拦截保存，当前页面数据未被覆盖。\n"+errors.slice(0,5).join("\n"));}else if(saved)最近安全状态=structuredClone(状态);本次允许删除SKU.clear();window.ProductLifecycle?.syncData?.(状态);return saved}
 function 标记待同步(){}
 初始化统一状态();
 window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);window.ProductLifecycle?.syncData?.(状态);
@@ -102,17 +108,18 @@ window.FrozenCartonApp={
   getActiveProducts:()=>structuredClone(产品池有效()),
   getStoreRecord:store=>structuredClone(门店严格记录(store)),
   getStoreParams:store=>structuredClone(门店严格参数(store)),
-  saveDraftState:next=>{草稿状态=清理计算缓存(structuredClone(next));if(可编辑模式())状态=草稿状态;保存草稿();window.ProductLifecycle?.hydrateState?.(草稿状态.lifecycle||null,草稿状态);清空业务快照();渲染全部();return true},
-  saveActiveState:next=>{状态=清理计算缓存(structuredClone(next));草稿状态=状态;保存草稿();window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);清空业务快照();渲染全部();return true},
+  saveDraftState:next=>{const previous=状态;草稿状态=清理计算缓存(structuredClone(next));if(可编辑模式())状态=草稿状态;const saved=保存草稿();if(!saved&&window.__dataGuardLastViolation){状态=previous;草稿状态=状态;发布状态=状态;alert("检测到未授权的数据结构变化，已拦截保存，当前页面数据未被覆盖。\n"+(window.__dataGuardLastViolation.errors||[]).slice(0,5).join("\n"));return false}window.ProductLifecycle?.hydrateState?.(草稿状态.lifecycle||null,草稿状态);清空业务快照();渲染全部();return saved},
+  saveActiveState:next=>{const previous=状态;状态=清理计算缓存(structuredClone(next));草稿状态=状态;const saved=保存草稿();if(!saved&&window.__dataGuardLastViolation){状态=previous;草稿状态=状态;发布状态=状态;alert("检测到未授权的数据结构变化，已拦截保存，当前页面数据未被覆盖。\n"+(window.__dataGuardLastViolation.errors||[]).slice(0,5).join("\n"));return false}window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);清空业务快照();渲染全部();return saved},
   render:()=>渲染全部()
 };
 // Lifecycle edits are part of the same shared document, not a separate browser-only cache.
 window.addEventListener("product-lifecycle:state-changed", event=>{
   if(!状态||!event.detail)return;
+  const previousLifecycle=状态.lifecycle;
   清空业务快照();
   状态.lifecycle=structuredClone(event.detail);
-  if(可编辑模式()){草稿状态=状态;保存草稿();}
-  else{发布状态=状态;保存发布();}
+  const saved=可编辑模式()?保存草稿():保存发布();
+  if(!saved&&window.__dataGuardLastViolation){状态.lifecycle=previousLifecycle;草稿状态=状态;发布状态=状态;alert("检测到未授权的数据结构变化，已拦截保存，当前页面数据未被覆盖。\n"+(window.__dataGuardLastViolation.errors||[]).slice(0,5).join("\n"));}
 });
 ["product-lifecycle:product-updated","product-lifecycle:data-committed","product-lifecycle:state-hydrated"].forEach(type=>window.addEventListener(type,()=>清空业务快照()));
 // Keep the planogram and the allocation table on the same live state.
@@ -913,6 +920,8 @@ function 删除陈列模块(id){
   const helper=window.DisplayModuleState?.deletePlanogramModule;
   const result=helper?helper(状态,{id,keyOf:x=>产品主键(x)||SKU键(x)}):{ok:false,reason:"删除模块功能尚未加载"};
   if(!result.ok){alert("无法删除："+result.reason);return}
+  const beforeIds=new Set(状态.skus.map(x=>x.id));
+  允许本次删除SKU([...beforeIds].filter(rowId=>!result.state.skus.some(x=>x.id===rowId)));
   状态.skus=result.state.skus;
   const remaining=同SKU陈列模块(row).filter(x=>x.id!==id);if(remaining[0])同步同SKU满陈(remaining[0]);
   当前.陈列图选中SKU=remaining[0]?.id||"";保存();渲染全部();
@@ -1688,12 +1697,13 @@ async function pullCloudData() {
   if (!ok) return cloudNote('已取消拉取，当前页面未改变。');
   const cloudState = 清理计算缓存(structuredClone(data.payload));
   确保产品池(cloudState);
-  if (!安全保存本地(统一状态保存键, cloudState) || !await 等待本地持久化()) {
+  if (!安全保存本地(统一状态保存键, cloudState, { allowExternalReplace: true }) || !await 等待本地持久化()) {
     return cloudNote('本机存储失败，本次未应用云端数据，当前页面未改变。', true);
   }
   状态 = cloudState;
   草稿状态 = 状态;
   发布状态 = 状态;
+  最近安全状态 = structuredClone(cloudState);
   window.ProductLifecycle?.hydrateState?.(cloudState.lifecycle || null, cloudState);
   window.ProductLifecycle?.syncData?.(状态);
   docRevision = Number(data.doc_revision) || 0;
