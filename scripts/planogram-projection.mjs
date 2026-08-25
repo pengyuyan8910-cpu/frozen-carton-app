@@ -3,6 +3,36 @@ function number(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function placementRow(row, placement, index, multiple) {
+  const next = { ...row, ...(placement || {}) };
+  next.sourceRowId = row.sourceRowId || row.id;
+  next.id = multiple ? `${row.id}::module::${index + 1}` : row.id;
+  next.placements = placement ? [{ ...placement }] : [];
+  next.cabinetKey = placement?.cabinetKey || row.cabinetKey || "";
+  next.cabinetLabel = placement?.cabinetLabel || row.cabinetLabel || "";
+  next.position = placement?.position || placement?.section || row.position || "";
+  if (placement?.displayCols !== undefined) next.displayCols = number(placement.displayCols);
+  if (placement?.faceWidth !== undefined) next.faceWidth = number(placement.faceWidth);
+  if (placement?.perCol !== undefined) next.perCol = number(placement.perCol);
+  if (placement?.fullCount !== undefined) next.rowFull = number(placement.fullCount);
+  return next;
+}
+
+export function normalizeNewStorePlanogramRows(rows) {
+  const output = [];
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const placements = Array.isArray(row?.placements)
+      ? row.placements.filter(placement => placement?.cabinetKey)
+      : [];
+    if (placements.length <= 1) {
+      output.push(placementRow(row, placements[0], 0, false));
+      continue;
+    }
+    placements.forEach((placement, index) => output.push(placementRow(row, placement, index, true)));
+  }
+  return output;
+}
+
 function projectionFor(row, placement, index, multiple) {
   const projection = { ...row, ...(placement || {}) };
   projection.sourceRowId = row.id;
