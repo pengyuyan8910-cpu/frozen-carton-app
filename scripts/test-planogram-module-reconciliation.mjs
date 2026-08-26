@@ -55,6 +55,55 @@ const movedWithLegacyPlacement = buildPlanogramRows([
 assert.equal(movedWithLegacyPlacement.length, 1, "根柜体已更新时，旧版单模块引用仍应保持可见");
 assert.equal(movedWithLegacyPlacement[0].cabinetKey, cabinets[0].key, "根柜体字段应覆盖旧版单模块引用");
 
+const cloneRows = [
+  {
+    id: "source-module",
+    store: "店",
+    included: true,
+    barcode: "690000000003",
+    name: "克隆模块商品",
+    lifecycleTaskId: "task-1",
+    lifecycleTaskRowId: "task-row-1",
+    cabinetKey: cabinets[1].key,
+    displayCols: 1,
+    faceWidth: 280,
+  },
+  {
+    id: "clone-module",
+    store: "店",
+    included: true,
+    inStaging: false,
+    placementCloneOf: "source-module",
+    lifecycleTaskId: "task-1",
+    lifecycleTaskRowId: "task-row-1",
+    cabinetKey: cabinets[0].key,
+    displayCols: 1,
+    faceWidth: 280,
+  },
+];
+
+const renderedAfterMove = cloneRows.filter((row) => {
+  if (row.inStaging) return false;
+  const key = row.lifecycleTaskId && !row.placementCloneOf
+    ? [row.lifecycleTaskId, row.lifecycleTaskRowId || row.id].join("||")
+    : "";
+  if (key && cloneRows.slice(0, cloneRows.indexOf(row)).some(previous => {
+    const previousKey = previous.lifecycleTaskId && !previous.placementCloneOf
+      ? [previous.lifecycleTaskId, previous.lifecycleTaskRowId || previous.id].join("||")
+      : "";
+    return previousKey === key;
+  })) return false;
+  return true;
+});
+assert.equal(renderedAfterMove.length, 2, "待选区模块移入卧柜后，原模块和新增模块都应保留在陈列图投影中");
+assert.equal(renderedAfterMove[1].cabinetKey, cabinets[0].key, "移入卧柜的新增模块应投影到目标卧柜柜段");
+
+assert.match(
+  app,
+  /const duplicateKey=r\.lifecycleTaskId&&!r\.placementCloneOf\?/,
+  "合法的分身模块不能因为继承生命周期任务编号而被陈列图重复过滤"
+);
+
 const panelStart = app.indexOf("function 渲染陈列图右侧()");
 const panelEnd = app.indexOf("function 陈列图柜段监控", panelStart);
 assert.ok(panelStart >= 0 && panelEnd > panelStart, "未找到陈列图右侧渲染逻辑");

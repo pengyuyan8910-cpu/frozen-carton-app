@@ -206,7 +206,7 @@ function 初始SKU行(id){return (初始数据.skus||[]).find(x=>x.id===id)}
 function 初始SKU宽度(r){return Math.max(0,数(r.displayCols)*数(r.faceWidth))}
 function 建立基准(state){if(!state)return;for(const r of state.skus||[]){const b=初始SKU行(r.id);r._baseIncluded=b?!!b.included:false;r._baseCabinetKey=b?b.cabinetKey:r.cabinetKey;r._baseDisplayCols=b?数(b.displayCols):0;r._baseFaceWidth=b?数(b.faceWidth):数(r.faceWidth);r._baseWidth=b?初始SKU宽度(b):0}state._baselineReady=true}
 function 柜段占用明细(r){const out=new Map();const baseKey=r._baseCabinetKey||r.cabinetKey;const baseWidth=基准宽度(r);const newWidth=r.included?SKU占用宽度(r):0;if(r._baseIncluded!==false&&baseKey)out.set(baseKey,(out.get(baseKey)||0)-baseWidth);if(r.included&&r.cabinetKey)out.set(r.cabinetKey,(out.get(r.cabinetKey)||0)+newWidth);return out}
-function 陈列图基础行(store){const seen=new Set();return 纳入SKU(store).filter(r=>{if(r.inStaging)return false;const duplicateKey=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(duplicateKey&&seen.has(duplicateKey))return false;if(duplicateKey)seen.add(duplicateKey);return true})}
+function 陈列图基础行(store){const seen=new Set();return 纳入SKU(store).filter(r=>{if(r.inStaging)return false;const duplicateKey=r.lifecycleTaskId&&!r.placementCloneOf?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(duplicateKey&&seen.has(duplicateKey))return false;if(duplicateKey)seen.add(duplicateKey);return true})}
 function 陈列图行投影(store){const rows=陈列图基础行(store),helper=window.PlanogramProjection?.buildPlanogramRows;return helper?helper(rows,store,状态.cabinets):rows}
 function 柜段使用(){if(柜段使用缓存)return 柜段使用缓存;const stores=[...new Set(状态.cabinets.map(c=>c.store).filter(Boolean))],rows=stores.flatMap(store=>陈列图行投影(store)),helper=window.PlanogramProjection?.buildCabinetUsage;if(helper){柜段使用缓存=[...helper(状态.cabinets,rows).values()];return 柜段使用缓存}const map=new Map(状态.cabinets.map(c=>[c.key,{...c,used:0,items:[]}]));for(const r of rows){const c=map.get(r.cabinetKey);if(!c)continue;const used=SKU占用宽度(r);c.used+=used;c.items.push({id:r.sourceRowId||r.id,name:r.name,used,cols:数(r.displayCols)})}for(const c of map.values()){c.used=Number(Math.max(0,c.used).toFixed(1));c.left=Number((数(c.length)-c.used).toFixed(1));c.over=c.left<-.5}柜段使用缓存=[...map.values()];return 柜段使用缓存}function 门店汇总(store){
  const snapshot=业务快照();if(snapshot.summaries.has(store))return snapshot.summaries.get(store);
@@ -469,7 +469,7 @@ r.customPlacement=true;
 切换("allocation");
 完成提示("新品试算方案已应用：排柜、柜段余量和外储测算已更新。")};
 window.空位方案缓存={};
-function 柜段内SKU(store,cabKey){const seen=new Set();return 纳入SKU(store).filter(r=>{if(r.cabinetKey!==cabKey)return false;const k=r.lifecycleTaskId?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(k&&seen.has(k))return false;if(k)seen.add(k);return true})}
+function 柜段内SKU(store,cabKey){const seen=new Set();return 纳入SKU(store).filter(r=>{if(r.cabinetKey!==cabKey)return false;const k=r.lifecycleTaskId&&!r.placementCloneOf?[r.lifecycleTaskId,r.lifecycleTaskRowId||r.id].join("||"):"";if(k&&seen.has(k))return false;if(k)seen.add(k);return true})}
 function 缩减候选(store,cabKey,excludeId,gap){let freed=0;
 const reducers=[];
 const items=柜段内SKU(store,cabKey).filter(r=>r.id!==excludeId&&数(r.displayCols)>1).sort((a,b)=>等级分(a.grade)-等级分(b.grade)||数(a.dailyQty)-数(b.dailyQty));
