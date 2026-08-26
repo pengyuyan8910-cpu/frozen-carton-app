@@ -115,16 +115,26 @@ function projectionFor(row, placement, index, multiple) {
  * Converts saved multi-placement rows into the individual modules used by the
  * planogram view. It is a view projection only; source rows are never mutated.
  */
-export function buildPlanogramRows(rows, store) {
+export function buildPlanogramRows(rows, store, cabinets) {
+  const cabinetKeys = Array.isArray(cabinets)
+    ? new Set(cabinets
+      .filter(cabinet => !store || cabinet?.store === store)
+      .map(cabinet => text(cabinet?.key))
+      .filter(Boolean))
+    : null;
+  const validCabinetKey = key => {
+    const normalized = text(key);
+    return !!normalized && (!cabinetKeys || cabinetKeys.has(normalized));
+  };
   const output = [];
   for (const row of Array.isArray(rows) ? rows : []) {
     if (store && row.store !== store) continue;
     if (row.included === false || row.inStaging) continue;
     const placements = Array.isArray(row.placements)
-      ? row.placements.filter(placement => placement?.cabinetKey)
+      ? row.placements.filter(placement => validCabinetKey(placement?.cabinetKey))
       : [];
     if (!placements.length) {
-      if (row.cabinetKey) output.push(projectionFor(row, null, 0, false));
+      if (validCabinetKey(row.cabinetKey)) output.push(projectionFor(row, null, 0, false));
       continue;
     }
     placements.forEach((placement, index) => output.push(projectionFor(row, placement, index, placements.length > 1)));
