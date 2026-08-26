@@ -74,6 +74,7 @@ const cloneRows = [
     included: true,
     inStaging: false,
     placementCloneOf: "source-module",
+    customPlacement: true,
     lifecycleTaskId: "task-1",
     lifecycleTaskRowId: "task-row-1",
     cabinetKey: cabinets[0].key,
@@ -100,7 +101,7 @@ assert.equal(renderedAfterMove[1].cabinetKey, cabinets[0].key, "移入卧柜的�
 
 assert.match(
   app,
-  /const duplicateKey=r\.lifecycleTaskId&&!r\.placementCloneOf\?/,
+  /const duplicateKey=r\.lifecycleTaskId&&!r\.placementCloneOf&&!r\.customPlacement\?/,
   "合法的分身模块不能因为继承生命周期任务编号而被陈列图重复过滤"
 );
 
