@@ -72,7 +72,7 @@ function 应用状态补丁(patch){
 if(!patch||patch._dataSignature!==数据签名)return null;
 if(!patch._patchVersion)return 迁移旧版完整状态(patch);
 const state=初始状态();
-const persistedAllowed=Array.isArray(patch.allowedRemovedSkuIds)?patch.allowedRemovedSkuIds:(patch.deletedIds||[]);
+const persistedAllowed=Array.isArray(patch.allowedRemovedSkuIds)&&patch.allowedRemovedSkuIds.length?patch.allowedRemovedSkuIds:(patch.deletedIds||[]);
 state._allowedRemovedSkuIds=[...new Set(persistedAllowed.map(x=>文(x)).filter(Boolean))];
 const del=new Set(patch.deletedIds||[]);
 state.skus=(state.skus||[]).filter(r=>!del.has(r.id));
