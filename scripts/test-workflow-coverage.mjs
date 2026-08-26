@@ -5,6 +5,7 @@ const read = name => fs.readFileSync(new URL(`../.github/workflows/${name}`, imp
 const updateData = read('update-data.yml');
 const newStore = read('generate-new-store-draft.yml');
 const replan = read('replan-ci.yml');
+const planogramContract = read('planogram-contract.yml');
 
 assert.match(updateData, /scripts\/source-to-app-data-preserve-face\.mjs/, '正式底表刷新依赖 preserve-face 导入器，workflow 必须在该文件变化时触发');
 assert.match(updateData, /scripts\/accepted-baseline-loader\.mjs/, '正式底表刷新依赖 accepted baseline loader，workflow 必须在该文件变化时触发');
@@ -30,6 +31,11 @@ assert.match(replan, /npm run refresh-data/, '主回归 CI 必须用当前正式
 assert.match(replan, /NEW_STORE_CONFIG_PATH:\s*data\/new-store\/新增门店配置\.json[\s\S]*npm run generate-new-store-draft/, '主回归 CI 必须用标准配置真实生成一次新增门店草稿');
 assert.match(replan, /npm run test:replan/, '主回归 CI 必须执行产品池重排回归测试');
 assert.match(replan, /npm run test:workflow/, '主回归 CI 必须执行 workflow 依赖覆盖测试');
+
+assert.match(planogramContract, /on:\s*\n\s*push:/, '陈列契约必须在 master 推送后自动执行');
+assert.match(planogramContract, /npm run check/, '陈列契约必须先执行语法检查');
+assert.match(planogramContract, /npm run test:planogram-contract/, '陈列契约必须执行统一陈列与数据保护回归测试');
+assert.match(planogramContract, /scripts\/test-\*\.mjs/, '陈列契约相关测试变化必须触发自动检查');
 
 for (const [name, source] of [['update-data.yml', updateData], ['generate-new-store-draft.yml', newStore], ['replan-ci.yml', replan]]) {
   assert.match(source, /actions\/checkout@v5/, `${name} 应使用 Node 24 运行时兼容的 checkout@v5`);

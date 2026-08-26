@@ -1,0 +1,41 @@
+name: 陈列与数据保护契约
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "app.js"
+      - "index.html"
+      - "bootstrap.js"
+      - "product-lifecycle-bridge.js"
+      - "scripts/display-module-state.mjs"
+      - "scripts/planogram-*.mjs"
+      - "scripts/local-state-store.mjs"
+      - "scripts/cloud-state-guard.mjs"
+      - "scripts/test-*.mjs"
+      - "package.json"
+      - ".github/workflows/planogram-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  planogram-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 拉取仓库
+        uses: actions/checkout@v5
+      - name: 准备 Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+      - name: 安装依赖
+        run: npm install
+      - name: 语法检查
+        run: npm run check
+      - name: Workflow依赖覆盖测试
+        run: npm run test:workflow
+      - name: 陈列与数据保护契约回归
+        run: npm run test:planogram-contract
