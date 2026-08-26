@@ -137,6 +137,17 @@ export function buildPlanogramRows(rows, store, cabinets) {
       if (validCabinetKey(row.cabinetKey)) output.push(projectionFor(row, null, 0, false));
       continue;
     }
+    if (placements.length === 1
+      && validCabinetKey(row.cabinetKey)
+      && text(placements[0]?.cabinetKey) !== text(row.cabinetKey)) {
+      output.push(projectionFor(row, {
+        ...placements[0],
+        cabinetKey: row.cabinetKey,
+        cabinetLabel: row.cabinetLabel,
+        position: row.position
+      }, 0, false));
+      continue;
+    }
     placements.forEach((placement, index) => output.push(projectionFor(row, placement, index, placements.length > 1)));
   }
   return output;
