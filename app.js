@@ -30,6 +30,20 @@ const 本次允许删除SKU=new Set();
 function 允许本次删除SKU(ids=[]){for(const id of ids)if(id)本次允许删除SKU.add(String(id))}
 function 恢复最近安全状态(){if(!最近安全状态)return false;状态=structuredClone(最近安全状态);草稿状态=状态;发布状态=状态;window.ProductLifecycle?.hydrateState?.(状态.lifecycle||null,状态);return true}
 let 当前={门店:"",页面:"goods",定位SKU:"",陈列图选中SKU:"",陈列图筛选:"all",陈列图四级:"",陈列图缩放:100};
+let 待恢复视图滚动位置=null;
+const 视图滚动位置缓存=new Map();
+function 保存视图滚动位置(id=当前.页面){
+ if(!id)return;
+ 视图滚动位置缓存.set(id,{left:window.scrollX||0,top:window.scrollY||0});
+}
+function 恢复视图滚动位置(id=当前.页面){
+ const saved=视图滚动位置缓存.get(id);
+ if(!saved)return;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(id!==当前.页面)return;
+  window.scrollTo({left:saved.left,top:saved.top,behavior:"auto"});
+ }));
+}
 let 同步请求中=false;
 const 格=(v,d=1)=>{const n=数(v);
 return Number.isFinite(n)?n.toFixed(d).replace(/\.0$/,""):"0"};
@@ -1248,18 +1262,18 @@ function 渲染冰箱模块(){
   qa("[data-cancel-refrigerator-section]").forEach(btn=>btn.addEventListener("click",()=>window.取消冰箱分区(btn.dataset.cancelRefrigeratorSection)));
   if(!q("#refrigeratorImpact"))host.insertAdjacentHTML("beforebegin",'<div id="refrigeratorImpact" class="refrigerator-impact"></div>');渲染冰箱联动结果(冰箱尺寸预览);
 }
-function 切换(id){提交当前编辑();当前.页面=id;
+function 切换(id){提交当前编辑();保存视图滚动位置(当前.页面);当前.页面=id;待恢复视图滚动位置=id;
 qa(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===id));
 qa(".view").forEach(v=>v.classList.toggle("active",v.id===id));
 渲染全部()}
-function 渲染全部(){切换数据源();清空业务快照();建立基准(状态);选项初始化();
+function 渲染全部(){const restorePage=待恢复视图滚动位置||当前.页面;if(!待恢复视图滚动位置)保存视图滚动位置(当前.页面);待恢复视图滚动位置=null;切换数据源();清空业务快照();建立基准(状态);选项初始化();
  document.body.classList.add("ops");
  const banner=q("#modeBanner");if(banner)banner.textContent="当前页面可直接编辑，修改会实时保存到本机。";
  const 当前版本=window.UNIFIED_CARTON_VERSION||{},当前报告=window.UNIFIED_CARTON_REPORT||{};q("#dataNote").textContent=(状态.meta.version||"10%触发")+"｜底表："+(当前版本.sourceName||状态.meta.source||"当前版")+"｜"+(当前报告.passed===false?"复核失败":"复核通过")+"｜生成："+(状态.meta.generatedAt||当前版本.generatedAt||"");
- const renderers={overview:渲染总览,goods:渲染商品,risk:渲染风险,replenish:渲染补货,allocation:渲染排柜,refrigerator:渲染冰箱模块,displaymap:渲染陈列图,newstore:渲染新增门店,logic:渲染逻辑};
- renderers[当前.页面]?.();
- qa(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===当前.页面));qa(".view").forEach(v=>v.classList.toggle("active",v.id===当前.页面))
-}
+  const renderers={overview:渲染总览,goods:渲染商品,risk:渲染风险,replenish:渲染补货,allocation:渲染排柜,refrigerator:渲染冰箱模块,displaymap:渲染陈列图,newstore:渲染新增门店,logic:渲染逻辑};
+  renderers[当前.页面]?.();
+  qa(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.view===当前.页面));qa(".view").forEach(v=>v.classList.toggle("active",v.id===当前.页面));恢复视图滚动位置(restorePage)
+ }
 function 导出(name,content,type){const b=new Blob([content],{type});
 const a=document.createElement("a");
 a.href=URL.createObjectURL(b);
