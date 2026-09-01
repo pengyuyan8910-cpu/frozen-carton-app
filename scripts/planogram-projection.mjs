@@ -77,7 +77,13 @@ function placementRow(row, placement, index, multiple) {
   if (placement?.displayCols !== undefined) next.displayCols = number(placement.displayCols);
   if (placement?.faceWidth !== undefined) next.faceWidth = number(placement.faceWidth);
   if (placement?.perCol !== undefined) next.perCol = number(placement.perCol);
-  if (placement?.fullCount !== undefined) next.rowFull = number(placement.fullCount);
+  if (placement?.fullCount !== undefined) {
+    const columns = number(placement.displayCols ?? row.displayCols ?? next.displayCols);
+    const perCol = number(placement.perCol ?? row.perCol ?? next.perCol);
+    next.rowFull = columns > 0 && perCol > 0
+      ? Math.max(0, Math.floor(columns * perCol))
+      : number(placement.fullCount);
+  }
   return next;
 }
 
@@ -107,7 +113,13 @@ function projectionFor(row, placement, index, multiple) {
   if (placement?.displayCols !== undefined) projection.displayCols = number(placement.displayCols);
   if (placement?.faceWidth !== undefined) projection.faceWidth = number(placement.faceWidth);
   if (placement?.perCol !== undefined) projection.perCol = number(placement.perCol);
-  if (placement?.fullCount !== undefined) projection.rowFull = number(placement.fullCount);
+  if (placement?.fullCount !== undefined) {
+    const columns = number(placement.displayCols ?? row.displayCols ?? projection.displayCols);
+    const perCol = number(placement.perCol ?? row.perCol ?? projection.perCol);
+    projection.rowFull = columns > 0 && perCol > 0
+      ? Math.max(0, Math.floor(columns * perCol))
+      : number(placement.fullCount);
+  }
   return projection;
 }
 

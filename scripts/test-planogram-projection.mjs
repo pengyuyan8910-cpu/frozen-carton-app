@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { buildPlanogramRows, buildCabinetUsage } from "./planogram-projection.mjs";
+import { buildPlanogramRows, buildCabinetUsage, normalizeNewStorePlanogramRows } from "./planogram-projection.mjs";
 
 const appSource = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 assert.match(appSource, /陈列图行投影\(store\)/, "陈列图必须使用统一模块投影");
@@ -43,6 +43,53 @@ assert.equal(projected.length, 2, "多模块SKU必须投影为两个可见模块
 assert.deepEqual(projected.map(row => row.cabinetKey), cabinets.map(cabinet => cabinet.key));
 assert.equal(projected[0].sourceRowId, "multi");
 assert.notEqual(projected[0].id, projected[1].id, "两个模块必须有独立的陈列图投影ID");
+
+const staleFullCount = buildPlanogramRows([{
+  id: "stale-capacity",
+  store: "店",
+  included: true,
+  name: "物理容量已更新但模块满陈未更新",
+  cabinetKey: cabinets[0].key,
+  displayCols: 2,
+  perCol: 12,
+  rowFull: 24,
+  placements: [{
+    cabinetKey: cabinets[0].key,
+    displayCols: 2,
+    perCol: 12,
+    fullCount: 4,
+  }],
+}], "店", cabinets);
+assert.equal(staleFullCount.length, 1);
+assert.equal(staleFullCount[0].rowFull, 24, "陈列图不能用旧模块满陈覆盖实际列数×单列容量");
+
+const staleSingleColumn = buildPlanogramRows([{
+  id: "stale-single-column",
+  store: "店",
+  included: true,
+  name: "单列物理容量已更新但模块满陈未更新",
+  cabinetKey: cabinets[0].key,
+  displayCols: 1,
+  perCol: 12,
+  rowFull: 12,
+  placements: [{ cabinetKey: cabinets[0].key, displayCols: 1, perCol: 12, fullCount: 2 }],
+}], "店", cabinets);
+assert.equal(staleSingleColumn[0].rowFull, 12, "单列容量不能被旧满陈压成1或2件");
+
+const normalizedStaleFullCount = normalizeNewStorePlanogramRows([{
+  id: "new-store-stale-capacity",
+  store: "店",
+  included: true,
+  displayCols: 2,
+  perCol: 12,
+  placements: [{
+    cabinetKey: cabinets[0].key,
+    displayCols: 2,
+    perCol: 12,
+    fullCount: 4,
+  }],
+}]);
+assert.equal(normalizedStaleFullCount[0].rowFull, 24, "新增门店临时结果不能继承旧模块满陈");
 
 const usage = buildCabinetUsage(cabinets, projected);
 assert.equal(usage.get(cabinets[0].key).used, 120, "第一柜段统计必须与第一模块一致");

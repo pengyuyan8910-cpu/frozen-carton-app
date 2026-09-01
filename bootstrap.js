@@ -1,6 +1,6 @@
 (async function loadFrozenCartonData(){
   const DATA_VERSION = "20260825_authorized_removal_v7";
-  const RULE_VERSION = "20260825_authorized_removal_v7";
+  const RULE_VERSION = "20260901_capacity_projection_v1";
   const APP_VERSION = "20260901_view_scroll_v1";
   const note = document.getElementById("dataNote");
   const setNote = msg => { if (note) note.textContent = msg; };
