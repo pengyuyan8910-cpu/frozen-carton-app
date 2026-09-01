@@ -11,7 +11,7 @@ assert.match(app, /let 待恢复视图滚动位置=null/, '必须区分切换页
 assert.match(app, /function 切换\(id\)\{[\s\S]*?保存视图滚动位置\(当前\.页面\)[\s\S]*?当前\.页面=id/, '切换视图前必须先保存当前页面位置');
 assert.match(app, /function 渲染全部\(\)\{[\s\S]*?const restorePage=待恢复视图滚动位置\|\|当前\.页面[\s\S]*?恢复视图滚动位置\(restorePage\)/, '重建视图后必须恢复目标页面位置');
 assert.match(app, /window\.scrollTo\(/, '恢复页面位置必须实际调用窗口滚动定位');
-assert.match(bootstrap, /const APP_VERSION\s*=\s*"20260901_view_scroll_v1"/, '页面位置修复必须更新 app.js 缓存版本');
-assert.match(index, /bootstrap\.js\?v=20260901_view_scroll_v1/, '页面位置修复必须更新 bootstrap.js 缓存版本');
+assert.match(bootstrap, /const APP_VERSION\s*=\s*"20260901_capacity_hydration_v1"/, '页面脚本更新必须使用新的 app.js 缓存版本');
+assert.match(index, /bootstrap\.js\?v=20260901_capacity_hydration_v1/, '页面脚本更新必须使用新的 bootstrap.js 缓存版本');
 
 console.log('view scroll preservation contract passed');

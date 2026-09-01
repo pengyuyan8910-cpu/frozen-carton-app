@@ -24,6 +24,18 @@ function updateSkuReferences(row, oldId, newId) {
   }
 }
 
+function mergePlacementProjection(row, placement) {
+  const next = { ...row };
+  for (const [key, value] of Object.entries(placement || {})) {
+    // Placement height/depth are oriented cabinet dimensions. They must not
+    // overwrite the product's own length/width/height used by later capacity
+    // calculations after a new-store result is appended to the page.
+    if (["length", "width", "height", "volume"].includes(key)) continue;
+    next[key] = value;
+  }
+  return next;
+}
+
 /**
  * Repairs duplicate row IDs already present in a saved current-page state.
  * It changes identity only; all store/product/planogram fields are retained.
@@ -66,7 +78,7 @@ export function repairDuplicateSkuIds(state, baselineState = {}) {
 }
 
 function placementRow(row, placement, index, multiple) {
-  const next = { ...row, ...(placement || {}) };
+  const next = mergePlacementProjection(row, placement);
   const sourceId = scopedNewStoreSkuId(row, 0, false);
   next.sourceRowId = sourceId;
   next.id = multiple ? `${sourceId}::module::${index + 1}` : sourceId;
@@ -103,7 +115,7 @@ export function normalizeNewStorePlanogramRows(rows) {
 }
 
 function projectionFor(row, placement, index, multiple) {
-  const projection = { ...row, ...(placement || {}) };
+  const projection = mergePlacementProjection(row, placement);
   projection.sourceRowId = row.id;
   projection.id = multiple ? `${row.id}::placement::${index}` : row.id;
   projection.placements = [];
