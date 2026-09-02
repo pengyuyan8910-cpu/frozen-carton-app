@@ -9,6 +9,29 @@ function text(value) {
   return String(value ?? "").trim();
 }
 
+function identityValues(item) {
+  return [item?.barcode, item?.name, item?.productKey, item?.productName]
+    .map(text)
+    .filter(Boolean);
+}
+
+function canonicalProductFor(row, state) {
+  const values = new Set(identityValues(row));
+  if (!values.size) return null;
+  return (Array.isArray(state?.productPool) ? state.productPool : [])
+    .find(product => identityValues(product).some(value => values.has(value))) || null;
+}
+
+function capacityRow(row, state) {
+  const product = canonicalProductFor(row, state);
+  if (!product) return row;
+  const next = { ...row };
+  for (const field of ["length", "width", "height", "volume"]) {
+    if (product[field] !== undefined && product[field] !== null) next[field] = product[field];
+  }
+  return next;
+}
+
 function isVertical(cabinet) {
   return /立柜|vertical/i.test([cabinet?.kind, cabinet?.type, cabinet?.label].map(text).join(" "));
 }
@@ -94,6 +117,7 @@ export function recalculateLoadedPlanogram(state) {
   const cabinetMap = new Map(state.cabinets.map(cabinet => [text(cabinet.key), cabinet]));
 
   for (const row of state.skus) {
+    const source = capacityRow(row, state);
     const placements = Array.isArray(row.placements) ? row.placements : [];
     const rowCabinet = cabinetMap.get(text(row.cabinetKey));
     // A manual move can update the row's cabinetKey while leaving the legacy
@@ -120,15 +144,15 @@ export function recalculateLoadedPlanogram(state) {
         // still carry the previous direction after the user changes the select.
         const preferred = normalizeOrientation(row.faceOrientation)
           || normalizeOrientation(placement.orientation)
-          || inferOrientation(row);
-        const layout = setPlacementCapacity(placement, row, cabinet, preferred, index === 0 ? row.displayCols : 1);
+          || inferOrientation(source);
+        const layout = setPlacementCapacity(placement, source, cabinet, preferred, index === 0 ? row.displayCols : 1);
         if (!layout) continue;
         if (!primary || text(placement.cabinetKey) === text(row.cabinetKey) || index === 0) primary = { ...layout, cabinet };
       }
     } else {
       const cabinet = cabinetMap.get(text(row.cabinetKey));
-      const preferred = normalizeOrientation(row.faceOrientation) || inferOrientation(row);
-      const layout = layoutFor(row, cabinet, preferred);
+      const preferred = normalizeOrientation(row.faceOrientation) || inferOrientation(source);
+      const layout = layoutFor(source, cabinet, preferred);
       if (layout) primary = { ...layout, cabinet };
     }
 
@@ -162,6 +186,7 @@ export function recalculateLoadedPlanogram(state) {
     const external = Math.max(0, carton - Math.min(carton, receivable));
     let remaining = external;
     for (const row of rows) {
+      const source = capacityRow(row, state);
       row.skuFull = full;
       for (let index = 0; index < (row.placements || []).length; index += 1) {
         const placement = row.placements[index];
@@ -169,7 +194,7 @@ export function recalculateLoadedPlanogram(state) {
           ? remaining
           : Math.min(remaining, Math.floor(external * number(placement.fullCount) / Math.max(1, full)));
         placement.externalQty = share;
-        placement.staticExternalL = share * number(row.volume);
+        placement.staticExternalL = share * number(source.volume ?? row.volume);
         placement.avgExternalL = placement.staticExternalL / 2;
         remaining -= share;
       }

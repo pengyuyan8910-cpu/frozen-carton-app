@@ -19,6 +19,7 @@ const tests = [
   'scripts/test-new-store-planogram-visibility.mjs',
   'scripts/test-loaded-planogram-capacity.mjs',
   'scripts/test-new-store-capacity-hydration.mjs',
+  'scripts/test-loaded-capacity-uses-product-pool.mjs',
   'scripts/test-planogram-usage-cache.mjs',
   'scripts/test-view-scroll-preservation.mjs',
   'scripts/test-current-state-preservation.mjs',

@@ -15,6 +15,8 @@ return Number.isFinite(n)?n:0};
 function 产品键(r){return String(r?.barcode??"").trim()||String(r?.name??"").trim()}
 function 生成产品池(skus=初始数据.skus||[]){const map=new Map();for(const r of skus){const key=产品键(r);if(!key||map.has(key))continue;map.set(key,{id:"pool_"+key,active:true,name:r.name,barcode:r.barcode,grade:r.grade,rank:r.rank,category2:r.category2,category3:r.category3,category4:r.category4,length:r.length,width:r.width,height:r.height,volume:r.volume,carton:r.carton,dailyQty:r.dailyQty,dailySales:r.dailySales,moq:r.moq,moqDays:r.moqDays})}return [...map.values()]}
 function 确保产品池(state){if(!state.productPool||!Array.isArray(state.productPool)||!state.productPool.length)state.productPool=生成产品池(state.skus);return state.productPool}
+function 商品主数据(r,state=状态){const values=[r?.barcode,r?.name,r?.productKey,r?.productName].map(文).filter(Boolean);const current=确保产品池(state).find(p=>[p?.barcode,p?.name,p?.productKey,p?.productName].map(文).some(v=>v&&values.includes(v)));if(current)return current;const found=window.ProductLifecycle?.findProduct?.(r);return found&&typeof found==='object'&&Object.keys(found).length?found:null}
+function SKU计算行(r,state=状态){const product=商品主数据(r,state);if(!product)return r;return{...r,length:product.length??r.length,width:product.width??r.width,height:product.height??r.height,volume:product.volume??r.volume}}
 function 产品池有效(){return window.ProductLifecycle?.getActiveProducts?.()||确保产品池(状态).filter(p=>p.active!==false&&!['淘汰完成','已淘汰'].includes(p.lifecycleStatus))}
 function 产品转SKU(p,store){return{id:"poolsku_"+Date.now()+"_"+Math.random().toString(36).slice(2),store,included:true,status:"产品池新增",grade:p.grade||"未评级",rank:数(p.rank)||9999,category2:p.category2||"",category3:p.category3||"",category4:p.category4||"",name:p.name||"新品",barcode:p.barcode||"",length:数(p.length),width:数(p.width),height:数(p.height),volume:数(p.volume)||数(p.length)*数(p.width)*数(p.height)/1e6,carton:Math.max(1,数(p.carton)||1),dailyQty:数(p.dailyQty),dailySales:数(p.dailySales),moq:数(p.moq),moqDays:数(p.moqDays),cabinetKey:"",cabinetLabel:"",position:"",displayCols:1,perCol:1,faceWidth:0,placements:[],customPlacement:true,currentStock:"",planCartons:1,sourceAdvice:"产品池新增",sourceAction:"待排柜",note:"产品池新增"}}
 
@@ -560,7 +562,7 @@ r.customPlacement=true;
 完成提示("空位方案已应用：排柜、柜段余量和外储测算已更新。")};
 function 柜型摆法(r,c,preferred="",strict=false){
   // 业务口径：卧柜/冰淇淋柜的纵深数量使用柜体宽度字段 c.depth，不使用柜体长度或柜体深。
-  const L=数(r?.length),W=数(r?.width),H=数(r?.height),D=数(c?.depth),CH=数(c?.height);
+  const dims=SKU计算行(r);const L=数(dims?.length),W=数(dims?.width),H=数(dims?.height),D=数(c?.depth),CH=数(c?.height);
   const upright=/立柜/.test(文(c?.kind)+" "+文(c?.type)+" "+文(c?.label));
   if(!(L>0&&W>0&&H>0&&D>0&&CH>0))return null;
   const raw=upright
