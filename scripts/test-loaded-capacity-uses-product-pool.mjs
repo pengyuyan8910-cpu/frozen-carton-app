@@ -9,9 +9,11 @@ assert.match(appSource, /function SKU计算行\(r/,
   "手动切换陈列面必须使用产品池的原始商品尺寸");
 assert.match(appSource, /const dims=SKU计算行\(r\)/,
   "柜型容量计算必须通过统一商品尺寸来源");
-assert.match(bootstrapSource, /20260902_product_dimensions_v1/,
+assert.match(appSource, /刷新已加载陈列容量\(\{params:状态\.params,cabinets:状态\.cabinets,skus:\[row\],productPool:确保产品池\(状态\)\}\)/,
+  "单SKU手动修改容量时必须携带产品池，不能退回读取污染行尺寸");
+assert.match(bootstrapSource, /20260902_product_dimensions_v2/,
   "容量模块和 app.js 修改后必须更新缓存版本");
-assert.match(indexSource, /bootstrap\.js\?v=20260902_product_dimensions_v1/,
+assert.match(indexSource, /bootstrap\.js\?v=20260902_product_dimensions_v2/,
   "入口必须引用新的 bootstrap 缓存版本");
 
 const cabinet = {
