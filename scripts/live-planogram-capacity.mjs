@@ -18,8 +18,12 @@ function identityValues(item) {
 function canonicalProductFor(row, state) {
   const values = new Set(identityValues(row));
   if (!values.size) return null;
-  return (Array.isArray(state?.productPool) ? state.productPool : [])
-    .find(product => identityValues(product).some(value => values.has(value))) || null;
+  for (const pool of [state?.productPool, state?.formalProductPool]) {
+    const found = (Array.isArray(pool) ? pool : [])
+      .find(product => identityValues(product).some(value => values.has(value)));
+    if (found) return found;
+  }
+  return null;
 }
 
 function capacityRow(row, state) {

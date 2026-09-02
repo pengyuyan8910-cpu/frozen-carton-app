@@ -15,7 +15,9 @@ return Number.isFinite(n)?n:0};
 function 产品键(r){return String(r?.barcode??"").trim()||String(r?.name??"").trim()}
 function 生成产品池(skus=初始数据.skus||[]){const map=new Map();for(const r of skus){const key=产品键(r);if(!key||map.has(key))continue;map.set(key,{id:"pool_"+key,active:true,name:r.name,barcode:r.barcode,grade:r.grade,rank:r.rank,category2:r.category2,category3:r.category3,category4:r.category4,length:r.length,width:r.width,height:r.height,volume:r.volume,carton:r.carton,dailyQty:r.dailyQty,dailySales:r.dailySales,moq:r.moq,moqDays:r.moqDays})}return [...map.values()]}
 function 确保产品池(state){if(!state.productPool||!Array.isArray(state.productPool)||!state.productPool.length)state.productPool=生成产品池(state.skus);return state.productPool}
-function 商品主数据(r,state=状态){const values=[r?.barcode,r?.name,r?.productKey,r?.productName].map(文).filter(Boolean);const current=确保产品池(state).find(p=>[p?.barcode,p?.name,p?.productKey,p?.productName].map(文).some(v=>v&&values.includes(v)));if(current)return current;const found=window.ProductLifecycle?.findProduct?.(r);return found&&typeof found==='object'&&Object.keys(found).length?found:null}
+function 当前产品池(state=状态){return Array.isArray(state?.productPool)&&state.productPool.length?state.productPool:[]}
+function 正式产品池(){return Array.isArray(初始数据?.productPool)?初始数据.productPool:[]}
+function 商品主数据(r,state=状态){const values=[r?.barcode,r?.name,r?.productKey,r?.productName].map(文).filter(Boolean);const find=pool=>(Array.isArray(pool)?pool:[]).find(p=>[p?.barcode,p?.name,p?.productKey,p?.productName].map(文).some(v=>v&&values.includes(v)));const current=find(当前产品池(state));if(current)return current;const formal=find(正式产品池());if(formal)return formal;const found=window.ProductLifecycle?.findProduct?.(r);if(found&&typeof found==='object'&&Object.keys(found).length)return found;return find(生成产品池(state?.skus||[]))||null}
 function SKU计算行(r,state=状态){const product=商品主数据(r,state);if(!product)return r;return{...r,length:product.length??r.length,width:product.width??r.width,height:product.height??r.height,volume:product.volume??r.volume}}
 function 产品池有效(){return window.ProductLifecycle?.getActiveProducts?.()||确保产品池(状态).filter(p=>p.active!==false&&!['淘汰完成','已淘汰'].includes(p.lifecycleStatus))}
 function 产品转SKU(p,store){return{id:"poolsku_"+Date.now()+"_"+Math.random().toString(36).slice(2),store,included:true,status:"产品池新增",grade:p.grade||"未评级",rank:数(p.rank)||9999,category2:p.category2||"",category3:p.category3||"",category4:p.category4||"",name:p.name||"新品",barcode:p.barcode||"",length:数(p.length),width:数(p.width),height:数(p.height),volume:数(p.volume)||数(p.length)*数(p.width)*数(p.height)/1e6,carton:Math.max(1,数(p.carton)||1),dailyQty:数(p.dailyQty),dailySales:数(p.dailySales),moq:数(p.moq),moqDays:数(p.moqDays),cabinetKey:"",cabinetLabel:"",position:"",displayCols:1,perCol:1,faceWidth:0,placements:[],customPlacement:true,currentStock:"",planCartons:1,sourceAdvice:"产品池新增",sourceAction:"待排柜",note:"产品池新增"}}
@@ -99,7 +101,7 @@ for(const item of patch.cabinetUpdates||[]){const cabinet=cabinetMap.get(item.ke
 const map=new Map(state.skus.map(r=>[r.id,r]));
 for(const p of patch.skus||[]){const r=map.get(p.id);if(!r)continue;const values=p.values||{};const base=state.skus.find(x=>x.id===r.id);const baseCabinetKey=base?.cabinetKey;Object.assign(r,values);if(values.inStaging===undefined&&values.cabinetKey===""&&values.cabinetLabel==="待选区"&&values.position==="待选区"&&values.customPlacement===true){const source=state.cabinets.find(c=>c.key===baseCabinetKey);const typeText=文(source?.kind)+" "+文(source?.label)+" "+文(source?.key);const type=/冰淇淋|雪糕|冰品/.test(typeText)?"冰淇淋柜":/立柜/.test(typeText)?"立柜":/卧柜/.test(typeText)?"卧柜":文(source?.kind);r.inStaging=true;r.stagingCabinetType=type;r.stagingIce=type==="冰淇淋柜";r.stagingFrom=source?{key:source.key,label:source.label,position:source.position}:null}}
 for(const r of patch.newSkus||[])state.skus.push(r);
-if(Array.isArray(patch.productPool))state.productPool=patch.productPool;
+if(Array.isArray(patch.productPool)&&patch.productPool.length)state.productPool=patch.productPool;
 if(patch.lifecycle&&typeof patch.lifecycle==="object")state.lifecycle=JSON.parse(JSON.stringify(patch.lifecycle));
 if(Object.prototype.hasOwnProperty.call(patch,"productPoolRevision"))state.productPoolRevision=patch.productPoolRevision||"";
 if(Array.isArray(patch.productPoolChangeLog))state.productPoolChangeLog=structuredClone(patch.productPoolChangeLog);
@@ -114,8 +116,8 @@ function 写入本地值(key,value){if(window.FrozenCartonLocalStore?.queueSet?.
 function 删除本地值(key){if(window.FrozenCartonLocalStore?.queueRemove?.(key))return true;try{localStorage.removeItem(key);return true}catch(e){console.warn("删除本地值失败",e);return false}}
 function 读取本地(key){try{const raw=读取本地原值(key);if(raw===null||raw===undefined)return null;const st=应用状态补丁(typeof raw==="string"?JSON.parse(raw):raw);if(!状态可用(st)){删除本地值(key);console.warn("本地方案无效，已自动恢复初始数据",key);return null}return st}catch(e){console.warn("读取本地方案失败",e);删除本地值(key);return null}}
 function 安全保存本地(key,state,options={}){window.__dataGuardLastViolation=null;const allowedRemovedSkuIds=[...new Set([...(Array.isArray(state?._allowedRemovedSkuIds)?state._allowedRemovedSkuIds:[]),...[...本次允许删除SKU],...(Array.isArray(options.allowedRemovedSkuIds)?options.allowedRemovedSkuIds:[])].map(x=>文(x)).filter(Boolean))];if(状态保护器&&!options.allowExternalReplace){const check=状态保护器.validate(state,{referenceState:最近安全状态,allowedRemovedSkuIds});if(!check.ok){window.__dataGuardLastViolation=check;console.error("数据保护拦截：",check.errors);return false}}if(allowedRemovedSkuIds.length)state._allowedRemovedSkuIds=allowedRemovedSkuIds;const patch=状态补丁(state,{allowedRemovedSkuIds});if(window.FrozenCartonLocalStore?.queueSet?.(key,patch))return true;try{localStorage.setItem(key,JSON.stringify(patch));return true}catch(e){console.warn("本地保存失败，已保留当前页面内存状态",e);window.__storageWarnings=(window.__storageWarnings||[]).concat(String(e));return false}}
-function 刷新已加载陈列容量(state){const helper=window.LivePlanogramCapacity?.recalculateLoadedPlanogram;if(typeof helper==='function')helper(state);return state}
-function 刷新单SKU陈列容量(row){if(!row)return;刷新已加载陈列容量({params:状态.params,cabinets:状态.cabinets,skus:[row],productPool:确保产品池(状态)})}
+function 刷新已加载陈列容量(state){const helper=window.LivePlanogramCapacity?.recalculateLoadedPlanogram;if(typeof helper==='function')helper({...state,formalProductPool:正式产品池()});return state}
+function 刷新单SKU陈列容量(row){if(!row)return;刷新已加载陈列容量({params:状态.params,cabinets:状态.cabinets,skus:[row],productPool:当前产品池(状态)})}
 function 初始化统一状态(){const initial=初始状态();const unified=读取本地(统一状态保存键);const draft=unified||读取本地(旧草稿保存键);const published=unified?null:读取本地(旧发布保存键);const result=window.UnifiedStateMigration?.migrateUnifiedState?.({initial,draft,published,signature:数据签名})||{source:unified?'unified':'initial',state:unified||initial};const loaded=result.state||initial;const repaired=window.PlanogramProjection?.repairDuplicateSkuIds?.(loaded,initial)||loaded;状态=清理计算缓存(repaired);if((!状态.lifecycle||!Array.isArray(状态.lifecycle.tasks)||状态.lifecycle.tasks.length===0)&&初始数据?.lifecycle?.tasks?.length)状态.lifecycle=structuredClone(初始数据.lifecycle);刷新已加载陈列容量(状态);草稿状态=状态;发布状态=状态;最近安全状态=structuredClone(状态);建立基准(状态);安全保存本地(统一状态保存键,状态);return result}
 function 保存草稿(){const saved=安全保存本地(统一状态保存键,状态);if(saved)最近安全状态=structuredClone(状态);return saved}
 function 保存发布(){const saved=安全保存本地(统一状态保存键,状态);if(saved)最近安全状态=structuredClone(状态);return saved}
@@ -199,7 +201,7 @@ function 同步同SKU满陈(r){
   const total=same.reduce((sum,x)=>sum+(数(x.rowFull)||满陈(x)),0);
   for(const x of same){x.skuFull=total;delete x.externalCountOverride;delete x.staticExternalOverride;delete x.avgExternalOverride}
 }
-function 计算SKU(r){const rowFull=数(r.rowFull)||满陈(r);
+function 计算SKU(r){const rowFull=满陈(r);
 const full=rowFull;
 const skuFull=数(r.skuFull)||rowFull;
 const trigger=Math.ceil(skuFull*数(状态.params.triggerRate));
