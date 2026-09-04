@@ -691,17 +691,45 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
       if (target) target.used += rowWidth({ displayCols: row.moveToCols || source.displayCols, faceWidth: row.moveToFaceWidth || source.faceWidth });
     });
     const errors = [];
+    const batchPlacement = window.LifecycleBatchPlacement;
+    const launchProducts = [
+      ...(dataRef?.productPool || []),
+      ...(stateRef?.draftProducts || []),
+      ...(dataRef?.skus || [])
+    ];
+    const fallbackRows = [];
     taskRows.forEach(row => {
       const alreadyExists = (dataRef?.skus || []).some(item => item.lifecycleTaskId === task.id && String(item.lifecycleTaskRowId) === String(row.id));
       if (alreadyExists) return;
-      const cabinet = cabinets.get(row.cabinetKey);
+      let cabinet = cabinets.get(row.cabinetKey);
       const width = Math.max(0, number(row.needWidth) || number(row.displayCols) * number(row.faceWidth));
       if (!cabinet || cabinet.used + width > number(cabinet.length) + 0.5) {
+        // 批量上新只要本店存在合法空位，就先放入一个临时新品模块。
+        // 仅对未携带替换/压缩/移位动作的普通上新行兜底，避免改动既有调整方案。
+        const simpleLaunch = !row.sourceSkuId && !row.originalSkuId && !row.sourceSlotId && !row.replaceSkuId && !row.shrinkSkuId && !row.moveSkuId;
+        const product = launchProducts.find(item => itemsMatch(item, row) || itemsMatch(item, task)) || row;
+        if (simpleLaunch && batchPlacement?.findBatchLaunchPlacement) {
+          const fallback = batchPlacement.findBatchLaunchPlacement(
+            product,
+            row,
+            [...cabinets.values()],
+            new Map([...cabinets].map(([key, value]) => [key, value.used]))
+          );
+          if (fallback.ok && fallback.row) {
+            fallbackRows.push({ row, value: { ...fallback.row, placementStatus: "已自动转入同店空位" } });
+            fallback.usedByCabinet.forEach((used, key) => {
+              const target = cabinets.get(key);
+              if (target) target.used = used;
+            });
+            return;
+          }
+        }
         errors.push({ store: row.store, cabinet: row.cabinetLabel || row.cabinetKey, need: width, left: cabinet ? number(cabinet.length) - cabinet.used : 0 });
         return;
       }
       cabinet.used += width;
     });
+    if (!errors.length) fallbackRows.forEach(({ row, value }) => Object.assign(row, value));
     return { ok: errors.length === 0, errors };
   }  // 仅用于用户主动“保存至云端”时，将已完成任务这一既有事实写回产品池状态。
   // 仅可从对应草稿/任务主数据补齐“已完成上新”且缺失的产品池记录；不删除商品，不触碰 SKU 行、门店、柜段、陈列位置、图片或任何经营字段。
