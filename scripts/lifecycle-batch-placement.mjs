@@ -103,7 +103,7 @@ function initialUsage(source, cabinets) {
   return usage;
 }
 
-function requestedPlacement(row, product, cabinet, left) {
+function requestedPlacement(row, product, cabinet, left, allowTemporary = false) {
   const options = orientations(product, cabinet);
   const preferred = text(row?.orientation || row?.faceOrientation || row?.displayOrientation);
   options.sort((a, b) => (preferred && a.label === preferred ? -1 : 0) - (preferred && b.label === preferred ? -1 : 0) || b.per - a.per || a.face - b.face);
@@ -123,6 +123,16 @@ function requestedPlacement(row, product, cabinet, left) {
   for (const option of options) {
     if (option.face <= left + 0.5) return { ...option, displayCols: 1, needWidth: option.face };
   }
+  if (allowTemporary && options.length) {
+    const option = options[0];
+    return {
+      ...option,
+      displayCols: 1,
+      needWidth: option.face,
+      temporary: true,
+      overflowWidth: Math.max(0, option.face - left),
+    };
+  }
   return null;
 }
 
@@ -132,18 +142,32 @@ function candidateCabinets(row, product, cabinets, usage) {
   return cabinets
     .filter(cabinet => text(cabinet.store) === store && saleEligible(cabinet) && isIceCabinet(cabinet) === isIceProduct(product))
     .map((cabinet, index) => ({ cabinet, index, left: number(cabinet.length) - number(usage.get(text(cabinet.key))), preferred: text(cabinet.key) === targetKey }))
-    .filter(candidate => candidate.left >= 0)
     .sort((a, b) => Number(b.preferred) - Number(a.preferred) || b.left - a.left || a.index - b.index);
 }
 
 function assignRow(row, product, cabinets, usage) {
-  for (const candidate of candidateCabinets(row, product, cabinets, usage)) {
+  const candidates = candidateCabinets(row, product, cabinets, usage);
+  for (const candidate of candidates) {
     const placement = requestedPlacement(row, product, candidate.cabinet, candidate.left);
     if (!placement) continue;
+    return applyPlacement(row, candidate, placement, usage);
+  }
+  // 新品上新不能因某个柜段或整店当前排面不足而被拒绝；没有完整单列空位时，
+  // 先在同店合法柜段预留一个临时单列，后续由用户手动调整既有排面。
+  for (const candidate of [...candidates].sort((a, b) => b.left - a.left || Number(b.preferred) - Number(a.preferred) || a.index - b.index)) {
+    const placement = requestedPlacement(row, product, candidate.cabinet, candidate.left, true);
+    if (!placement?.temporary) continue;
+    return applyPlacement(row, candidate, placement, usage);
+  }
+  return null;
+}
+
+function applyPlacement(row, candidate, placement, usage) {
     const cabinet = candidate.cabinet;
     const used = number(usage.get(text(cabinet.key))) + placement.needWidth;
     usage.set(text(cabinet.key), used);
     const moved = text(row.cabinetKey) && text(row.cabinetKey) !== text(cabinet.key);
+    const temporary = Boolean(placement.temporary);
     return {
       ...row,
       cabinetKey: cabinet.key,
@@ -155,15 +179,17 @@ function assignRow(row, product, cabinets, usage) {
       needWidth: placement.needWidth,
       orientation: placement.label,
       method: 'natural',
-      scheme: moved ? '自动寻找同店空位' : (row.scheme || '利用柜段自然余量'),
-      status: '可直接上新',
-      adjustment: '无需移动已有商品',
+      scheme: temporary ? '自动寻找同店柜段（待手动调整）' : (moved ? '自动寻找同店空位' : (row.scheme || '利用柜段自然余量')),
+      status: temporary ? '需手动调整后上新' : '可直接上新',
+      adjustment: temporary ? '需手动调整现有排面' : '无需移动已有商品',
+      placementStatus: temporary ? '待手动调整' : '已校验',
+      overflowWidth: temporary ? placement.overflowWidth : 0,
       reason: moved
         ? `原指定柜段空位不足，已自动放入同店${cabinet.label || '可用柜段'} ${cabinet.position || ''}，后续可手动调整陈列`
+        : temporary
+          ? `本店暂无完整单列空位，已先预留${cabinet.label || '可用柜段'} ${cabinet.position || ''} 的临时单列，需手动调整现有排面释放${placement.overflowWidth}mm`
         : (row.reason || `柜段当前剩余${candidate.left}mm，已预留${placement.needWidth}mm临时陈列位`),
     };
-  }
-  return null;
 }
 
 export function placeBatchLaunchRows(task, source = {}) {

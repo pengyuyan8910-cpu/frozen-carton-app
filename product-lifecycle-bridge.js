@@ -716,7 +716,7 @@ const pool = Array.isArray(dataRef.productPool) ? dataRef.productPool : [];
             new Map([...cabinets].map(([key, value]) => [key, value.used]))
           );
           if (fallback.ok && fallback.row) {
-            fallbackRows.push({ row, value: { ...fallback.row, placementStatus: "已自动转入同店空位" } });
+            fallbackRows.push({ row, value: { ...fallback.row, placementStatus: fallback.row.placementStatus || "已自动转入同店空位" } });
             fallback.usedByCabinet.forEach((used, key) => {
               const target = cabinets.get(key);
               if (target) target.used = used;

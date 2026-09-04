@@ -756,6 +756,7 @@ function preferredCols(maxFit,s){
 function makeLaunchCandidate(p,store,c,o,cols,method,extra={}){
  const q=candidateQtyMetrics(p,o,cols,store);
  const cat=sameCategoryScore(c,p);
+ const temporary=Boolean(extra.temporaryPlacement);
  const baseScores={released:105,pending:98,natural:90,shrink:74,replace:66,move:58};
  let score=baseScores[method]||50;
  score+=cat.points+Math.min(10,cols*3)-Math.min(20,q.externalL*.08);
@@ -769,10 +770,10 @@ function makeLaunchCandidate(p,store,c,o,cols,method,extra={}){
  const adjustment={released:"无需移动商品",pending:"等待原商品撤柜",natural:"无需移动商品",shrink:"调整1个商品排面",replace:"淘汰并替换1个商品",move:"跨柜移动1个商品"}[method]||"";
  return{
   id:`${store}__${method}__${c.key}__${cols}__${extra.shrinkSkuId||extra.replaceSkuId||extra.moveSkuId||extra.sourceSlotId||""}`,
-  store,feasible:true,status:["natural","released"].includes(method)?"可直接上新":"需调整后上新",
-  method,scheme:methodName,cabinetKey:c.key,cabinetLabel:c.label,position:c.position,
-  needWidth:o.face*cols,faceWidth:o.face,displayCols:cols,perCol:o.per,orientation:o.label,
-  score,categoryScore:cat.points,adjustment,...q,...extra
+   store,feasible:true,status:temporary?"需手动调整后上新":["natural","released"].includes(method)?"可直接上新":"需调整后上新",
+   method,scheme:methodName,cabinetKey:c.key,cabinetLabel:c.label,position:c.position,
+   needWidth:o.face*cols,faceWidth:o.face,displayCols:cols,perCol:o.per,orientation:o.label,
+   score,categoryScore:cat.points,adjustment:temporary?"需手动调整现有排面":adjustment,...q,...extra
  };
 }
 function dedupeCandidates(list){
@@ -810,14 +811,17 @@ function buildLaunchPlan(p,store){
   if(auto.ok&&auto.row){
    const target=cabs.find(c=>c.key===auto.row.cabinetKey);
    if(target){
-    const o={face:num(auto.row.faceWidth),per:num(auto.row.perCol),label:auto.row.orientation||""};
-    const candidate=makeLaunchCandidate(p,store,target,o,1,"natural",{
-     reason:`已自动搜索本店空位：${target.label||"柜段"} ${target.position||""}，后续可手动调整陈列`
-    });
-    candidate.scheme="自动寻找同店空位";
-    candidate.score=150;
-    candidate.adjustment="无需移动已有商品";
-    candidates.push(candidate);
+     const o={face:num(auto.row.faceWidth),per:num(auto.row.perCol),label:auto.row.orientation||""};
+     const candidate=makeLaunchCandidate(p,store,target,o,1,"natural",{
+      temporaryPlacement:auto.row.placementStatus==="待手动调整",
+      placementStatus:auto.row.placementStatus||"已校验",
+      overflowWidth:num(auto.row.overflowWidth),
+      reason:auto.row.reason||`已自动搜索本店空位：${target.label||"柜段"} ${target.position||""}，后续可手动调整陈列`
+     });
+     candidate.scheme=auto.row.placementStatus==="待手动调整"?"自动寻找同店柜段（待手动调整）":"自动寻找同店空位";
+     candidate.score=150;
+     candidate.adjustment=auto.row.placementStatus==="待手动调整"?"需手动调整现有排面":"无需移动已有商品";
+     candidates.push(candidate);
    }
   }
  }
@@ -1517,7 +1521,7 @@ if("ResizeObserver" in window){
 (async function init(){
  document.getElementById("launchDate").value=dateISO(7);document.getElementById("retireDate").value=dateISO(7);document.getElementById("restoreDate").value=dateISO(7);
  bind();try{
-  if(!batchPlacementApi())await import("./scripts/lifecycle-batch-placement.mjs?v=20260904_batch_launch_space_v1");
+  if(!batchPlacementApi())await import("./scripts/lifecycle-batch-placement.mjs?v=20260904_batch_launch_space_v2");
   await loadData();renderAll();notifyParentSize();
  }catch(error){showFormalDataError(error);}
 })();

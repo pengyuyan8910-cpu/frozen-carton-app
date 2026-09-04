@@ -6,8 +6,9 @@ import { findBatchLaunchPlacement, placeBatchLaunchRows } from './lifecycle-batc
 const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const lifecycleHtml = fs.readFileSync(new URL('../product-lifecycle.html', import.meta.url), 'utf8');
 const bridgeHtml = fs.readFileSync(new URL('../product-lifecycle-bridge.js', import.meta.url), 'utf8');
-assert.match(indexHtml, /lifecycle-batch-placement\.mjs\?v=20260904_batch_launch_space_v1/);
-assert.match(indexHtml, /product-lifecycle\.html\?v=20260904_batch_launch_space_v1/);
+assert.match(indexHtml, /lifecycle-batch-placement\.mjs\?v=20260904_batch_launch_space_v2/);
+assert.match(indexHtml, /product-lifecycle\.html\?v=20260904_batch_launch_space_v2/);
+assert.match(indexHtml, /product-lifecycle-bridge\.js\?v=20260904_batch_launch_space_v2/);
 assert.match(lifecycleHtml, /findBatchLaunchPlacement/);
 assert.match(lifecycleHtml, /自动寻找同店空位/);
 assert.match(bridgeHtml, /simpleLaunch/);
@@ -60,6 +61,37 @@ assert.equal(oneColumnFallback.task.rows[0].cabinetKey, fallbackCabinet.key);
 assert.equal(oneColumnFallback.task.rows[0].displayCols, 1);
 assert.equal(oneColumnFallback.task.rows[0].needWidth, 210);
 
+const noFullWidthProduct = { ...product, id: 'pool-new-tight', name: '没有完整单列余量测试品', barcode: '690000000004', length: 200 };
+const noFullWidthTask = {
+  id: 'TASK-L-TEST-TIGHT', type: '上新',
+  rows: [{
+    id: 'TASK-L-TEST-TIGHT-0', store: '店A', productName: noFullWidthProduct.name, barcode: noFullWidthProduct.barcode,
+    cabinetKey: targetCabinet.key, cabinetLabel: targetCabinet.label, position: targetCabinet.position,
+    displayCols: 1, faceWidth: 200, needWidth: 200, perCol: 10,
+  }],
+};
+const noFullWidthData = {
+  stores: [{ store: '店A' }],
+  productPool: [noFullWidthProduct],
+  cabinets: [
+    { ...targetCabinet, length: 500 },
+    { ...fallbackCabinet, length: 200 },
+  ],
+  skus: [
+    { ...existing, displayCols: 1, faceWidth: 360 },
+    { ...existing, id: 'existing-2', cabinetKey: fallbackCabinet.key, faceWidth: 100 },
+  ],
+};
+const noFullWidthBefore = structuredClone(noFullWidthData);
+const temporaryPlacement = placeBatchLaunchRows(noFullWidthTask, noFullWidthData);
+assert.equal(temporaryPlacement.ok, true, '同店没有完整单列余量时也应先生成临时入柜方案');
+assert.equal(temporaryPlacement.task.rows[0].cabinetKey, targetCabinet.key, '临时方案应选择当前可承接空间最大的合法柜段');
+assert.equal(temporaryPlacement.task.rows[0].displayCols, 1);
+assert.equal(temporaryPlacement.task.rows[0].needWidth, 200);
+assert.equal(temporaryPlacement.task.rows[0].placementStatus, '待手动调整');
+assert.equal(temporaryPlacement.task.rows[0].overflowWidth, 60);
+assert.deepEqual(noFullWidthData, noFullWidthBefore, '临时入柜预览不得改写正式门店、柜体或SKU数据');
+
 const suppliedUsage = placeBatchLaunchRows(task, {
   productPool: [product],
   usageByCabinet: { [targetCabinet.key]: 465, [fallbackCabinet.key]: 0 },
@@ -104,6 +136,13 @@ assert.equal(directBridgeFallback.row.cabinetKey, fallbackCabinet.key);
 const bridgeValidation = bridgeContext.window.ProductLifecycle.validateTaskCompletion(bridgeTask);
 assert.equal(bridgeValidation.ok, true, '任务完成校验应与预览使用同店空位兜底');
 assert.equal(bridgeTask.rows[0].cabinetKey, fallbackCabinet.key);
+
+assert.equal(bridgeContext.window.ProductLifecycle.prepareData(noFullWidthData), true);
+const tightBridgeTask = structuredClone(noFullWidthTask);
+const tightBridgeValidation = bridgeContext.window.ProductLifecycle.validateTaskCompletion(tightBridgeTask);
+assert.equal(tightBridgeValidation.ok, true, '没有完整单列余量时完成校验也应允许临时入柜');
+assert.equal(tightBridgeTask.rows[0].cabinetKey, targetCabinet.key);
+assert.equal(tightBridgeTask.rows[0].placementStatus, '待手动调整');
 
 const atomicTask = {
   ...structuredClone(task),
