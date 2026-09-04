@@ -68,6 +68,12 @@ const suppliedUsage = placeBatchLaunchRows(task, {
 });
 assert.equal(suppliedUsage.task.rows[0].cabinetKey, fallbackCabinet.key, '使用外部柜段占用快照时不得重复累计 used');
 
+const cabinetUsedFallback = placeBatchLaunchRows(task, {
+  productPool: [product],
+  cabinets: [{ ...targetCabinet, used: 465 }, { ...fallbackCabinet, used: 0 }],
+});
+assert.equal(cabinetUsedFallback.task.rows[0].cabinetKey, fallbackCabinet.key, '没有SKU明细时应使用柜段自身的 used 占用');
+
 const ordinaryCabinet = { ...fallbackCabinet, key: 'store-a|ice-1|segment-1', kind: '冰淇淋柜', label: '冰淇淋柜1' };
 const iceProduct = { ...product, id: 'pool-ice', name: '冰淇淋测试品', barcode: '690000000002', category3: '冰淇淋' };
 const iceResult = placeBatchLaunchRows({ ...task, rows: [{ ...task.rows[0], productName: iceProduct.name, barcode: iceProduct.barcode }] }, {

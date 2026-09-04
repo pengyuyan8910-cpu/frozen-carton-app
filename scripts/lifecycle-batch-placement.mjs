@@ -76,14 +76,19 @@ function resolveProduct(row, source) {
 }
 
 function initialUsage(source, cabinets) {
-  const usage = new Map(cabinets.map(cabinet => [text(cabinet.key), 0]));
-  if (source?.usageByCabinet) {
+  const hasUsageSnapshot = source?.usageByCabinet && typeof source.usageByCabinet === 'object';
+  const hasSkuRows = Array.isArray(source?.skus) && source.skus.length > 0;
+  const usage = new Map(cabinets.map(cabinet => [
+    text(cabinet.key),
+    hasUsageSnapshot || hasSkuRows ? 0 : Math.max(0, number(cabinet.used)),
+  ]));
+  if (hasUsageSnapshot) {
     for (const [key, used] of Object.entries(source.usageByCabinet)) {
       if (usage.has(text(key))) usage.set(text(key), Math.max(0, number(used)));
     }
   }
   const rows = Array.isArray(source?.skus) ? source.skus : [];
-  rows.forEach(row => {
+  if (!hasUsageSnapshot && hasSkuRows) rows.forEach(row => {
     if (row?.included === false) return;
     const key = text(row?.cabinetKey);
     if (!usage.has(key)) return;
