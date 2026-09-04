@@ -76,6 +76,34 @@ const staleSingleColumn = buildPlanogramRows([{
 }], "店", cabinets);
 assert.equal(staleSingleColumn[0].rowFull, 12, "单列容量不能被旧满陈压成1或2件");
 
+const stalePlacementColumns = buildPlanogramRows([{
+  id: "stale-placement-columns",
+  store: "店",
+  included: true,
+  name: "主记录单列但历史模块仍为两列",
+  cabinetKey: cabinets[0].key,
+  displayCols: 1,
+  faceWidth: 185,
+  perCol: 28,
+  rowFull: 28,
+  placements: [{
+    cabinetKey: cabinets[0].key,
+    displayCols: 2,
+    faceWidth: 185,
+    perCol: 28,
+    fullCount: 56,
+    widthUsed: 370,
+  }],
+}], "店", cabinets);
+assert.equal(stalePlacementColumns.length, 1);
+assert.equal(stalePlacementColumns[0].displayCols, 1, "单模块投影必须以主记录列数为准，不能显示历史两列");
+assert.equal(stalePlacementColumns[0].rowFull, 28, "单模块投影满陈必须与主记录单列容量一致");
+assert.equal(
+  buildCabinetUsage(cabinets, stalePlacementColumns).get(cabinets[0].key).used,
+  185,
+  "单模块柜段占用必须按主记录单列宽度统计"
+);
+
 const normalizedStaleFullCount = normalizeNewStorePlanogramRows([{
   id: "new-store-stale-capacity",
   store: "店",

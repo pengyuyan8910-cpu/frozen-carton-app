@@ -151,6 +151,35 @@ const state = {
         fullCount: 92,
         widthUsed: 240
       }]
+    },
+    {
+      id: "stale-placement-columns",
+      store: "店",
+      included: true,
+      name: "主记录单列但历史模块仍为两列",
+      barcode: "1005",
+      length: 235,
+      width: 176,
+      height: 49,
+      volume: 1,
+      carton: 30,
+      cabinetKey: "店__卧柜2505-柜2__分区1",
+      cabinetLabel: "卧柜2505-柜2",
+      position: "分区1",
+      faceWidth: 176,
+      faceOrientation: "width",
+      displayCols: 1,
+      perCol: 18,
+      rowFull: 18,
+      placements: [{
+        cabinetKey: "店__卧柜2505-柜2__分区1",
+        orientation: "width-face",
+        faceWidth: 176,
+        perCol: 18,
+        displayCols: 2,
+        fullCount: 36,
+        widthUsed: 352
+      }]
     }
   ]
 };
@@ -161,6 +190,7 @@ const chest = result.skus.find(row => row.id === "chest");
 const vertical = result.skus.find(row => row.id === "vertical");
 const movedToChest = result.skus.find(row => row.id === "moved-to-chest");
 const turnedToWidth = result.skus.find(row => row.id === "turned-to-width");
+const stalePlacementColumns = result.skus.find(row => row.id === "stale-placement-columns");
 
 assert.equal(chest.perCol, 46, "卧柜必须按柜体宽697÷产品长240=2，再乘高度堆叠23，得到46");
 assert.equal(chest.rowFull, 46);
@@ -187,6 +217,10 @@ assert.equal(turnedToWidth.faceWidth, 240, "再次切回长做陈列面必须使
 assert.equal(turnedToWidth.perCol, 92, "再次切回长做陈列面必须按产品宽计算堆叠");
 assert.equal(turnedToWidth.placements[0].orientation, "length-face");
 assert.equal(turnedToWidth.placements[0].perCol, 92);
+assert.equal(stalePlacementColumns.displayCols, 1, "主记录单列时，加载容量不能保留历史模块两列");
+assert.equal(stalePlacementColumns.placements[0].displayCols, 1, "单模块派生列数必须与主记录一致");
+assert.equal(stalePlacementColumns.placements[0].fullCount, 18, "单模块派生满陈必须按单列容量计算");
+assert.equal(stalePlacementColumns.placements[0].widthUsed, 176, "单模块派生占宽必须按一列计算");
 assert.deepEqual(result.skus.map(row => [row.id, row.cabinetKey, row.position]), originalLocations, "重算不得改变柜段和位置");
 assert.equal(Object.hasOwn(chest, "externalCountOverride"), false, "旧外储覆盖值不能继续遮蔽新满陈");
 assert.equal(Object.hasOwn(chest, "staticExternalOverride"), false);

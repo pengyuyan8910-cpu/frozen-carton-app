@@ -36,6 +36,10 @@ function mergePlacementProjection(row, placement) {
   return next;
 }
 
+function hasValue(value) {
+  return value !== undefined && value !== null && text(value) !== "";
+}
+
 /**
  * Repairs duplicate row IDs already present in a saved current-page state.
  * It changes identity only; all store/product/planogram fields are retained.
@@ -86,15 +90,23 @@ function placementRow(row, placement, index, multiple) {
   next.cabinetKey = placement?.cabinetKey || row.cabinetKey || "";
   next.cabinetLabel = placement?.cabinetLabel || row.cabinetLabel || "";
   next.position = placement?.position || placement?.section || row.position || "";
-  if (placement?.displayCols !== undefined) next.displayCols = number(placement.displayCols);
-  if (placement?.faceWidth !== undefined) next.faceWidth = number(placement.faceWidth);
-  if (placement?.perCol !== undefined) next.perCol = number(placement.perCol);
-  if (placement?.fullCount !== undefined) {
-    const columns = number(placement.displayCols ?? row.displayCols ?? next.displayCols);
-    const perCol = number(placement.perCol ?? row.perCol ?? next.perCol);
+  if (multiple) {
+    if (placement?.displayCols !== undefined) next.displayCols = number(placement.displayCols);
+    if (placement?.faceWidth !== undefined) next.faceWidth = number(placement.faceWidth);
+    if (placement?.perCol !== undefined) next.perCol = number(placement.perCol);
+  } else {
+    if (hasValue(row?.displayCols)) next.displayCols = number(row.displayCols);
+    if (hasValue(row?.faceWidth)) next.faceWidth = number(row.faceWidth);
+    if (hasValue(row?.perCol)) next.perCol = number(row.perCol);
+  }
+  if (hasValue(next.displayCols) && hasValue(next.perCol)) {
+    const columns = number(next.displayCols);
+    const perCol = number(next.perCol);
     next.rowFull = columns > 0 && perCol > 0
       ? Math.max(0, Math.floor(columns * perCol))
-      : number(placement.fullCount);
+      : number(row?.rowFull);
+    if (hasValue(next.faceWidth)) next.widthUsed = columns * number(next.faceWidth);
+    next.fullCount = next.rowFull;
   }
   return next;
 }
@@ -122,15 +134,23 @@ function projectionFor(row, placement, index, multiple) {
   projection.cabinetKey = placement?.cabinetKey || row.cabinetKey || "";
   projection.cabinetLabel = placement?.cabinetLabel || row.cabinetLabel || "";
   projection.position = placement?.position || placement?.section || row.position || "";
-  if (placement?.displayCols !== undefined) projection.displayCols = number(placement.displayCols);
-  if (placement?.faceWidth !== undefined) projection.faceWidth = number(placement.faceWidth);
-  if (placement?.perCol !== undefined) projection.perCol = number(placement.perCol);
-  if (placement?.fullCount !== undefined) {
-    const columns = number(placement.displayCols ?? row.displayCols ?? projection.displayCols);
-    const perCol = number(placement.perCol ?? row.perCol ?? projection.perCol);
+  if (multiple) {
+    if (placement?.displayCols !== undefined) projection.displayCols = number(placement.displayCols);
+    if (placement?.faceWidth !== undefined) projection.faceWidth = number(placement.faceWidth);
+    if (placement?.perCol !== undefined) projection.perCol = number(placement.perCol);
+  } else {
+    if (hasValue(row?.displayCols)) projection.displayCols = number(row.displayCols);
+    if (hasValue(row?.faceWidth)) projection.faceWidth = number(row.faceWidth);
+    if (hasValue(row?.perCol)) projection.perCol = number(row.perCol);
+  }
+  if (hasValue(projection.displayCols) && hasValue(projection.perCol)) {
+    const columns = number(projection.displayCols);
+    const perCol = number(projection.perCol);
     projection.rowFull = columns > 0 && perCol > 0
       ? Math.max(0, Math.floor(columns * perCol))
-      : number(placement.fullCount);
+      : number(row?.rowFull);
+    if (hasValue(projection.faceWidth)) projection.widthUsed = columns * number(projection.faceWidth);
+    projection.fullCount = projection.rowFull;
   }
   return projection;
 }

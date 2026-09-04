@@ -91,10 +91,13 @@ function rowKey(row) {
   return text(row?.barcode) || text(row?.name) || text(row?.id);
 }
 
-function setPlacementCapacity(placement, row, cabinet, preferred, fallbackColumns) {
+function setPlacementCapacity(placement, row, cabinet, preferred, fallbackColumns, rowColumnsAuthoritative = false) {
   const layout = layoutFor(row, cabinet, preferred);
   if (!layout) return null;
-  const displayCols = Math.max(1, Math.floor(number(placement?.displayCols) || fallbackColumns || 1));
+  const storedColumns = rowColumnsAuthoritative && row?.displayCols !== undefined && row?.displayCols !== null
+    ? row.displayCols
+    : placement?.displayCols;
+  const displayCols = Math.max(1, Math.floor(number(storedColumns) || fallbackColumns || 1));
   Object.assign(placement, {
     orientation: `${layout.orientation}-face`,
     faceWidth: layout.faceWidth,
@@ -149,7 +152,14 @@ export function recalculateLoadedPlanogram(state) {
         const preferred = normalizeOrientation(row.faceOrientation)
           || normalizeOrientation(placement.orientation)
           || inferOrientation(source);
-        const layout = setPlacementCapacity(placement, source, cabinet, preferred, index === 0 ? row.displayCols : 1);
+        const layout = setPlacementCapacity(
+          placement,
+          source,
+          cabinet,
+          preferred,
+          index === 0 ? row.displayCols : 1,
+          placements.length === 1
+        );
         if (!layout) continue;
         if (!primary || text(placement.cabinetKey) === text(row.cabinetKey) || index === 0) primary = { ...layout, cabinet };
       }
